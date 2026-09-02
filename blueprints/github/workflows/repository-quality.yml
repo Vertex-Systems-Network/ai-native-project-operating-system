@@ -21,16 +21,41 @@ jobs:
     name: repository-integrity
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository with base history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
 
-      - name: Compile validator
+      - name: Compile repository scripts
         run: python -m compileall -q scripts
 
-      - name: Validate AI-native state and workflow safety
+      - name: Validate current AI-native state and workflow safety
         run: python scripts/validate_ai_native_repo.py
+
+      - name: Run protected-base validator against proposed tree
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show "${BASE_SHA}:scripts/validate_ai_native_repo.py" > scripts/.trusted-base-validator.py
+          python scripts/.trusted-base-validator.py
+          rm -f scripts/.trusted-base-validator.py
+
+      - name: Report control-plane changes for review evidence
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only "$BASE_SHA" HEAD -- \
+            AGENTS.md .ai .github blueprints scripts schemas config/coordination config/protocol \
+            config/security config/consent config/github config/quality config/runtime config/release \
+            CONTROL-PLANE-SECURITY.md PRODUCTION-ASSURANCE.md DESIGN-DATA-OPERATIONS.md \
+            AUTO-AGENT.md SUPERVISOR.md ORCHESTRATOR.md MULTI-AGENT-ORCHESTRATION.md || true
 
       - name: Validate YAML syntax
         shell: bash
@@ -47,4 +72,4 @@ jobs:
           fi
 
       - name: Show repository integrity success
-        run: echo 'Repository integrity, state references, workflow pinning, JSON, and YAML checks passed.'
+        run: echo 'Repository integrity, current/base validator checks, state references, workflow pinning, JSON, and YAML checks passed.'
