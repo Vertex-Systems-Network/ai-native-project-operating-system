@@ -43,6 +43,15 @@ export async function ensureSchema(): Promise<void> {
       signed_envelope JSONB,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS provisioning_requests (
+      idempotency_key TEXT PRIMARY KEY,
+      github_account_id BIGINT NOT NULL,
+      action TEXT NOT NULL,
+      status TEXT NOT NULL,
+      result JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ
+    );
     CREATE TABLE IF NOT EXISTS commercial_audit_log (
       id BIGSERIAL PRIMARY KEY,
       request_id TEXT NOT NULL,
