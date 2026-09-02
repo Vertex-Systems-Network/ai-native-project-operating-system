@@ -7,8 +7,8 @@
   "repository_owner": "Vertex-Systems-Network",
   "initialized_at": null,
   "initialized_by": null,
-  "source_protocol_version": "1.0.0",
+  "source_protocol_version": "1.0.1",
   "source_template_repository": "Vertex-Systems-Network/ai-native-project-operating-system",
   "bootstrap_completed": false,
-  "notes": "Child repositories created from this template must run scripts/bootstrap_instance.py before project execution scales."
+  "notes": "Canonical template source. Child repositories copied from this source must detect their different repository identity, run scripts/bootstrap_instance.py, and only then connect project integrations or activate child runtime automation."
 }
