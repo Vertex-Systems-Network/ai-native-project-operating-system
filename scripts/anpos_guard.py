@@ -154,9 +154,16 @@ def _scope_set(value: Any) -> set[str]:
     if isinstance(value, list):
         return {str(v) for v in value if str(v)}
     text = str(value).strip()
-    if not text or text in {"none", "no_pm", "no_access", "none_by_default"}:
+    if not text or text in {"none", "no_pm", "no_access", "none_by_default", "no_secrets", "no_deploy"}:
         return set()
     return {text}
+
+
+def _enforce_scope_subset(label: str, requested: Any, allowed: Any) -> None:
+    requested_set = _scope_set(requested)
+    allowed_set = _scope_set(allowed)
+    if requested_set and "*" not in allowed_set and not requested_set.issubset(allowed_set):
+        raise PermissionError(f"Agent lacks requested {label}: {sorted(requested_set - allowed_set)}")
 
 
 def authorize_runtime_scope(slot: dict[str, Any], agent: dict[str, Any]) -> None:
@@ -176,20 +183,9 @@ def authorize_runtime_scope(slot: dict[str, Any], agent: dict[str, Any]) -> None
     if requested_hosts and "*" not in allowed_hosts and not requested_hosts.issubset(allowed_hosts):
         raise PermissionError(f"Agent lacks requested network destinations: {sorted(requested_hosts - allowed_hosts)}")
 
-    requested_pm = _scope_set(slot.get("pm_scope"))
-    allowed_pm = _scope_set(permissions.get("pm_scope"))
-    if requested_pm and "*" not in allowed_pm and not requested_pm.issubset(allowed_pm):
-        raise PermissionError(f"Agent lacks requested PM scope: {sorted(requested_pm - allowed_pm)}")
-
-    secret_scope = str(slot.get("secret_scope") or "none")
-    allowed_secret_scope = str(permissions.get("secret_scope") or "none_by_default")
-    if secret_scope not in {"none", "no_secrets"} and allowed_secret_scope in {"none", "none_by_default", "no_secrets"}:
-        raise PermissionError("Slot requests secret access not authorized for this agent.")
-
-    deployment_scope = str(slot.get("deployment_scope") or "none")
-    allowed_deploy = str(permissions.get("deployment_scope") or "none_by_default")
-    if deployment_scope not in {"none", "no_deploy"} and allowed_deploy in {"none", "none_by_default", "no_deploy"}:
-        raise PermissionError("Slot requests deployment authority not authorized for this agent.")
+    _enforce_scope_subset("PM scope", slot.get("pm_scope"), permissions.get("pm_scope"))
+    _enforce_scope_subset("secret scope", slot.get("secret_scope"), permissions.get("secret_scope"))
+    _enforce_scope_subset("deployment scope", slot.get("deployment_scope"), permissions.get("deployment_scope"))
 
 
 def verify_fencing(expected_epoch: int, expected_token: str, actor_agent_id: str | None = None) -> dict[str, Any]:
@@ -209,7 +205,8 @@ def validate_handoff(slot: dict[str, Any]) -> None:
         "denied_paths", "allowed_tools", "network_policy", "network_allowlist", "pm_scope", "secret_scope",
         "deployment_scope", "acceptance_criteria", "required_checks", "risk_classification"
     ]
-    missing = [key for key in required if slot.get(key) is None or (key in {"id", "work_unit_id", "base_sha", "required_roles", "allowed_paths", "acceptance_criteria", "required_checks", "risk_classification"} and slot.get(key) in ("", []))]
+    must_be_nonempty = {"id", "work_unit_id", "base_sha", "required_roles", "allowed_paths", "acceptance_criteria", "required_checks", "risk_classification"}
+    missing = [key for key in required if slot.get(key) is None or (key in must_be_nonempty and slot.get(key) in ("", []))]
     if missing:
         raise ValueError(f"Slot handoff envelope missing required field(s): {', '.join(missing)}")
 
