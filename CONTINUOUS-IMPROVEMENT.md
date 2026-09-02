@@ -17,9 +17,9 @@ Discovery and recommendation may be automated. Code changes that alter the appro
 
 Every approved maintenance/change cycle follows:
 
-**Detect → Research → Compare → Impact Analysis → Plan → Supervisor Alert → Owner Consent → Isolated Implementation → Tests/QA/Security Verification → Review → Merge → State/README/Linear Sync**
+**Detect → Research → Compare → Impact Analysis → Plan → Supervisor Alert → Owner Consent → Isolated Implementation → Tests/QA/Security Verification → Review → Merge → State/README/Selected-PM Sync**
 
-GitHub remains canonical for code and consent/maintenance state. Linear mirrors approved child-project work when connected.
+GitHub remains canonical for code and consent/maintenance state. The selected project-management provider mirrors approved child-project work when connected.
 
 ---
 
@@ -135,7 +135,7 @@ After consent becomes `approved`:
 7. Test compatibility and rollback where relevant.
 8. Update architecture/docs/version inventory.
 9. Submit through normal review/merge governance.
-10. Update project memory, child README/runtime state, Linear, and maintenance state.
+10. Update project memory, child README/runtime state, selected PM provider when connected, and maintenance state.
 
 An approved dependency update is not complete merely because installation succeeds.
 
@@ -230,7 +230,7 @@ After approval, use the normal architecture/data-flow/UI/UX/security/QA and mult
 
 ## Scheduled workflow limitations
 
-GitHub Actions can schedule and create durable child-repository audit requests, but a generic template cannot assume a continuously running AI agent, connected email account, authenticated one-click email callback, or access to proprietary tools.
+GitHub Actions can schedule and create durable child-repository audit requests, but a generic template cannot assume a continuously running AI agent, connected email account, authenticated one-click email callback, connected PM provider, or access to proprietary tools.
 
 Therefore:
 
@@ -239,21 +239,22 @@ Therefore:
 - scheduled child Actions create durable due/audit requests;
 - an available Supervisor AI performs the actual current research and planning;
 - email is sent only through an authorized connected provider/runtime;
+- PM synchronization happens only when a provider is selected/verified;
 - consent is recorded only through a verifiable authorized action;
 - if the Supervisor was offline, it processes overdue requests at next startup/resume;
-- never claim an email, research run, consent click, or code update occurred when the required runtime/integration was unavailable.
+- never claim an email, research run, PM sync, consent click, or code update occurred when the required runtime/integration was unavailable.
 
 ## Completion and reconciliation
 
 After either maintenance loop produces an approved child-project change and it is merged:
 
 - increment normal merge generation
-- alert active workers to reconcile main
+- alert active Workers to reconcile main
 - update technology/options/modules inventory
 - close the maintenance/scout request
 - update `config/consent/consent-requests.json`
 - refresh child project status/README
-- sync Linear when connected
+- sync the selected PM provider when connected
 - record test/security evidence
 
 The two loops continuously improve child projects without turning automated discovery into uncontrolled scope or dependency churn.
