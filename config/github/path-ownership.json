@@ -27,7 +27,6 @@
     {"pattern": "/CONTROL-PLANE-SECURITY.md", "owner_roles": ["security", "supervisor"], "review_required": true, "independent_review_required": true},
     {"pattern": "/PRODUCTION-ASSURANCE.md", "owner_roles": ["supervisor", "security", "devops", "architecture"], "review_required": true},
     {"pattern": "/DESIGN-DATA-OPERATIONS.md", "owner_roles": ["supervisor", "architecture", "security", "qa"], "review_required": true},
-    {"pattern": "/FINAL-CORE.md", "owner_roles": ["supervisor", "architecture"], "review_required": true},
     {"pattern": "/config/ai/agent-catalog.json", "owner_roles": ["supervisor", "security"], "review_required": true},
     {"pattern": "/config/ai/memory-provenance.json", "owner_roles": ["supervisor", "security", "architecture"], "review_required": true},
     {"pattern": "/config/coordination/**", "owner_roles": ["supervisor"], "review_required": true},
