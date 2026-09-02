@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/agent-catalog.schema.json",
+  "title": "ANPOS Agent Catalog",
+  "type": "object",
+  "required": ["schema_version", "selection_status", "available_agents", "selected_agents", "role_assignments"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 3},
+    "selection_status": {"type": "string"},
+    "available_agents": {"type": "array"},
+    "selected_agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "provider", "capabilities", "roles", "identity_verified", "runtime_identity", "permissions", "privacy_profile"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "provider": {"type": "string"},
+          "capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "roles": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+          "identity_verified": {"const": true},
+          "runtime_identity": {
+            "type": "object",
+            "required": ["principal_id", "evidence_ref", "verified_at"],
+            "properties": {
+              "principal_id": {"type": "string", "minLength": 1},
+              "evidence_ref": {"type": "string", "minLength": 1},
+              "verified_at": {"type": "string", "minLength": 1},
+              "expires_at": {"type": ["string", "null"]}
+            },
+            "additionalProperties": true
+          },
+          "permissions": {
+            "type": "object",
+            "required": ["allowed_paths", "denied_paths", "allowed_tools", "secret_scope", "deployment_scope", "repository_admin"],
+            "additionalProperties": true
+          },
+          "privacy_profile": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "role_assignments": {"type": "object"}
+  },
+  "additionalProperties": true
+}
