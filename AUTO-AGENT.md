@@ -20,7 +20,7 @@ A Worker given only the repository URL must read `AGENTS.md`, `.ai/manifest.json
 ## Lease discipline
 
 - A claimed/in-progress Worker must maintain a live lease/heartbeat according to project runtime policy.
-- Before shared coordination writes, submission, or resumption, verify that the slot claim/fencing data still matches repository state.
+- Before shared coordination writes, submission, or resumption, verify that slot claim/fencing data still matches repository state.
 - An expired lease does not authorize the Worker to continue silently. Stop and reconcile with the Supervisor/repository.
 - A Supervisor may recover an expired claim only after inspecting branch/PR/commit evidence.
 
@@ -32,7 +32,7 @@ A Worker given only the repository URL must read `AGENTS.md`, `.ai/manifest.json
 - Run relevant quality/security/tests continuously.
 - Do not make unsanctioned shared-state edits.
 - Record blockers, material discoveries, acceptance evidence, and requirement traceability.
-- Keep Linear mirrored when available and permitted, while GitHub remains canonical.
+- When a project-management provider is selected and the Worker is permitted to write it, mirror assignment/blocker/review state through the provider adapter contract; GitHub remains canonical.
 
 ## Merge/reconcile acknowledgement
 
@@ -46,7 +46,8 @@ When implementation, required verification, documentation, traceability, alert r
 2. Open/update the PR/MR.
 3. Mark the slot `submitted_for_review` while retaining claim/fencing evidence.
 4. Record the review reference and test evidence.
-5. Send exactly:
+5. Mirror review state to the selected PM provider when connected/permitted.
+6. Send exactly:
 
 **ALL DONE SUBMITTED FOR REVIEW AND MERGE**
 
