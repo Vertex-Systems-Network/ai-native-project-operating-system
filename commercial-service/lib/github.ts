@@ -15,6 +15,13 @@ function githubAppJwt(): string {
   return `${signingInput}.${signature}`;
 }
 
+const githubHeaders = (token: string) => ({
+  Accept: "application/vnd.github+json",
+  Authorization: `Bearer ${token}`,
+  "X-GitHub-Api-Version": "2026-03-10",
+  "User-Agent": "ANPOS-Commercial-Service/1.0",
+});
+
 export type MarketplaceSubscription = {
   id: number;
   login: string;
@@ -32,16 +39,41 @@ export type MarketplaceSubscription = {
 
 export async function getMarketplaceSubscription(accountId: number): Promise<MarketplaceSubscription | null> {
   const response = await fetch(`https://api.github.com/marketplace_listing/accounts/${accountId}`, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${githubAppJwt()}`,
-      "X-GitHub-Api-Version": "2026-03-10",
-      "User-Agent": "ANPOS-Commercial-Service/1.0",
-    },
+    headers: githubHeaders(githubAppJwt()),
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`GitHub Marketplace reconciliation failed: ${response.status}`);
   return response.json() as Promise<MarketplaceSubscription>;
+}
+
+async function vendorInstallationToken(): Promise<string> {
+  const installationId = process.env.GITHUB_VENDOR_INSTALLATION_ID;
+  if (!installationId || !/^\d+$/.test(installationId)) throw new Error("GITHUB_VENDOR_INSTALLATION_ID is not configured");
+  const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
+    method: "POST",
+    headers: githubHeaders(githubAppJwt()),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error(`Vendor installation token failed: ${response.status}`);
+  const body = await response.json() as { token?: string };
+  if (!body.token) throw new Error("Vendor installation token missing");
+  return body.token;
+}
+
+export async function inviteTemplateCollaborator(username: string): Promise<{ repository: string; status: number }> {
+  const repository = process.env.ANPOS_PRIVATE_TEMPLATE_REPO;
+  if (!repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error("ANPOS_PRIVATE_TEMPLATE_REPO is not configured");
+  const token = await vendorInstallationToken();
+  const response = await fetch(`https://api.github.com/repos/${repository}/collaborators/${encodeURIComponent(username)}`, {
+    method: "PUT",
+    headers: { ...githubHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ permission: "pull" }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (![201, 204].includes(response.status)) throw new Error(`Template collaborator provisioning failed: ${response.status}`);
+  return { repository, status: response.status };
 }
