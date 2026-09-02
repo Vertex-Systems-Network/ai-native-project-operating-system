@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.2.0",
+  "current_protocol_version": "1.2.1",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -98,12 +98,38 @@
         "config/release, config/data, config/operations, config/contracts, config/security and config/design contain reusable child assurance policy",
         "scripts/validate_ai_native_repo.py certifies source-boundary and hardening invariants"
       ]
+    },
+    {
+      "id": "ANPOS-1.2.0-to-1.2.1",
+      "from_version": "1.2.0",
+      "to_version": "1.2.1",
+      "detected_at": "2026-09-03T03:37:55+05:00",
+      "impact": [
+        "Remove stale duplicate FINAL-CORE.md after its requirements were absorbed into current control-plane, orchestration, initialization, schema, traceability and ownership contracts",
+        "Remove obsolete FINAL-CORE references from bootstrap, validator, control-plane protection, path ownership and CODEOWNERS",
+        "Add a minimal template-safe .gitignore for ANPOS Python tooling caches, local environments/secrets, OS/editor residue and temporary/backup files",
+        "Protect .gitignore through control-plane policy, path ownership, source CODEOWNERS, child CODEOWNERS generation and repository validation",
+        "Keep stack-specific ignore rules deferred until each child project approves its actual technology stack",
+        "No project-management, AI-provider, application runtime, release or child-project behavior is activated on the canonical source"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing child projects may adopt the hygiene file and stale-document cleanup after impact analysis. Preserve project-specific .gitignore rules and merge rather than overwrite them blindly.",
+      "status": "applied",
+      "applied_at": "2026-09-03T03:37:55+05:00",
+      "verification_evidence": [
+        "FINAL-CORE.md removed after reference/uniqueness audit",
+        ".gitignore exists and is protected by control-plane policy, path ownership and CODEOWNERS",
+        "scripts/bootstrap_instance.py generates explicit child ownership for .gitignore",
+        "scripts/validate_ai_native_repo.py requires and protects .gitignore and no longer requires FINAL-CORE.md",
+        "Full post-cleanup compile, unit/conformance and repository-validator certification must pass before this migration is treated as release-certified"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.2.0-to-NEXT",
-    "from_version": "1.2.0",
+    "id": "ANPOS-1.2.1-to-NEXT",
+    "from_version": "1.2.1",
     "to_version": null,
     "detected_at": null,
     "impact": [],
