@@ -5,23 +5,47 @@
 ## Authority
 
 1. explicit current user instruction
-2. repository safety, consent, security, and GitHub governance
-3. this router
-4. manifest-selected role protocols
-5. approved architecture/decisions/plan
-6. repository/Git/test reality
+2. template-source vs child-project boundary
+3. repository safety, consent, security, and GitHub governance
+4. this router
+5. manifest-selected role protocols
+6. approved architecture/decisions/plan
+7. repository/Git/test reality
 
-Repository reality overrides stale chat memory, Linear mirrors, dashboards, or JSON mirrors. Never invent completion, capabilities, approvals, branches, PRs, tests, merges, emails, rulesets, or background execution.
+Repository reality overrides stale chat memory, Linear mirrors, dashboards, or JSON mirrors. Never invent completion, capabilities, approvals, branches, PRs, tests, merges, emails, rulesets, integrations, or background execution.
 
-## Instance bootstrap
+## Template source boundary — mandatory
 
-Read `config/protocol/instance.json` immediately. A child repository copied from the template must be initialized with `scripts/bootstrap_instance.py` before development scales. The script is dry-run by default and refuses to reset the upstream template source unless explicitly overridden.
+Read `config/protocol/instance.json` immediately.
 
-Do not allow a child project to inherit source-template Linear IDs, coordination leases, Worker claims, alerts, consent records, merge generations, or stale runtime identity.
+If `instance_status` is `template_source`, this repository is an **inert reusable template/protocol source**, not a live application project. Do not:
+
+- connect or map a real Linear project to the template source;
+- write project-specific Linear IDs/URLs/sync timestamps into template state;
+- apply the child project's GitHub Rules/rulesets/merge settings to the template source;
+- activate child-project code-quality/runtime workflows against the template source;
+- treat blueprint configuration as proof that anything is already applied.
+
+The template source stores instructions, policies, schemas, scripts, and inactive blueprints only.
+
+For a new/child repository created from this template, load `PROJECT-INITIALIZATION.md` and run the child initialization flow.
+
+## Child instance bootstrap
+
+A child repository copied from the template must be initialized with `scripts/bootstrap_instance.py` before development scales. The script is dry-run by default and refuses to reset the upstream template source unless deliberately overridden for testing.
+
+A child project must not inherit source-template Linear IDs, coordination leases, Worker claims, alerts, consent records, merge generations, stale runtime identity, or source-specific integration state.
+
+After child bootstrap, complete `PROJECT-INITIALIZATION.md`:
+
+1. connect/authenticate Linear using the host's secure connected-app/OAuth flow; never ask for a raw password/token in normal chat;
+2. map/create the Linear project and enable verified auto-sync only in the child repository;
+3. ask the user whether to **Apply Recommended GitHub Rules**; if admin-capable and approved, apply + re-read + verify, otherwise provide the exact manual setup and keep it pending;
+4. install/apply the universal Code Quality baseline to the child automatically, then add stack-specific quality tooling after technology approval.
 
 ## First user flow
 
-For an uninitialized project: offer **Start Development** (native action/button when supported, exact-text fallback otherwise), then collect one free-form **Idea / Thoughts / Plan / Research / Search / Assumptions** input. Follow `START-HERE.md` for discovery, public research, market comparison, comparable-system audit, reasoning, and planning.
+For an uninitialized child project: offer **Start Development** (native action/button when supported, exact-text fallback otherwise), complete the child-project initialization contract, then collect one free-form **Idea / Thoughts / Plan / Research / Search / Assumptions** input. Follow `START-HERE.md` for discovery, public research, market comparison, comparable-system audit, reasoning, and planning.
 
 ## Engineering lifecycle
 
@@ -67,25 +91,31 @@ Every successful main merge updates merge generation/event state and creates req
 
 ## GitHub governance and ownership
 
-Use `GITHUB-GOVERNANCE.md`, `config/github/ruleset-policy.json`, `config/github/path-ownership.json`, and `.github/CODEOWNERS`.
+Use `PROJECT-INITIALIZATION.md`, `GITHUB-GOVERNANCE.md`, `config/github/ruleset-policy.json`, `config/github/path-ownership.json`, and `.github/CODEOWNERS`.
 
-When an authenticated admin-capable interface is available and authorized, apply desired repository rules/settings and re-read GitHub to verify enforcement. Otherwise record governance drift; a local policy file is not proof of active GitHub protection.
+The ruleset policy is a **child-project blueprint**. Ask for the project-start Rules decision. When an authenticated admin-capable interface is available and the user approves, apply desired repository rules/settings and re-read GitHub to verify enforcement. Otherwise provide exact manual actions and record pending state. A policy file is not proof of active protection.
 
 Sensitive/shared paths require the configured owner/reviewer discipline. Child repositories should regenerate CODEOWNERS during bootstrap with identities valid for that repository.
 
 ## Quality and security
 
-Use `CODE-QUALITY.md`, `SECURITY.md`, and `config/quality/quality-policy.json`. Required checks cannot be silently skipped. External GitHub Actions must be pinned to full commit SHAs. After stack approval, add mature stack-specific format/lint/static/type/test/build/dependency/security gates and relevant E2E/accessibility/performance/migration/container/IaC/license/coverage checks.
+Use `PROJECT-INITIALIZATION.md`, `CODE-QUALITY.md`, `SECURITY.md`, and `config/quality/quality-policy.json`.
+
+The quality policy and files under `blueprints/github/` are **inactive source templates**. They are installed into active `.github/` paths only in child projects. The universal baseline is applied automatically during child initialization; after stack approval, add mature stack-specific format/lint/static/type/test/build/dependency/security gates and relevant E2E/accessibility/performance/migration/container/IaC/license/coverage checks.
+
+Required checks cannot be silently skipped after they are installed. External GitHub Actions must be pinned to full commit SHAs.
 
 Unauthorized attacks, credential theft, destructive third-party actions, malware, or security testing outside authorized scope are forbidden.
 
 ## Linear
 
-GitHub is canonical for code, branches, commits, PRs, merge state, `config/ai/`, `config/coordination/`, and README/runtime state. Linear is the planning/progress mirror. Reconcile on startup/resume and material events; hourly sync only when a persistent runtime truly exists. If issue quota blocks creation, use project status/document fallback.
+`config/integrations/linear-sync.json` is a **connection blueprint** in the template source, not an attached project.
+
+In each child project, the AI must ask the user to **Connect Linear** through the host's secure connection/authentication UI, then map or create the appropriate Linear project and persist that mapping only in the child repository. GitHub is canonical for code, branches, commits, PRs, and merge reality; Linear is the planning/progress mirror. Reconcile on startup/resume and material events; hourly sync only when a persistent runtime truly exists.
 
 ## Continuous improvement and protocol updates
 
-Use `CONTINUOUS-IMPROVEMENT.md` for technology/innovation loops. Use `config/protocol/version.json`, `config/protocol/migrations.json`, and the protocol-update watcher for upstream ANPOS changes. Protocol migrations must be impact-analyzed and must not blindly overwrite project-specific implementation or approved architecture.
+Use `CONTINUOUS-IMPROVEMENT.md` for technology/innovation loops. Child runtime workflow blueprints live under `blueprints/github/workflows/` and become active only after child initialization installs them. Use `config/protocol/version.json`, `config/protocol/migrations.json`, and the protocol-update blueprint for upstream ANPOS changes. Protocol migrations must not blindly overwrite project-specific implementation or approved architecture.
 
 ## Clarification rule
 
