@@ -1,6 +1,15 @@
 # Continuous Improvement and Maintenance Protocol
 
-This protocol governs requirements 31–32. It adds two durable GitHub-backed improvement loops without allowing unattended changes to production code.
+This protocol governs requirements 31–32 for **child projects created from ANPOS**. The canonical source stores inactive workflow/config blueprints; it does not run project maintenance loops against itself.
+
+## Template boundary
+
+Source blueprints:
+
+- `blueprints/github/workflows/technology-update-watch.yml`
+- `blueprints/github/workflows/innovation-scout.yml`
+
+Child bootstrap installs the applicable files into the child repository's active `.github/workflows/` paths. Technology Watch remains disabled until the child has an approved technology stack. Innovation Scout remains disabled until explicit owner opt-in.
 
 ## Core rule
 
@@ -10,7 +19,7 @@ Every approved maintenance/change cycle follows:
 
 **Detect → Research → Compare → Impact Analysis → Plan → Supervisor Alert → Owner Consent → Isolated Implementation → Tests/QA/Security Verification → Review → Merge → State/README/Linear Sync**
 
-GitHub remains canonical for code and consent/maintenance state. Linear mirrors approved work when available.
+GitHub remains canonical for code and consent/maintenance state. Linear mirrors approved child-project work when connected.
 
 ---
 
@@ -18,13 +27,13 @@ GitHub remains canonical for code and consent/maintenance state. Linear mirrors 
 
 ### Schedule
 
-`.github/workflows/technology-update-watch.yml` runs once every 24 hours and may also be dispatched manually.
+The source blueprint is `blueprints/github/workflows/technology-update-watch.yml`. After child bootstrap it becomes `.github/workflows/technology-update-watch.yml` in the child repository. It is enabled only after the child has an approved technology stack, then runs once every 24 hours and may also be dispatched manually.
 
 The GitHub Action is a durable scheduler/trigger, not a substitute for an AI runtime. It creates or preserves a single open Supervisor audit request. When an active Supervisor runtime is available, the Supervisor processes that request.
 
 ### What the Supervisor audits
 
-Build a current technology inventory from repository reality, including where relevant:
+Build a current technology inventory from child-repository reality, including where relevant:
 
 - frontend framework/runtime
 - backend framework/runtime
@@ -84,7 +93,7 @@ Create a consent request in `config/consent/consent-requests.json` and a Supervi
 
 ### Owner notification email
 
-The Supervisor must notify the configured project/repository owner contact by email when a meaningful update requires consent.
+The Supervisor must notify the configured child-project owner contact by email when a meaningful update requires consent.
 
 The email should contain:
 
@@ -126,13 +135,13 @@ After consent becomes `approved`:
 7. Test compatibility and rollback where relevant.
 8. Update architecture/docs/version inventory.
 9. Submit through normal review/merge governance.
-10. Update project memory, README dashboard, Linear, and maintenance state.
+10. Update project memory, child README/runtime state, Linear, and maintenance state.
 
 An approved dependency update is not complete merely because installation succeeds.
 
 ### Urgent security updates
 
-A critical security update may be flagged `urgent`, but this protocol does not silently bypass owner authority. If an explicit emergency-remediation policy has previously been approved for the project, follow it. Otherwise obtain expedited consent and clearly communicate exposure/risk.
+A critical security update may be flagged `urgent`, but this protocol does not silently bypass owner authority. If an explicit emergency-remediation policy has previously been approved for the child project, follow it. Otherwise obtain expedited consent and clearly communicate exposure/risk.
 
 ---
 
@@ -140,7 +149,7 @@ A critical security update may be flagged `urgent`, but this protocol does not s
 
 ### Activation consent
 
-This loop is optional and disabled by default.
+This loop is optional and disabled by default in both the source blueprint and newly bootstrapped child until owner approval.
 
 Before activation, offer:
 
@@ -151,11 +160,13 @@ If native controls are unavailable, require the exact fallback:
 
 `ENABLE 25-HOUR INNOVATION SCOUT`
 
-Record the decision in `config/maintenance/innovation-scout.json`.
+Record the decision in the child project's `config/maintenance/innovation-scout.json`.
 
 ### Schedule semantics
 
-GitHub cron cannot express a true repeating 25-hour interval directly. Therefore `.github/workflows/innovation-scout.yml` runs an hourly lightweight due-check and creates a scout request only when at least 25 hours have elapsed since the last scout request and no prior scout request remains open.
+The source blueprint is `blueprints/github/workflows/innovation-scout.yml`. Child bootstrap installs it as `.github/workflows/innovation-scout.yml`, but it remains inactive while `enabled` is false.
+
+GitHub cron cannot express a true repeating 25-hour interval directly. Therefore, once explicitly enabled in a child project, the workflow runs an hourly lightweight due-check and creates a scout request only when at least 25 hours have elapsed since the last scout request and no prior scout request remains open.
 
 This preserves the requested ~25-hour cadence without one-hour research runs or noisy repository commits.
 
@@ -219,28 +230,30 @@ After approval, use the normal architecture/data-flow/UI/UX/security/QA and mult
 
 ## Scheduled workflow limitations
 
-GitHub Actions can schedule and create durable repository audit requests, but a generic repository cannot assume a continuously running AI agent, connected Gmail account, authenticated one-click email callback, or access to proprietary tools.
+GitHub Actions can schedule and create durable child-repository audit requests, but a generic template cannot assume a continuously running AI agent, connected email account, authenticated one-click email callback, or access to proprietary tools.
 
 Therefore:
 
-- scheduled Actions create durable due/audit requests
-- an available Supervisor AI performs the actual current research and planning
-- email is sent only through an authorized connected provider/runtime
-- consent is recorded only through a verifiable authorized action
-- if the Supervisor was offline, it processes overdue requests at next startup/resume
-- never claim an email, research run, consent click, or code update occurred when the required runtime/integration was unavailable
+- source files are inactive blueprints;
+- child bootstrap installs project workflows;
+- scheduled child Actions create durable due/audit requests;
+- an available Supervisor AI performs the actual current research and planning;
+- email is sent only through an authorized connected provider/runtime;
+- consent is recorded only through a verifiable authorized action;
+- if the Supervisor was offline, it processes overdue requests at next startup/resume;
+- never claim an email, research run, consent click, or code update occurred when the required runtime/integration was unavailable.
 
 ## Completion and reconciliation
 
-After either maintenance loop produces an approved change and it is merged:
+After either maintenance loop produces an approved child-project change and it is merged:
 
 - increment normal merge generation
 - alert active workers to reconcile main
 - update technology/options/modules inventory
 - close the maintenance/scout request
 - update `config/consent/consent-requests.json`
-- refresh README
-- sync Linear when available
+- refresh child project status/README
+- sync Linear when connected
 - record test/security evidence
 
-The two loops continuously improve the project without turning automated discovery into uncontrolled scope or dependency churn.
+The two loops continuously improve child projects without turning automated discovery into uncontrolled scope or dependency churn.
