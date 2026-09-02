@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/consent-requests.schema.json",
+  "title": "ANPOS Consent Requests",
+  "type": "object",
+  "required": ["schema_version", "next_sequence", "requests", "status_values"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 2},
+    "next_sequence": {"type": "integer", "minimum": 1},
+    "requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "requested_at", "request_hash", "nonce", "expires_at", "status"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^CONSENT-[0-9]{6}$"},
+          "request_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "nonce": {"type": "string", "minLength": 16},
+          "expires_at": {"type": "string", "minLength": 1},
+          "nonce_consumed_at": {"type": ["string", "null"]},
+          "status": {"enum": ["pending", "approved", "partially_approved", "rejected", "expired", "implemented", "verified", "closed"]},
+          "decision_identity_evidence_ref": {"type": ["string", "null"]},
+          "decision_request_hash": {"type": ["string", "null"]}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"status": {"enum": ["approved", "partially_approved", "rejected"]}}},
+            "then": {"required": ["decision_by", "decision_identity_evidence_ref", "decision_at", "decision_request_hash", "nonce_consumed_at"]}
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
