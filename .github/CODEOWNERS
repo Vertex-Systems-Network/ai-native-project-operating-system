@@ -1,0 +1,10 @@
+# Template-source CODEOWNERS. Child repos should regenerate this via scripts/bootstrap_instance.py.
+* @wpessential
+/.github/ @wpessential
+/config/coordination/ @wpessential
+/config/protocol/ @wpessential
+/config/github/ @wpessential
+/config/consent/ @wpessential
+/schemas/ @wpessential
+/scripts/ @wpessential
+/SECURITY.md @wpessential
