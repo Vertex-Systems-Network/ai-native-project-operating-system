@@ -139,15 +139,14 @@ def validate_protocol_versioning() -> None:
 
     last_migration = version.get("last_protocol_migration")
     applied = migrations.get("applied_migrations", [])
-    if last_migration:
-        if not isinstance(applied, list) or not any(
-            isinstance(record, dict)
-            and record.get("id") == last_migration
-            and record.get("status") == "applied"
-            and record.get("to_version") == current
-            for record in applied
-        ):
-            fail("protocol version: last_protocol_migration must reference an applied migration to the current version")
+    if last_migration and not any(
+        isinstance(record, dict)
+        and record.get("id") == last_migration
+        and record.get("status") == "applied"
+        and record.get("to_version") == current
+        for record in applied if isinstance(applied, list)
+    ):
+        fail("protocol version: last_protocol_migration must reference an applied migration to the current version")
 
 
 def validate_template_boundary() -> None:
@@ -157,6 +156,8 @@ def validate_template_boundary() -> None:
     agents = load_json("config/ai/agent-catalog.json")
     rules = load_json("config/github/ruleset-policy.json")
     quality = load_json("config/quality/quality-policy.json")
+    supervisor = load_json("config/coordination/supervisor-state.json")
+    queue = load_json("config/coordination/agent-work-queue.json")
 
     if instance.get("instance_status") == "template_source":
         if pm.get("status") != "template_blueprint" or pm.get("activation_scope") != "child_project_only":
@@ -189,6 +190,16 @@ def validate_template_boundary() -> None:
         role_assignments = agents.get("role_assignments") or {}
         if role_assignments.get("supervisor_agent_id") not in (None, "") or role_assignments.get("worker_agent_ids"):
             fail("template source: development AI role assignments must be empty")
+
+        if "last_linear_sync_at" in supervisor:
+            fail("template source: legacy last_linear_sync_at field must be migrated to last_pm_sync_at")
+        if supervisor.get("last_pm_sync_at") not in (None, ""):
+            fail("template source: last_pm_sync_at must be empty")
+        slot_schema = queue.get("slot_schema") or {}
+        if "linear_reference" in slot_schema:
+            fail("template source: legacy linear_reference field must be migrated to pm_reference")
+        if "pm_reference" not in slot_schema:
+            fail("template source: queue slot schema must include pm_reference")
 
         if rules.get("status") != "template_blueprint" or rules.get("activation_scope") != "child_project_only":
             fail("template source: GitHub Rules policy must remain a child-project template_blueprint")
@@ -286,10 +297,10 @@ def validate_coordination() -> None:
     queue = load_json("config/coordination/agent-work-queue.json")
     supervisor = load_json("config/coordination/supervisor-state.json")
     machine = load_json("config/protocol/state-machine.json")
-    if int(queue.get("schema_version", 0)) < 2:
-        fail("agent-work-queue schema_version must be >= 2")
-    if int(supervisor.get("schema_version", 0)) < 2:
-        fail("supervisor-state schema_version must be >= 2")
+    if int(queue.get("schema_version", 0)) < 3:
+        fail("agent-work-queue schema_version must be >= 3")
+    if int(supervisor.get("schema_version", 0)) < 3:
+        fail("supervisor-state schema_version must be >= 3")
     sup = supervisor.get("supervisor") or {}
     if sup.get("status") == "active":
         for key in ["agent_id", "heartbeat_at", "lease_id", "lease_expires_at", "fencing_token", "election_ref"]:
