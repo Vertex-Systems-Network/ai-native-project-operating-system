@@ -125,7 +125,7 @@ def validate_required_files() -> None:
         "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
         "AI-NATIVE-EXECUTION.md", "MULTI-AGENT-ORCHESTRATION.md", "AUTO-AGENT.md", "SUPERVISOR.md", "ORCHESTRATOR.md",
         "DEVELOPMENT-LIFECYCLE.md", "CONTINUOUS-IMPROVEMENT.md", "GITHUB-GOVERNANCE.md", "CODE-QUALITY.md", "SECURITY.md",
-        "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "FINAL-CORE.md", "README.md",
+        "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "README.md",
         "PROJECT-IDEA.md", "requirements-anpos.txt",
         "config/protocol/version.json", "config/protocol/instance.json", "config/protocol/migrations.json", "config/protocol/state-machine.json",
         "config/traceability/requirements-traceability.json", "config/integrations/project-management.json",
