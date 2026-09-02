@@ -4,6 +4,7 @@
   "activation_scope": "child_project_only",
   "protected_control_plane": true,
   "protected_paths": [
+    "/.gitignore",
     "/AGENTS.md",
     "/.ai/**",
     "/CLAUDE.md",
