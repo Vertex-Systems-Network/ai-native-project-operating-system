@@ -5,10 +5,11 @@
   "type": "object",
   "required": ["schema_version", "coordination_epoch", "supervisor", "merge_generation", "status"],
   "properties": {
-    "schema_version": {"type": "integer", "minimum": 2},
+    "schema_version": {"type": "integer", "minimum": 3},
     "coordination_epoch": {"type": "integer", "minimum": 0},
     "merge_generation": {"type": "integer", "minimum": 0},
-    "status": {"enum": ["unassigned", "active", "expired", "relinquished", "idle_synced"]},
+    "last_pm_sync_at": {"type": ["string", "null"]},
+    "status": {"enum": ["template_unassigned", "unassigned", "active", "expired", "relinquished", "idle_synced"]},
     "supervisor": {
       "type": "object",
       "required": ["status", "agent_id", "heartbeat_at", "lease_id", "lease_expires_at", "fencing_token", "election_ref"],
