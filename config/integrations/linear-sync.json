@@ -22,11 +22,11 @@
     "sync_on_governance_or_quality_change": true,
     "catch_up_on_resume": true
   },
-  "last_successful_sync_at": "2026-09-02T18:11:20+05:00",
-  "last_attempt_at": "2026-09-02T18:11:20+05:00",
+  "last_successful_sync_at": "2026-09-02T18:42:07+05:00",
+  "last_attempt_at": "2026-09-02T18:42:07+05:00",
   "last_error": null,
-  "last_reconciled_main_sha": "15facefbfa2f90b74caa2c4c0b6148d6cf9164fa",
-  "last_linear_status_update_id": "13a5ca0c-999f-4278-9bf5-25a52760ed9e",
-  "sync_result": "governance_and_quality_layers_reconciled",
+  "last_reconciled_main_sha": "544043283e0b1e81fffe7d85ffce43ca1b863aff",
+  "last_linear_status_update_id": "acdf1c32-3323-41f3-b3e1-bc2a57d28eac",
+  "sync_result": "main_and_dependabot_pr_review_state_reconciled",
   "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
 }
