@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "coordination_mode": "multi_agent",
   "updated_at": null,
   "slots": [],
@@ -28,7 +28,7 @@
     "heartbeat_at": null,
     "submitted_at": null,
     "review_reference": null,
-    "linear_reference": null,
+    "pm_reference": null,
     "blockers": [],
     "notes": []
   },
