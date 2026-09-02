@@ -2,9 +2,9 @@
 """Initialize a child repository created from the ANPOS template.
 
 The source repository is an inert template. This script activates child-project
-runtime state and installs child runtime blueprints. It does NOT connect Linear
-or apply GitHub repository rules; those actions are completed by the AI/user
-setup flow after authentication/consent.
+runtime state and installs child runtime blueprints. It does NOT connect a live
+project-management provider, attach development AIs, or apply GitHub repository
+rules; those actions are completed by the AI/user setup flow afterward.
 
 Dry-run by default. Use --apply to write changes. The template source repository
 is protected unless --allow-source is explicitly supplied for deliberate tests.
@@ -24,8 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_REPO = "Vertex-Systems-Network/ai-native-project-operating-system"
 BLUEPRINT_ROOT = ROOT / "blueprints" / "github"
 
-# Governance is intentionally excluded here because GitHub Rules require the
-# explicit project-start approval flow before application/monitoring.
+# Governance is intentionally excluded because GitHub Rules require the explicit
+# project-start approval flow before application/monitoring.
 AUTO_INSTALL_WORKFLOWS = (
     "codeql-actions.yml",
     "dependency-review.yml",
@@ -108,7 +108,8 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
         "outstanding_updates": [],
         "outstanding_removals": [],
         "unresolved_decisions": [
-            "Connect Linear and map this child repository to a Linear project.",
+            "Choose a Project Management System or explicitly skip PM integration.",
+            "Choose the Development AI agent pool available in the current host.",
             "Ask the user whether to apply the recommended GitHub Rules policy."
         ],
         "critical_defects": [],
@@ -155,12 +156,29 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
             doc["next_sequence"] = 1
         changed[path] = json.dumps(doc, indent=2) + "\n"
 
-    # Linear remains deliberately unbound until the user authenticates/connects
-    # the Linear account in the child-project setup flow.
+    pm = load("config/integrations/project-management.json")
+    pm["status"] = "selection_required"
+    pm["activation_scope"] = "child_project"
+    pm["selection"] = {
+        "status": "not_selected",
+        "selected_provider_id": None,
+        "selected_provider_name": None,
+        "workspace_or_org_id": None,
+        "workspace_or_org_name": None,
+        "external_project_id": None,
+        "external_project_name": None,
+        "external_project_url": None,
+        "connected_at": None,
+        "verified_at": None,
+        "sync_enabled": False,
+    }
+    changed["config/integrations/project-management.json"] = json.dumps(pm, indent=2) + "\n"
+
+    # Linear remains one optional adapter and is unbound unless selected later.
     linear = load("config/integrations/linear-sync.json")
-    linear["status"] = "connection_required"
+    linear["status"] = "not_selected"
     linear["enabled"] = False
-    linear["activation_scope"] = "child_project"
+    linear["activation_scope"] = "child_project_only_when_selected"
     linear["project"] = {"name": None, "id": None, "url": None}
     for key in [
         "last_successful_sync_at",
@@ -171,11 +189,18 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     ]:
         if key in linear:
             linear[key] = None
-    linear["sync_result"] = "awaiting_user_linear_connection"
+    linear["sync_result"] = "provider_not_selected"
     changed["config/integrations/linear-sync.json"] = json.dumps(linear, indent=2) + "\n"
 
-    # The baseline workflows are installed automatically in the child, but must
-    # still be observed running successfully before the AI claims them as passing.
+    agents = load("config/ai/agent-catalog.json")
+    agents["selection_status"] = "discovery_required"
+    agents["available_agents"] = []
+    agents["selected_agents"] = []
+    agents["suggested_but_unavailable"] = []
+    changed["config/ai/agent-catalog.json"] = json.dumps(agents, indent=2) + "\n"
+
+    # Baseline workflows are installed automatically in the child, but must still
+    # be observed running successfully before the AI claims them as passing.
     quality = load("config/quality/quality-policy.json")
     quality["status"] = "installed_pending_verification"
     quality["activation_scope"] = "child_project"
@@ -186,8 +211,8 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     }
     changed["config/quality/quality-policy.json"] = json.dumps(quality, indent=2) + "\n"
 
-    # Rules remain a user decision. The bootstrap records the pending decision but
-    # does not mutate GitHub administration settings or enable governance audit.
+    # Rules remain a user decision. Bootstrap never mutates repository-admin
+    # settings or enables governance auditing before that decision.
     rules = load("config/github/ruleset-policy.json")
     rules["status"] = "pending_user_decision"
     rules["activation_scope"] = "child_project"
@@ -233,7 +258,8 @@ def main() -> int:
         print("Would initialize child project:", repository)
         if not args.github_owner:
             print("NOTE: --github-owner is required when --apply is used.")
-        print("NOTE: Linear remains unbound until the user connects/authenticates Linear.")
+        print("NOTE: Project Management provider selection remains unresolved until the user chooses one or skips.")
+        print("NOTE: Development AI selection remains unresolved until runtime discovery + user selection.")
         print("NOTE: Code Quality baseline is installed but remains pending verification until child checks run.")
         print("NOTE: GitHub Rules remain unapplied until the user approves the Rules setup flow.")
         for path in sorted(changes):
@@ -245,7 +271,7 @@ def main() -> int:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
     print(f"Initialized ANPOS child project {repository} with {len(changes)} reset/generated files.")
-    print("NEXT: connect Linear, verify baseline Code Quality, then ask the user whether to apply recommended GitHub Rules.")
+    print("NEXT: choose PM provider, connect/map it if selected, choose Development AI(s), verify Code Quality, then decide GitHub Rules.")
     return 0
 
 
