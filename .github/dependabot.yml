@@ -8,8 +8,5 @@ updates:
       time: "03:00"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 10
-    labels:
-      - dependencies
-      - ai-native-maintenance
     commit-message:
       prefix: chore(actions)
