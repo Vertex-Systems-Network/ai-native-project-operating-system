@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "status": "inactive_blueprint",
+  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/provisioning service.",
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/webhooks/github/marketplace",
+      "authentication": "github_webhook_hmac_sha256",
+      "idempotency": "X-GitHub-Delivery",
+      "purpose": "Process verified marketplace_purchase events",
+      "must_not_return_secrets": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/entitlements/current",
+      "authentication": "verified_github_account_session_or_app_identity",
+      "purpose": "Return current signed entitlement for the authenticated canonical GitHub account",
+      "response_contains_private_signing_material": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/keys",
+      "authentication": "public_or_cacheable_read",
+      "purpose": "Publish active entitlement verification public keys/key IDs",
+      "response_contains_private_signing_material": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/provision",
+      "authentication": "verified_github_account_session_or_app_identity",
+      "idempotency_header": "Idempotency-Key",
+      "purpose": "Provision an entitled private template/update/service capability after server-side entitlement verification",
+      "requires_active_entitlement": true,
+      "must_not_modify_existing_generated_project_on_expiry": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/reconcile",
+      "authentication": "operator_or_trusted_runtime_only",
+      "idempotency_header": "Idempotency-Key",
+      "purpose": "Reconcile commercial ledger against authenticated billing-provider reality after missed/ambiguous events",
+      "customer_callable": false
+    }
+  ],
+  "cross_cutting_rules": {
+    "canonical_subject_is_github_numeric_account_id": true,
+    "authorization_is_server_side": true,
+    "repository_reference_is_not_authorization": true,
+    "rate_limiting_required": true,
+    "structured_audit_logging_required": true,
+    "sensitive_fields_redacted_from_logs": true,
+    "request_ids_required": true,
+    "timeouts_and_bounded_retries_required": true,
+    "no_payment_card_storage_when_processor_handles_payment": true,
+    "no_remote_kill_switch_for_generated_customer_projects": true
+  }
+}
