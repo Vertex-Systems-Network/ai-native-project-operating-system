@@ -24,7 +24,6 @@
 /CONTROL-PLANE-SECURITY.md @wpessential
 /PRODUCTION-ASSURANCE.md @wpessential
 /DESIGN-DATA-OPERATIONS.md @wpessential
-/FINAL-CORE.md @wpessential
 /config/ai/agent-catalog.json @wpessential
 /config/ai/memory-provenance.json @wpessential
 /config/coordination/ @wpessential
