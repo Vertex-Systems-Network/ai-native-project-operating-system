@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.1.0",
+  "current_protocol_version": "1.2.0",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -42,10 +42,9 @@
         "Add runtime-discovered Choose Development AI step during child initialization",
         "Persist selected AI pool and Supervisor/Worker role assignments only in child projects",
         "Generalize Supervisor, Worker, and orchestrator PM synchronization",
-        "Rename coordination fields from last_linear_sync_at/linear_reference to last_pm_sync_at/pm_reference",
-        "Upgrade Supervisor/work-queue coordination schemas to v3 for generic PM state",
         "Reset PM provider and AI selection state during child bootstrap",
-        "Strengthen template-source validation against live PM/AI attachment state and legacy vendor-specific coordination fields"
+        "Strengthen template-source validation against live PM/AI attachment state",
+        "Generalize coordination mirror fields from Linear-only to PM-provider-neutral names"
       ],
       "project_conflicts": [],
       "requires_owner_consent": false,
@@ -57,19 +56,54 @@
         "config/integrations/linear-sync.json is an optional Linear adapter",
         "config/ai/agent-catalog.json defines runtime-discovered Development AI selection and role assignment",
         "PROJECT-INITIALIZATION.md and START-HERE.md include PM provider selection followed by Development AI selection",
-        "config/coordination/supervisor-state.json uses last_pm_sync_at",
-        "config/coordination/agent-work-queue.json uses pm_reference",
-        "schemas/supervisor-state.schema.json and schemas/agent-work-queue.schema.json require schema v3",
         "scripts/bootstrap_instance.py resets PM and AI selection for child projects",
-        "AGENTS.md, MULTI-AGENT-ORCHESTRATION.md, SUPERVISOR.md, AUTO-AGENT.md, ORCHESTRATOR.md, CONTINUOUS-IMPROVEMENT.md, FINAL-CORE.md and README.md use the provider-agnostic model",
-        "scripts/validate_ai_native_repo.py checks PM/AI source-template invariants and rejects legacy Linear-only coordination fields"
+        "coordination state uses last_pm_sync_at and pm_reference rather than Linear-specific fields",
+        "scripts/validate_ai_native_repo.py checks PM and AI source-template invariants"
+      ]
+    },
+    {
+      "id": "ANPOS-1.1.0-to-1.2.0",
+      "from_version": "1.1.0",
+      "to_version": "1.2.0",
+      "detected_at": "2026-09-03T01:42:00+05:00",
+      "impact": [
+        "Requirements 45-56: protect the AI control plane, authenticate agent/runtime identity, enforce eligibility and least privilege, complete Worker/Supervisor lease lifecycle, protect coordination namespaces, add fencing/CAS mutation gateway, trusted-base CI, trust firewall, replay-resistant consent, memory provenance, and conformance/chaos testing",
+        "Requirements 57-66: make quality bootstrap capability-aware, validate workflow permissions/features, generate stack-adaptive dependency management, enforce Draft 2020-12 JSON Schema, add release/environment and OIDC/secrets policy, SBOM/provenance/attestation evidence, PM conflict/idempotency authority, typed agent handoff, and AI-provider privacy/data boundaries",
+        "Requirements 67-74: lock approved design revisions, add visual/accessibility traceability with WCAG 2.2 AA web default, data classification/privacy lifecycle, persistent threat modeling, API/database migration safety, observability/SLO/incident/DR policy, and bounded agent budgets/retries/delegation",
+        "Require selected agent identity evidence and runtime principal matching before privileged Worker/Supervisor authority",
+        "Require path/tool/network/PM/secret/deployment scope checks before Worker claim creation",
+        "Add heartbeat/release/recovery scripts for Worker and Supervisor leases and orphan-lock recovery behavior",
+        "Add authenticated consent hash/nonce/expiry/evidence enforcement",
+        "Expand protected CODEOWNERS/control-plane paths to all assurance/security/design/data/operations/testing/traceability surfaces",
+        "Run current validator, protected-base validator, JSON Schema validation and control-plane unit/conformance tests in the child quality blueprint",
+        "Keep canonical source inert while child projects activate project-specific security, quality, design, release, data and operations state"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing child projects must impact-analyze this control-plane upgrade. Require owner consent if applying it materially changes approved project behavior, permissions, paid services, environments, destructive migration behavior, or deployment policy.",
+      "status": "applied",
+      "applied_at": "2026-09-03T01:42:00+05:00",
+      "verification_evidence": [
+        "CONTROL-PLANE-SECURITY.md maps requirements 45-56",
+        "PRODUCTION-ASSURANCE.md maps requirements 57-66",
+        "DESIGN-DATA-OPERATIONS.md maps requirements 67-74",
+        "config/coordination/agent-work-queue.json and supervisor-state.json use hardened schema version 4",
+        "scripts/anpos_guard.py enforces selected identity, principal, role, capability, path, tool, network, PM, secret and deployment scope",
+        "scripts/lease_control.py and scripts/coordination_mutation.py implement lease lifecycle and shared mutation guards",
+        "scripts/consent_guard.py and consent schema enforce request hash, nonce, expiry and authenticated decision evidence",
+        "config/testing/conformance-scenarios.json defines unit/runtime/CI/adversarial certification scenarios",
+        "tests/test_control_plane.py covers identity, eligibility, permission escalation, mutation, consent, design and source-boundary cases",
+        "config/quality/quality-policy.json separates universal and capability-dependent checks",
+        "blueprints/github/workflows/repository-quality.yml runs pinned dependencies, compile, unit tests, current validator and protected-base validator",
+        "config/release, config/data, config/operations, config/contracts, config/security and config/design contain reusable child assurance policy",
+        "scripts/validate_ai_native_repo.py certifies source-boundary and hardening invariants"
       ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.1.0-to-NEXT",
-    "from_version": "1.1.0",
+    "id": "ANPOS-1.2.0-to-NEXT",
+    "from_version": "1.2.0",
     "to_version": null,
     "detected_at": null,
     "impact": [],
