@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "coordination_epoch": 0,
+  "supervisor": {
+    "status": "unassigned",
+    "agent_id": null,
+    "agent_type": null,
+    "branch": null,
+    "active_module_id": null,
+    "active_work_unit_id": null,
+    "started_at": null,
+    "heartbeat_at": null
+  },
+  "merge_generation": 0,
+  "last_merge_sha": null,
+  "last_merge_at": null,
+  "active_worker_count": 0,
+  "last_linear_sync_at": null,
+  "last_readme_dashboard_update_at": null,
+  "last_reconciled_main_sha": null,
+  "status": "not_initialized"
+}
