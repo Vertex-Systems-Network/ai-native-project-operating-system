@@ -1,81 +1,83 @@
 # AI-Native Code Quality System
 
-Code quality is a merge gate and planning concern for **child projects created from this template**. The canonical template source stores the policy and inactive blueprints; it does not represent those project checks as already applied to itself.
+Code quality is a merge gate and planning concern for **child projects created from this template**. The canonical source stores policy and inactive blueprints; it does not represent child checks as already applied.
 
-The machine-readable blueprint is `config/quality/quality-policy.json`.
+Machine policy: `config/quality/quality-policy.json`.
 
 ## Source template boundary
 
-On `Vertex-Systems-Network/ai-native-project-operating-system`:
+- `blueprints/github/` contains inactive reusable files.
+- Source presence is not evidence a live check exists.
+- Child workflows are activated only by child initialization/capability setup.
 
-- files under `blueprints/github/` are reusable inactive project blueprints;
-- absence/presence of a blueprint is not evidence that a live GitHub check is enabled;
-- child-project quality workflows must not be treated as active on the canonical source.
+## Capability-aware child baseline — Requirements 57–58
 
-## Universal child-project baseline
+Child bootstrap always installs the universally safe **AI Native Quality Gates** plus the non-privileged runtime/update blueprints and Dependabot seed configuration.
 
-During child bootstrap, `scripts/bootstrap_instance.py` installs the universal baseline into the child's active `.github/` paths. Baseline capabilities include:
+Before enabling GitHub-hosted security features such as CodeQL, Dependency Review or Scorecard, inspect the actual child repository visibility, plan/features, permissions and support. Use `scripts/install_quality_capabilities.py` only after capability is known. If a feature is unavailable, record it as unavailable/deferred and use an appropriate local/open alternative where useful rather than knowingly starting the project with red CI.
 
-1. **AI Native Quality Gates**
-   - validates repository-backed JSON state;
-   - validates phase/module/work-unit/slot references;
-   - detects duplicate stable IDs;
-   - validates workflow safety invariants;
-   - requires third-party GitHub Actions to be pinned to full commit SHAs;
-   - validates YAML syntax and machine-file whitespace.
-2. **Dependency Review**
-   - evaluates dependency changes introduced by pull requests;
-   - blocks high-severity vulnerable dependency additions.
-3. **CodeQL baseline**
-   - provides the project security-analysis baseline supported by the repository/workflow context.
-4. **OpenSSF Scorecard**
-   - evaluates repository/supply-chain security posture where supported.
-5. **Dependabot**
-   - proposes supported dependency/workflow updates.
+The AI must verify actual successful child check names before using them in GitHub Rules.
 
-The AI must verify actual successful child-project checks before referring to them as active or using their names in GitHub Rules.
+Installed workflows must have minimum explicit permissions for their configured behavior. For example, a workflow must not request PR commenting while lacking the required permission; disable nonessential writes instead of escalating privileges by default.
 
-## Stack-adaptive checks
+## Formal machine-state validation — Requirement 60
 
-After `Approve Technology Stack`, the Architecture/SQA/Supervisor roles automatically select mature ecosystem-standard tooling for the actual stack and add CI checks before normal feature development scales up.
+ANPOS uses JSON Schema Draft 2020-12 validation through the pinned dependency in `requirements-anpos.txt`.
 
-At minimum, the selected stack should have, where the ecosystem supports them:
+- every `config/**/*.json` / routed machine config receives the base schema;
+- security/coordination-critical state also receives specialized schemas;
+- handwritten integrity checks supplement schemas rather than replace them.
+
+## Stack-adaptive quality — Requirement 59
+
+After `Approve Technology Stack`, automatically select mature ecosystem-standard tooling for the actual child project and configure CI before normal feature work scales.
+
+At minimum where supported:
 
 - deterministic formatting;
 - linting;
-- type checking or equivalent static analysis;
-- unit testing;
-- integration testing;
+- type/static analysis;
+- unit tests;
+- integration tests;
 - build/package verification;
 - dependency vulnerability audit;
 - security scanning.
 
-When relevant, also add contract/API tests, E2E tests, accessibility, performance/load, migration, container, infrastructure-as-code, license, and code-coverage gates.
+When relevant also add contract/API, E2E, accessibility, visual regression, performance/load, migration, container, IaC, license, coverage, SBOM and provenance/attestation checks.
 
-Normal non-destructive quality tooling does not require a separate generic approval. If setup requires paid services, secrets, repository-admin changes, destructive migrations, or another material commitment, obtain the applicable user approval/access first.
+Run `scripts/configure_dependabot.py` or equivalent after the actual stack/manifests exist so dependency updates cover the project's package ecosystems/directories, not only GitHub Actions.
+
+## Trusted control-plane verification — Requirement 51
+
+A PR must not be able to weaken its own validator unnoticed. The repository-quality blueprint:
+
+1. runs the current validator;
+2. on PRs, runs the **protected base revision's validator** against the proposed tree;
+3. runs control-plane conformance tests;
+4. reports control-plane file changes for CODEOWNER/independent review.
+
+Protected-path GitHub Rules/CODEOWNERS remain necessary because a workflow file itself is code and cannot be its own sole trust anchor.
+
+## Supply chain and release evidence — Requirements 62–63
+
+- pin third-party GitHub Actions to full commit SHAs;
+- use short-lived/OIDC deployment identity where supported;
+- keep privileged credentials away from untrusted PR execution;
+- enable secret scanning/push protection where supported;
+- production artifacts should link SBOM, source commit, artifact digest and build provenance/attestation when supported.
+
+See `PRODUCTION-ASSURANCE.md` and `config/release/release-policy.json`.
 
 ## Tool selection criteria
 
-Do not select a tool merely because it is popular. Compare:
+Compare ecosystem fit, maintenance/release health, false-positive profile, CI performance, autofix support, machine-readable/SARIF output, editor integration, monorepo support, security track record, license/cost and supported runtime compatibility.
 
-- ecosystem fit and framework awareness;
-- active maintenance and release health;
-- false-positive/noise profile;
-- CI performance;
-- autofix support;
-- machine-readable output/SARIF support;
-- editor/developer integration;
-- monorepo support;
-- security track record;
-- license and operating cost;
-- compatibility with the project's supported runtime versions.
-
-Record material tool decisions and why they were selected.
+Normal non-destructive quality tooling does not need another generic consent prompt. Paid services, secrets, repository-admin changes, destructive migrations or material commitments still require applicable access/consent.
 
 ## AI review layer
 
-An AI code-review service such as CodeRabbit can be added as a complementary reviewer when the child project's environment/account can actually run or attach it. It does not replace deterministic lint/test/security gates or independent review for high-risk changes.
+AI review services may complement deterministic gates when actually available. They never replace lint/tests/security gates, protected-base validation, or independent review for high-risk/control-plane changes.
 
 ## Definition of done
 
-A module/work unit is not complete because code exists. Required installed quality checks must pass, relevant tests must cover the behavior, known critical/high security issues must be resolved, documentation/state must agree with reality, and the Supervisor must accept the integration.
+A module/work unit is not complete because code exists. Required supported checks must pass, behavior must have relevant tests, critical/high security findings must be resolved or handled under authorized risk policy, applicable design/accessibility/migration/release evidence must exist, documentation/state must agree with repository reality, and Supervisor integration acceptance must be recorded.
