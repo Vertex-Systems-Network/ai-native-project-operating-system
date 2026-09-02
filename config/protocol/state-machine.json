@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "worker_slot_transitions": {
+    "free": ["claimed", "canceled"],
+    "claimed": ["in_progress", "free", "blocked", "canceled"],
+    "in_progress": ["blocked", "submitted_for_review", "canceled"],
+    "blocked": ["in_progress", "free", "canceled"],
+    "submitted_for_review": ["changes_requested", "approved", "canceled"],
+    "changes_requested": ["in_progress", "submitted_for_review", "canceled"],
+    "approved": ["merged", "changes_requested"],
+    "merged": ["completed"],
+    "completed": [],
+    "canceled": []
+  },
+  "supervisor_transitions": {
+    "unassigned": ["active"],
+    "active": ["expired", "relinquished"],
+    "expired": ["active"],
+    "relinquished": ["active"]
+  },
+  "invariants": [
+    "claimed/in_progress Worker slots require claim_id, claimant, coordination_epoch, fencing_token and lease_expires_at",
+    "active Supervisor requires lease_id, fencing_token, election_ref and lease_expires_at",
+    "only the current Supervisor fencing token may mutate shared coordination state",
+    "repository reality overrides stale mirrored status"
+  ]
+}
