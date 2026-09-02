@@ -65,14 +65,15 @@ def check_refs(values: Any, valid: set[str], label: str) -> None:
 
 def validate_required_files() -> None:
     required = [
-        "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "START-HERE.md",
+        "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
         "AI-NATIVE-EXECUTION.md", "MULTI-AGENT-ORCHESTRATION.md", "AUTO-AGENT.md",
         "SUPERVISOR.md", "ORCHESTRATOR.md", "DEVELOPMENT-LIFECYCLE.md",
         "CONTINUOUS-IMPROVEMENT.md", "GITHUB-GOVERNANCE.md", "CODE-QUALITY.md",
         "SECURITY.md", "PROJECT-IDEA.md", "README.md",
         "config/protocol/version.json", "config/protocol/instance.json", "config/protocol/migrations.json",
         "config/protocol/state-machine.json", "config/traceability/requirements-traceability.json",
-        "config/integrations/linear-sync.json", "config/github/ruleset-policy.json",
+        "config/integrations/project-management.json", "config/integrations/linear-sync.json",
+        "config/ai/agent-catalog.json", "config/github/ruleset-policy.json",
         "config/quality/quality-policy.json", "config/github/path-ownership.json", ".github/CODEOWNERS",
         "schemas/project-state.schema.json", "schemas/agent-work-queue.schema.json", "schemas/supervisor-state.schema.json",
         "scripts/bootstrap_instance.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
@@ -151,33 +152,73 @@ def validate_protocol_versioning() -> None:
 
 def validate_template_boundary() -> None:
     instance = load_json("config/protocol/instance.json")
+    pm = load_json("config/integrations/project-management.json")
     linear = load_json("config/integrations/linear-sync.json")
+    agents = load_json("config/ai/agent-catalog.json")
     rules = load_json("config/github/ruleset-policy.json")
     quality = load_json("config/quality/quality-policy.json")
 
     if instance.get("instance_status") == "template_source":
+        if pm.get("status") != "template_blueprint" or pm.get("activation_scope") != "child_project_only":
+            fail("template source: PM provider state must remain child-project template_blueprint")
+        selection = pm.get("selection") or {}
+        if selection.get("status") != "not_selected":
+            fail("template source: PM provider selection must remain not_selected")
+        for key in (
+            "selected_provider_id", "selected_provider_name", "workspace_or_org_id", "workspace_or_org_name",
+            "external_project_id", "external_project_name", "external_project_url", "connected_at", "verified_at"
+        ):
+            if selection.get(key) not in (None, ""):
+                fail(f"template source: PM runtime field {key} must be empty")
+        if selection.get("sync_enabled") is not False:
+            fail("template source: PM synchronization must be disabled")
+
         if linear.get("enabled") is not False:
-            fail("template source: Linear blueprint must not be enabled")
+            fail("template source: Linear adapter must not be enabled")
         project = linear.get("project") or {}
         if any(project.get(key) not in (None, "") for key in ("name", "id", "url")):
             fail("template source: Linear project mapping must be empty")
         for key in ("last_successful_sync_at", "last_attempt_at", "last_reconciled_main_sha", "last_linear_status_update_id"):
             if linear.get(key) not in (None, ""):
                 fail(f"template source: Linear runtime field {key} must be empty")
+
+        if agents.get("selection_status") not in {"not_selected", "discovery_required"}:
+            fail("template source: development AI selection must remain unresolved")
+        if agents.get("available_agents") or agents.get("selected_agents"):
+            fail("template source: project-specific AI agent pool must be empty")
+        role_assignments = agents.get("role_assignments") or {}
+        if role_assignments.get("supervisor_agent_id") not in (None, "") or role_assignments.get("worker_agent_ids"):
+            fail("template source: development AI role assignments must be empty")
+
         if rules.get("status") != "template_blueprint" or rules.get("activation_scope") != "child_project_only":
             fail("template source: GitHub Rules policy must remain a child-project template_blueprint")
         setup_flow = rules.get("setup_flow") or {}
         if setup_flow.get("ask_user_before_applying") is not True:
             fail("template source: child GitHub Rules setup must ask the user before applying")
+
         if quality.get("status") != "template_blueprint" or quality.get("apply_to_template_source") is not False:
             fail("template source: Code Quality policy must remain inactive blueprint")
         if quality.get("activation_scope") != "child_project_only":
             fail("template source: Code Quality activation_scope must be child_project_only")
+
         active_workflow_dir = ROOT / ".github" / "workflows"
         if active_workflow_dir.exists() and any(active_workflow_dir.glob("*.y*ml")):
             fail("template source: child runtime workflows must not exist in active .github/workflows")
         if (ROOT / ".github" / "dependabot.yml").exists():
             fail("template source: child Dependabot config must not be active in .github/dependabot.yml")
+
+
+def validate_provider_catalogs() -> None:
+    pm = load_json("config/integrations/project-management.json")
+    providers = pm.get("providers", [])
+    provider_ids = ids(providers, "project-management providers")
+    recommended = (pm.get("selection_flow") or {}).get("recommended_provider_id")
+    if recommended and recommended not in provider_ids:
+        fail(f"project-management recommended provider {recommended} is not in provider catalog")
+    if "linear" not in provider_ids:
+        fail("project-management provider catalog must include the Linear adapter")
+    if not pm.get("adapter_contract"):
+        fail("project-management provider catalog must define a non-empty adapter_contract")
 
 
 def validate_ai_graph() -> None:
@@ -285,8 +326,6 @@ def validate_workflow_tree(directory: Path, label: str) -> None:
 
 
 def validate_workflows() -> None:
-    # The source template validates inactive workflow blueprints. Child projects
-    # additionally validate their activated .github/workflows copies.
     validate_workflow_tree(ROOT / "blueprints" / "github" / "workflows", "blueprint")
     validate_workflow_tree(ROOT / ".github" / "workflows", "active")
 
@@ -297,6 +336,7 @@ def main() -> int:
     validate_manifest()
     validate_protocol_versioning()
     validate_template_boundary()
+    validate_provider_catalogs()
     validate_ai_graph()
     validate_coordination()
     validate_workflows()
