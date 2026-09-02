@@ -29,6 +29,7 @@ REQUIRED_FILES = [
     "schemas/license-entitlement.schema.json",
     "blueprints/commercial/marketplace-webhook-contract.json",
     "blueprints/commercial/entitlement-envelope.example.json",
+    "scripts/validate_commercial_licensing.py",
     "tests/test_commercial_licensing.py",
 ]
 
@@ -222,6 +223,66 @@ def validate_conformance() -> None:
         fail("commercial conformance scenarios must require commercial_runtime_integration")
 
 
+def validate_protection_and_routing() -> None:
+    manifest = load(".ai/manifest.json")
+    ownership = load("config/github/path-ownership.json")
+    control = load("config/security/control-plane-policy.json")
+
+    role = (manifest.get("roles") or {}).get("commercial_distribution")
+    if not isinstance(role, list):
+        fail("manifest must define commercial_distribution role")
+    else:
+        required_role_paths = {
+            "COMMERCIAL-LICENSING.md",
+            "config/licensing/commercial-policy.json",
+            "config/licensing/product-catalog.json",
+            "config/licensing/marketplace-adapter.json",
+            "config/licensing/entitlement-reference.json",
+            "scripts/validate_commercial_licensing.py",
+        }
+        missing = required_role_paths - set(role)
+        if missing:
+            fail(f"commercial_distribution role missing paths: {sorted(missing)}")
+
+    patterns = {
+        str(row.get("pattern"))
+        for row in ownership.get("rules", [])
+        if isinstance(row, dict)
+    }
+    protected = {str(value) for value in control.get("protected_paths", [])}
+    for expected in ["/COMMERCIAL-LICENSING.md", "/config/licensing/**"]:
+        if expected not in patterns:
+            fail(f"path ownership missing commercial protected pattern {expected}")
+        if expected not in protected:
+            fail(f"control-plane policy missing commercial protected path {expected}")
+
+    codeowners = (ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
+    for expected in ["/COMMERCIAL-LICENSING.md", "/config/licensing/"]:
+        if expected not in codeowners:
+            fail(f"CODEOWNERS missing commercial marker {expected}")
+
+    commercial_boundary = control.get("commercial_security_boundary") or {}
+    for key in [
+        "billing_entitlement_state_external_to_repository",
+        "webhook_and_signing_secrets_forbidden_in_repository",
+        "commercial_policy_changes_require_protected_review",
+        "license_expiry_must_not_be_used_as_destructive_project_control",
+    ]:
+        if commercial_boundary.get(key) is not True:
+            fail(f"control-plane commercial safeguard must remain true: {key}")
+
+
+def validate_quality_integration() -> None:
+    workflow = (ROOT / "blueprints" / "github" / "workflows" / "repository-quality.yml").read_text(encoding="utf-8")
+    for marker in [
+        "python scripts/validate_commercial_licensing.py",
+        "tests -p 'test_*.py'",
+        "config/licensing COMMERCIAL-LICENSING.md",
+    ]:
+        if marker not in workflow:
+            fail(f"repository quality blueprint missing commercial validation marker: {marker}")
+
+
 def validate_documentation() -> None:
     text = (ROOT / "COMMERCIAL-LICENSING.md").read_text(encoding="utf-8")
     for marker in [
@@ -242,14 +303,14 @@ def validate_documentation() -> None:
 
 def main() -> int:
     validate_files()
-    if ERRORS:
-        pass
-    else:
+    if not ERRORS:
         validate_source_boundary()
         validate_authority_and_safety()
         validate_entitlement_schema()
         validate_catalog()
         validate_conformance()
+        validate_protection_and_routing()
+        validate_quality_integration()
         validate_documentation()
 
     if ERRORS:
