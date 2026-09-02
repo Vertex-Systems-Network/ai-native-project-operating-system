@@ -1,10 +1,30 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "selection_status": "not_selected",
+  "selection_flow": {
+    "preferred_prompt": "Choose Development AI",
+    "only_selectable_when_current_host_can_use_agent": true,
+    "allow_multiple_agents": true,
+    "allow_role_assignment": true,
+    "never_claim_attached_without_runtime_evidence": true
+  },
   "discovery_rule": "Only expose an AI/agent as selectable when the current host can actually invoke, attach, hand off to, or otherwise use it for this repository.",
+  "candidate_examples": [
+    "Codex / ChatGPT",
+    "Claude Code",
+    "GitHub Copilot",
+    "Gemini",
+    "Cursor",
+    "Windsurf",
+    "Other verified compatible agent"
+  ],
   "available_agents": [],
   "selected_agents": [],
   "suggested_but_unavailable": [],
+  "role_assignments": {
+    "supervisor_agent_id": null,
+    "worker_agent_ids": []
+  },
   "agent_schema": {
     "id": "agent-id",
     "name": "Agent Name",
@@ -15,6 +35,7 @@
     "invokable": false,
     "roles": ["worker"],
     "selection_action": "Use Agent Name",
+    "connection_or_handoff_method": null,
     "notes": ""
   }
 }
