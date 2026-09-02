@@ -26,6 +26,7 @@
 /PRODUCTION-ASSURANCE.md @wpessential
 /DESIGN-DATA-OPERATIONS.md @wpessential
 /COMMERCIAL-LICENSING.md @wpessential
+/commercial-service/ @wpessential
 /config/ai/agent-catalog.json @wpessential
 /config/ai/memory-provenance.json @wpessential
 /config/coordination/ @wpessential
