@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "template_blueprint",
   "activation_scope": "commercial_distribution_only",
   "provider": "github_marketplace",
@@ -9,6 +9,15 @@
     "marketplace_listing_slug": null,
     "verified_publisher_confirmed": false,
     "financial_onboarding_confirmed": false
+  },
+  "listing_constraints": {
+    "paid_listing_requires_verified_publisher": true,
+    "paid_listing_requires_financial_onboarding": true,
+    "maximum_pricing_plans": 10,
+    "paid_plan_requires_monthly_and_annual_usd_prices": true,
+    "supported_pricing_models": ["free", "flat_rate", "per_unit"],
+    "optional_free_trial_days_when_enabled": 14,
+    "constraints_must_be_rechecked_against_current_github_docs_before_launch": true
   },
   "webhook": {
     "event": "marketplace_purchase",
