@@ -1,6 +1,6 @@
 # AI Native Project Operating System
 
-A repository-first operating system for turning a raw idea into a researched, designed, engineered, tested, security-hardened, stateful, and multi-agent AI-native software project.
+A repository-first operating system for turning a raw idea into a researched, designed, engineered, tested, security-hardened, stateful, multi-agent, and continuously improving AI-native software project.
 
 ## First-run experience
 
@@ -36,18 +36,22 @@ When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and ini
 28. **AI-Created Design Fallback** — if no design exists or the user skips, AI creates the professional UI/UX from validated requirements.
 29. **Main README Control Surface** — repository-visible state transitions immediately refresh the main-branch dashboard; supported persistent runtimes may also heartbeat-refresh it. Literal one-second Git commits are intentionally forbidden.
 30. **Plan/Module Progress Table** — README tracks module descriptions, owners, progress, dates, blockers, review state, merge generation, and required-action alerts.
+31. **24-Hour Technology Update Watch** — after stack approval/post-stack execution begins, GitHub schedules a daily Supervisor audit request. AI researches meaningful framework/runtime/dependency/platform/security updates, creates an impact/migration/test/rollback plan, alerts the Supervisor, notifies the configured owner by authorized email, obtains explicit consent, then implements only the approved scope and fully retests it.
+32. **Optional 25-Hour Innovation Scout** — disabled by default. After explicit owner opt-in, GitHub performs an hourly lightweight due-check and creates a market/options/modules research request only after at least 25 hours. AI researches new useful capabilities/options/modules/systems, presents selectable suggestions, and adds only owner-approved items back into the normal planning/architecture/QA/security development lifecycle.
 
 ## Current project control surface
 
 <!-- AI-PROJECT-DASHBOARD:START -->
 
-**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–30 currently represented in the repository protocol.
+**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–32 currently represented in the repository protocol.
 
 **Current merge generation:** `0`  
 **Open required-action agent alerts:** `0`  
+**Technology update watch:** Configured; activates for post-stack project lifecycle  
+**Innovation Scout:** `OFF` by default; explicit owner opt-in required  
 **Linear project:** AI Native Project Operating System  
-**Last repository-visible protocol update:** 2026-09-02 17:33 PKT  
-**Last Linear sync:** 2026-09-02 17:35 PKT
+**Last repository-visible protocol update:** 2026-09-02 17:49 PKT  
+**Last Linear sync:** 2026-09-02 17:48 PKT
 
 | Module | Description | Owner | Status | Progress | Start | End/Target | Review / Blocker |
 |---|---|---|---|---:|---|---|---|
@@ -59,8 +63,10 @@ When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and ini
 | P06 | Supervisor/worker queue, deterministic claims, PR/MR review, merge generation, required-action alert inbox, worker acknowledgement | Supervisor + Workers | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
 | P07 | Optional Figma/design intake and AI-created design fallback | UI/UX AI | Complete | 100% | 2026-09-02 | 2026-09-02 | Figma access depends on host connection |
 | P08 | Main README generated progress/control dashboard | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Event-driven refresh; no one-second commit churn |
+| P09 | 24-hour technology update audit, owner notification/consent, controlled update implementation and full retest protocol | Supervisor + Maintenance Worker | Complete | 100% | 2026-09-02 | 2026-09-02 | Runtime AI/email callback availability handled by deterministic fallbacks |
+| P10 | Optional 25-hour market/options/modules innovation scout with owner-selectable scope consent | Supervisor + Research AI | Complete | 100% | 2026-09-02 | 2026-09-02 | Disabled by default until explicit owner opt-in |
 
-> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, Git/PR state, and Linear state.
+> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, `config/maintenance/`, `config/consent/`, Git/PR state, and Linear state.
 
 <!-- AI-PROJECT-DASHBOARD:END -->
 
@@ -79,6 +85,10 @@ Persistent core artifacts:
 - `config/coordination/agent-alerts.json` — required-action merge/reconcile alerts and per-worker acknowledgements.
 - `config/integrations/linear-sync.json` — Linear planning/progress mirror and sync policy.
 - `config/design/design-intake.json` — optional Figma/design source and audit state.
+- `config/maintenance/technology-watch.json` — 24-hour technology audit policy/state.
+- `config/maintenance/innovation-scout.json` — optional 25-hour innovation-scout policy/state.
+- `config/consent/consent-requests.json` — canonical maintenance/scope consent records.
+- `config/notifications/project-owner.json` — safe project-owner notification/contact policy.
 - `docs/ai/PRE-PLAN.md` — living engineering pre-plan.
 
 Repository/Git/test reality wins over stale memory records.
@@ -89,7 +99,7 @@ The coordination hierarchy is:
 
 **Supervisor → Phase/Milestone → Module Slot → Worker → PR/MR → Supervisor Review → Merge → Merge-Generation Alert → Worker Reconciliation/Acknowledgement**
 
-Workers use isolated deterministic claim branches. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, repository-backed alerts, and README status. Direct push messaging between arbitrary AI chats is not assumed; repository queue/alert state and merge generation provide deterministic cross-agent coordination.
+Workers use isolated deterministic claim branches. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, repository-backed alerts, maintenance requests, owner consent routing, and README status. Direct push messaging between arbitrary AI chats is not assumed; repository queue/alert/consent state and merge generation provide deterministic cross-agent coordination.
 
 ## Linear integration
 
@@ -104,6 +114,7 @@ Linear sync occurs:
 - on merges
 - on module/phase completion
 - on plan revisions
+- on approved maintenance/innovation scope changes
 
 If Linear issue quota/capability is unavailable, project documents/status updates plus repository state are the fallback and development continues.
 
@@ -117,15 +128,37 @@ Before detailed UI/UX work:
 
 A supplied design is audited against validated flows, requirements, accessibility/responsiveness, and system constraints. If absent, AI designs the product itself.
 
+## Continuous improvement
+
+### 24-hour technology update watch
+
+`.github/workflows/technology-update-watch.yml` schedules a daily durable Supervisor audit request after the project reaches a post-stack lifecycle stage. The Action itself does not silently edit dependencies.
+
+The Supervisor researches current authoritative release/security/support sources, creates an impact and migration plan, records a consent request, and notifies the configured owner. Preferred authenticated email action is **Approve & Start Update** only when the host can securely record consent and trigger the approved work. Otherwise the canonical review surface / `APPROVE UPDATE <CONSENT-ID>` fallback is used.
+
+After approval, the update goes through isolated implementation, relevant QA/security/regression/build/deployment/rollback verification, review, merge, README/memory update, and Linear reconciliation.
+
+### Optional 25-hour innovation scout
+
+The scout is `OFF` by default. Preferred activation actions are:
+
+- `Enable 25-Hour Innovation Scout`
+- `Keep Innovation Scout Off`
+
+Because GitHub cron cannot express a true every-25-hours recurrence, `.github/workflows/innovation-scout.yml` performs an hourly lightweight due-check and creates a research request only after at least 25 hours and only when no earlier request remains open.
+
+Research may discover new options/modules/systems, but those remain proposals until the owner selects/approves them. Approved additions re-enter the appropriate planning, design, architecture, security, QA, and multi-agent development flow.
+
 ## Protocol files
 
-- `AGENTS.md` — root authority and complete entry/coordination contract.
+- `AGENTS.md` — root authority and complete entry/coordination/maintenance contract.
 - `START-HERE.md` — intake, research, market audit, and planning flow.
 - `DEVELOPMENT-LIFECYCLE.md` — system design through QA/security.
 - `AI-NATIVE-EXECUTION.md` — persistent ownership, memory, options/modules banks, and execution graph.
 - `MULTI-AGENT-ORCHESTRATION.md` — Linear, AI selection, Supervisor/Worker coordination, merges, alerts, Figma, and dashboard rules.
 - `AUTO-AGENT.md` — autonomous Worker entry, alert acknowledgement, and submission protocol.
-- `SUPERVISOR.md` — Supervisor coordination/review/merge/alert protocol.
+- `SUPERVISOR.md` — Supervisor coordination/review/merge/maintenance/owner-consent protocol.
+- `CONTINUOUS-IMPROVEMENT.md` — scheduled technology updates and optional market/options/modules innovation loops.
 
 ## Start prompt
 
