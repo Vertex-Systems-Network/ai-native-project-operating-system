@@ -30,8 +30,11 @@ jobs:
       - name: Install pinned ANPOS validation dependencies
         run: python -m pip install --disable-pip-version-check -r requirements-anpos.txt
 
-      - name: Compile repository scripts
-        run: python -m compileall -q scripts
+      - name: Compile repository scripts and tests
+        run: python -m compileall -q scripts tests
+
+      - name: Run control-plane conformance unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
 
       - name: Validate current AI-native state and workflow safety
         run: python scripts/validate_ai_native_repo.py
@@ -55,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           git diff --name-only "$BASE_SHA" HEAD -- \
-            AGENTS.md .ai .github blueprints scripts schemas config/coordination config/protocol \
+            AGENTS.md .ai .github blueprints scripts schemas tests config/coordination config/protocol \
             config/security config/consent config/github config/quality config/runtime config/release \
             CONTROL-PLANE-SECURITY.md PRODUCTION-ASSURANCE.md DESIGN-DATA-OPERATIONS.md \
             AUTO-AGENT.md SUPERVISOR.md ORCHESTRATOR.md MULTI-AGENT-ORCHESTRATION.md || true
@@ -75,4 +78,4 @@ jobs:
           fi
 
       - name: Show repository integrity success
-        run: echo 'Repository integrity, JSON Schema, current/base validator, workflow pinning, JSON, and YAML checks passed.'
+        run: echo 'Repository integrity, conformance tests, JSON Schema, current/base validator, workflow pinning, JSON, and YAML checks passed.'
