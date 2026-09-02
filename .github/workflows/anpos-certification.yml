@@ -1,0 +1,62 @@
+name: ANPOS Temporary Certification
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout certification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Restore canonical source inert tree for validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/anpos-certification.yml
+          test ! -d .github/workflows || test -z "$(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) -print -quit)"
+          test ! -f .github/dependabot.yml
+
+      - name: Install pinned ANPOS validation dependency
+        run: python -m pip install --disable-pip-version-check -r requirements-anpos.txt
+
+      - name: Compile ANPOS scripts and tests
+        run: python -m compileall -q scripts tests
+
+      - name: Run control-plane unit and conformance tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Run full ANPOS repository validator
+        run: python scripts/validate_ai_native_repo.py
+
+      - name: Verify protocol metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          v=json.loads(Path('config/protocol/version.json').read_text())
+          m=json.loads(Path('config/protocol/migrations.json').read_text())
+          i=json.loads(Path('config/protocol/instance.json').read_text())
+          assert v['version']=='1.2.0'
+          assert m['current_protocol_version']=='1.2.0'
+          assert v['last_protocol_migration']=='ANPOS-1.1.0-to-1.2.0'
+          assert i['instance_status']=='template_source'
+          assert i['source_protocol_version']=='1.2.0'
+          assert i['bootstrap_completed'] is False
+          print('ANPOS 1.2.0 metadata aligned.')
+          PY
+
+      - name: Certification result
+        run: echo 'ANPOS 1.2.0 source-template certification passed.'
