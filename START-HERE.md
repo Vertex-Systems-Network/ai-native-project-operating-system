@@ -1,44 +1,118 @@
 # Start Here
 
-This document defines the first project-start interaction and the mandatory path from raw idea to engineering execution.
+This document defines the mandatory path from a repository created from ANPOS to project research, planning, and engineering execution.
 
 ## State A — Repository link received
 
-When an AI is given this repository URL, it must first inspect the repository and read the root instructions.
+Inspect:
 
-If no completed project intake exists, the AI should not immediately produce architecture or code. It should offer a single primary action:
+- the actual current Git repository identity;
+- `config/protocol/instance.json`;
+- `AGENTS.md`;
+- `.ai/manifest.json`;
+- `PROJECT-INITIALIZATION.md`.
+
+Canonical source repository:
+
+`Vertex-Systems-Network/ai-native-project-operating-system`
+
+### If this is the canonical source
+
+The source is an inert template/protocol repository. Do not attach Linear, apply child GitHub Rules, activate child code-quality/runtime workflows, or start application development against it.
+
+The development target must be a **new child repository created/copied from this template**.
+
+### If this is a child repository
+
+If the child inherited `instance_status: template_source`, treat it as uninitialized and bootstrap it. If it is already `active_project`, resume from the first incomplete setup/lifecycle state.
+
+If project intake is not complete, offer the single primary action:
 
 **Start Development**
 
-Preferred UI when supported by the host:
+Preferred UI when supported:
 
 - Primary button/action: `Start Development`
 
-Fallback when the host does not support custom buttons:
+Fallback:
 
 - Ask the user to reply: `Start Development`
 
 ## State B — Start Development activated
 
+### B1. Bootstrap the child repository
+
+Run the safe child-instance bootstrap from `scripts/bootstrap_instance.py` or equivalent repository writes.
+
+The bootstrap must:
+
+- create child instance identity;
+- clear inherited runtime claims/leases/alerts/consents/merge state;
+- regenerate valid child CODEOWNERS;
+- leave Linear unbound until the user connects it;
+- install the universal child Code Quality/runtime workflow blueprints into active child `.github/` paths;
+- leave GitHub Rules unapplied until the user is asked.
+
+### B2. Connect Linear
+
+Immediately offer:
+
+**Connect Linear**
+
+Use the host's secure connected-app/OAuth flow. Never ask for a normal Linear password, raw API token, session cookie, or other secret in ordinary chat.
+
+After connection:
+
+1. discover available workspace/project choices;
+2. select/attach the intended existing project, or create one when needed and authorized;
+3. persist mapping only in the child repository;
+4. enable sync only after mapping is verified;
+5. mirror planning/progress automatically according to `config/integrations/linear-sync.json`.
+
+If connection cannot currently be completed because the host lacks Linear access, state exactly what connection action is required and mark the child setup as pending rather than inventing a mapping.
+
+### B3. Verify/apply the Code Quality baseline
+
+The child bootstrap installs the universal baseline from `blueprints/github/`.
+
+Verify the child files/workflows exist and are valid. Do not say a GitHub check is active/passing until the child repository has produced evidence.
+
+After technology approval later in the lifecycle, automatically add mature stack-specific formatter/linter/static-or-type-analysis/test/build/dependency/security tooling appropriate to the actual stack.
+
+### B4. Ask about GitHub Rules
+
+After the child baseline is installed enough to determine real check names, present:
+
+- Primary action: `Apply Recommended GitHub Rules`
+- Secondary action: `Review GitHub Rules`
+
+If the user approves and the AI has authenticated repository-admin write capability, apply `config/github/ruleset-policy.json`, then re-read GitHub and verify enforcement.
+
+If the AI cannot apply rules itself, provide the exact required manual settings, mark `pending_user_action`, and verify after the user performs them.
+
+Do not apply this child-project Rules flow to the canonical template source.
+
+### B5. Collect project intake
+
 Present one large free-form intake field when supported, labeled:
 
 **Idea / Thoughts / Plan / Research / Search / Assumptions**
 
-Prompt text:
+Prompt:
 
 > Add everything you currently have about the project in one place. This can be a raw idea, incomplete thoughts, an existing plan, research, links, search notes, assumptions, desired features, constraints, references, competitors, technical preferences, or uncertainties. It does not need to be organized.
 
-Fallback when the host has no custom text-area UI:
+Fallback:
 
 > Paste your Idea / Thoughts / Plan / Research / Search / Assumptions in one message. It can be completely unstructured.
 
-Do not force the user through multiple required fields.
+Do not force the user through multiple required project-description fields.
 
 ## State C — Intake received
 
-Persist or update the normalized project intake in `PROJECT-IDEA.md` when repository write access is available.
+Persist/update normalized project intake in `PROJECT-IDEA.md` when child repository write access is available.
 
-Then execute the following sequence before development:
+Then execute the following sequence before implementation.
 
 ### 1. Understand
 
@@ -54,141 +128,104 @@ Extract and distinguish:
 - references
 - existing decisions
 
+Never silently promote an assumption into a fact or requirement.
+
 ### 2. Search the internet for possibilities
 
-When web/search capability is available, proactively investigate the project domain. Search for:
+When web/search capability is available, proactively investigate:
 
 - existing solutions and competitors
 - comparable products
-- relevant workflows and user expectations
-- current technologies and implementation approaches
-- APIs, platforms, libraries, standards, and integrations
-- technical, operational, regulatory, security, privacy, or accessibility constraints where relevant
+- relevant workflows/user expectations
+- current technologies/implementation approaches
+- APIs/platforms/libraries/standards/integrations
+- technical/operational/regulatory/security/privacy/accessibility constraints
 - pricing/business-model patterns where relevant
-- known failure modes and common mistakes
-- opportunities or approaches not mentioned by the user
+- known failure modes/common mistakes
+- opportunities not mentioned by the user
 
 The purpose is discovery, not confirmation of the user's assumptions.
 
 ### 3. Research the strongest possibilities
 
-Deepen the most relevant findings. Prefer current, primary, authoritative, or technically credible sources where possible.
-
-Compare alternatives and note trade-offs. Do not treat search snippets or a single source as sufficient research for an important decision.
+Deepen the most relevant findings. Prefer current, primary, authoritative, or technically credible sources. Compare alternatives and trade-offs; do not base important decisions on one snippet/source.
 
 ### 4. Reason independently
 
-After research, synthesize what was learned and think beyond the initial prompt.
-
 The AI should:
 
-- test the user's assumptions against evidence
+- test assumptions against evidence
 - identify missing pieces
 - identify contradictions
 - identify hidden dependencies
-- consider simpler or stronger alternatives
-- identify feasibility and scope risks
+- consider simpler/stronger alternatives
+- identify feasibility/scope risks
 - separate must-haves from optional ideas
 - mark unresolved uncertainty explicitly
 
-### 5. Compare the user's concept with the current market
+### 5. Compare with the current market
 
-Before producing the project plan, compare the normalized user concept against relevant current market offerings and patterns.
+Compare the normalized concept against relevant direct/indirect competitors, category leaders, newer products, and open-source substitutes.
 
-The comparison should examine, where applicable:
+Examine where relevant:
 
-- direct competitors
-- indirect competitors and substitutes
-- mature category leaders
-- newer or fast-growing products
-- open-source alternatives
-- common feature sets
-- user journeys and workflows
-- positioning and differentiation
-- pricing and monetization patterns
-- onboarding and activation models
-- integrations and ecosystem expectations
+- common features and user journeys
+- positioning/differentiation
+- pricing/monetization
+- onboarding/activation
+- integrations/ecosystem expectations
 - platform coverage
-- trust, privacy, security, compliance, and accessibility expectations
+- trust/privacy/security/compliance/accessibility expectations
 - operational models
-- known customer complaints, weaknesses, and gaps
-- opportunities the user's concept could exploit
+- recurring complaints/weaknesses/gaps
 
-Do not assume that copying the market is desirable. The goal is to understand what already exists, what users are accustomed to, where existing systems are strong, and where meaningful gaps remain.
+Identify where the user's idea is stronger, weaker, undifferentiated, missing important capabilities, or carrying unnecessary complexity.
 
-Explicitly identify:
+### 6. Deeply audit comparable systems
 
-- where the user's idea is stronger
-- where it is weaker
-- where it is undifferentiated
-- where assumptions conflict with market evidence
-- missing capabilities that appear important
-- unnecessary capabilities that add complexity without clear value
-- possible differentiators worth preserving or developing
+For the most relevant systems, analyze what can responsibly be established about:
 
-### 6. Analyze and deeply audit comparable systems
-
-Select the most relevant existing systems discovered during research and market comparison, then study them in greater depth using the evidence available.
-
-For each important comparable system, audit as much as can be responsibly established, including:
-
-- product scope and target users
-- core jobs-to-be-done
-- feature architecture
-- information architecture and navigation
-- major user flows
-- onboarding
-- permissions and roles
-- collaboration model
-- automation model
-- integrations
-- pricing or business model
-- platform and deployment model where observable
-- API or developer ecosystem where relevant
-- data handling, privacy, security, compliance, and trust signals where observable
-- performance, reliability, scalability, or operational characteristics where credible evidence exists
-- user feedback, recurring complaints, limitations, and failure patterns
+- scope/target users/jobs-to-be-done
+- feature architecture/information architecture
+- major user flows/onboarding
+- roles/permissions/collaboration
+- automation/integrations
+- pricing/business model
+- platform/deployment/API ecosystem where observable
+- data handling/privacy/security/compliance/trust signals
+- credible performance/reliability/operational characteristics
+- recurring user complaints/limitations/failure patterns
 - strengths worth learning from
-- weaknesses or gaps worth avoiding
-- architectural or product decisions that appear reusable
+- weaknesses worth avoiding
+- reusable product/architecture decisions
 
-Distinguish clearly between:
-
-- directly verified evidence
-- reasonable inference
-- unknown or inaccessible implementation details
-
-Never fabricate private architecture, internal code, proprietary metrics, or undocumented behavior. A deep audit means rigorous analysis of available evidence, not pretending to have access to information that is not public.
-
-The objective is to learn from prior systems rather than blindly reproduce them.
+Clearly distinguish verified evidence, reasonable inference, and unknown/private implementation details.
 
 ### 7. Synthesize findings and plan
 
-Only after discovery, research, independent reasoning, market comparison, and comparable-system audits should the AI create the project plan.
+Only after discovery/research/reasoning/market comparison/audits should the AI create the project plan.
 
-The plan must incorporate what was learned rather than merely restating the user's original input.
+The plan must be grounded in:
 
-It should be grounded in:
-
-- the user's actual intent
+- user intent
 - normalized intake
 - repository reality
 - external evidence
 - market comparison
-- lessons from audited comparable systems
+- lessons from comparable systems
 - technical feasibility
-- identified risks and constraints
-- opportunities and gaps discovered during research
+- risks/constraints
+- discovered opportunities/gaps
 
-The AI should explicitly revise, remove, add, or reprioritize proposed capabilities when the evidence justifies doing so, while preserving genuine user constraints and decisions.
+Explicitly revise, add, remove, simplify, or reprioritize proposed capabilities when evidence justifies it.
 
-The planning output should distinguish at minimum:
+At minimum distinguish:
 
 - validated requirements
 - assumptions still requiring validation
 - recommended additions
-- recommended removals or simplifications
-- competitive or market-driven requirements
+- recommended removals/simplifications
+- competitive/market-driven requirements
 - differentiators
 - risks
 - unresolved decisions
@@ -196,19 +233,21 @@ The planning output should distinguish at minimum:
 
 ## State D — Post-planning engineering lifecycle
 
-After Stage 7 is complete, continue using `DEVELOPMENT-LIFECYCLE.md` as the authoritative post-planning protocol.
+After Stage 7, continue using `DEVELOPMENT-LIFECYCLE.md`.
 
-The required sequence is:
+Required sequence:
 
-8. **System Design** — act as a System Design Engineer and translate the validated plan into a complete system design.
-9. **Technology Selection + Consent** — recommend the frontend, backend, database, infrastructure, testing, deployment, and related technology choices based on current and credible future needs. Before detailed implementation architecture or coding, present `Approve Technology Stack` as the primary consent action when supported, with `Review Alternatives` as a secondary action where useful. If buttons are unavailable, require the deterministic fallback `Approve Technology Stack`.
-10. **Development Architecture Design** — after approval, act as a Senior Software Architecture / Structure Architecture Engineer and design the implementation structure, boundaries, contracts, repository organization, deployment topology, and engineering conventions.
-11. **Data Flow Design** — act as a Data Flow Engineer and model the important end-to-end flows, stores, transformations, trust boundaries, integrations, failure paths, and security checkpoints.
-12. **Professional UI/UX Design** — act as a Senior UI/UX Engineer / Product Designer and design the information architecture, user journeys, screens, component system, states, accessibility, and responsive behavior.
-13. **Development + DevOps** — act as a Senior Developer and DevOps Engineer and implement the approved design incrementally with tests, CI/CD, observability, deployment configuration, documentation, and operational safeguards.
-14. **SQA** — act as an independent Software Quality Assurance Engineer and execute functional, integration, end-to-end, regression, responsive, accessibility, performance, failure-path, deployment, and other relevant validation.
-15. **Security Engineering + Authorized Adversarial Assessment** — act as a Security Engineer and Ethical Hacker. Use white-hat, hostile black-hat-style, green-hat/novice misuse, insider, and automated-abuse perspectives only as authorized defensive threat-modeling and controlled-testing lenses. Remediate and retest material findings before release readiness.
+8. **System Design**
+9. **Technology Selection + Consent** — present `Approve Technology Stack`; use `Review Alternatives` where useful.
+10. **Development Architecture Design**
+11. **Data Flow Design**
+12. **Professional UI/UX Design**
+13. **Development + DevOps**
+14. **SQA**
+15. **Security Engineering + Authorized Adversarial Assessment**
 
-Security is not a bolt-on Stage 15 concern: security requirements and threat considerations must influence system design, architecture, data flows, UI/UX, implementation, DevOps, and QA throughout the lifecycle. Stage 15 is the dedicated final hardening and adversarial verification pass.
+After technology approval, the AI also completes the stack-specific Code Quality installation defined by `CODE-QUALITY.md` and verifies the resulting child-project check names before final GitHub Rules enforcement/adjustment.
 
-Do not skip the technology-consent gate merely because the AI has a preferred stack. The user must be shown the recommendation, alternatives, trade-offs, and reasons before implementation architecture and coding proceed, unless the user has already explicitly approved a concrete stack for this project.
+Security requirements influence every lifecycle stage; Stage 15 is the dedicated final hardening/adversarial verification pass.
+
+Do not skip the technology-consent gate unless the user has already explicitly approved a concrete stack for the child project.
