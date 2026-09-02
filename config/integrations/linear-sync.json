@@ -21,11 +21,11 @@
     "sync_on_plan_revision": true,
     "catch_up_on_resume": true
   },
-  "last_successful_sync_at": "2026-09-02T17:32:56+05:00",
-  "last_attempt_at": "2026-09-02T17:32:56+05:00",
+  "last_successful_sync_at": "2026-09-02T17:35:04+05:00",
+  "last_attempt_at": "2026-09-02T17:35:04+05:00",
   "last_error": null,
-  "last_reconciled_main_sha": "666f4e67c8dd6387eb6d209b72892d087ab9f1bd",
+  "last_reconciled_main_sha": "46ed77eaf1dd9241064010b843c658f03d8e7315",
   "last_linear_status_update_id": "39b4b414-934f-4139-861d-0e84e90ad0b7",
-  "sync_result": "github_and_linear_reconciled",
+  "sync_result": "github_and_linear_reconciled_no_material_change",
   "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
 }
