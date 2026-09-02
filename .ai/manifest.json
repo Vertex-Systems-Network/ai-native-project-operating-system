@@ -1,9 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "protocol": "ANPOS",
   "purpose": "Role-aware instruction router. Agents read common files plus only the files required by their active role/scope.",
   "authority_order": [
     "explicit_current_user_instruction",
+    "template_source_vs_child_project_boundary",
     "repository_safety_and_governance",
     "AGENTS.md",
     "role_files",
@@ -19,16 +20,16 @@
     "config/ai/project-state.json"
   ],
   "roles": {
-    "bootstrap": ["START-HERE.md", "scripts/bootstrap_instance.py"],
+    "bootstrap": ["PROJECT-INITIALIZATION.md", "START-HERE.md", "scripts/bootstrap_instance.py"],
     "planner": ["START-HERE.md", "docs/ai/PRE-PLAN.md", "AI-NATIVE-EXECUTION.md"],
     "architect": ["DEVELOPMENT-LIFECYCLE.md", "config/ai/options-bank.json", "config/ai/modules-bank.json"],
     "worker": ["AUTO-AGENT.md", "AI-NATIVE-EXECUTION.md", "config/coordination/agent-work-queue.json", "config/coordination/agent-alerts.json"],
     "supervisor": ["SUPERVISOR.md", "MULTI-AGENT-ORCHESTRATION.md", "ORCHESTRATOR.md", "config/coordination/supervisor-state.json"],
-    "qa": ["CODE-QUALITY.md", "DEVELOPMENT-LIFECYCLE.md", "config/quality/quality-policy.json"],
+    "qa": ["CODE-QUALITY.md", "PROJECT-INITIALIZATION.md", "DEVELOPMENT-LIFECYCLE.md", "config/quality/quality-policy.json"],
     "security": ["SECURITY.md", "DEVELOPMENT-LIFECYCLE.md", "CODE-QUALITY.md"],
     "maintenance": ["CONTINUOUS-IMPROVEMENT.md", "config/maintenance/technology-watch.json", "config/consent/consent-requests.json"],
-    "governance": ["GITHUB-GOVERNANCE.md", "config/github/ruleset-policy.json", "config/github/path-ownership.json"],
+    "governance": ["PROJECT-INITIALIZATION.md", "GITHUB-GOVERNANCE.md", "config/github/ruleset-policy.json", "config/github/path-ownership.json"],
     "ui_ux": ["DEVELOPMENT-LIFECYCLE.md", "config/design/design-intake.json"]
   },
-  "rule": "Do not load every protocol file by default when role routing can provide sufficient authority/context."
+  "rule": "Do not load every protocol file by default when role routing can provide sufficient authority/context. Never activate child-project integrations or automation against the template source."
 }
