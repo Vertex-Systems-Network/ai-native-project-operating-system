@@ -27,6 +27,9 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Install pinned ANPOS validation dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-anpos.txt
+
       - name: Compile repository scripts
         run: python -m compileall -q scripts
 
@@ -72,4 +75,4 @@ jobs:
           fi
 
       - name: Show repository integrity success
-        run: echo 'Repository integrity, current/base validator checks, state references, workflow pinning, JSON, and YAML checks passed.'
+        run: echo 'Repository integrity, JSON Schema, current/base validator, workflow pinning, JSON, and YAML checks passed.'
