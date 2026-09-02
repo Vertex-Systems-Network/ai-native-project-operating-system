@@ -15,8 +15,8 @@
   "last_merge_sha": null,
   "last_merge_at": null,
   "active_worker_count": 0,
-  "last_linear_sync_at": null,
-  "last_readme_dashboard_update_at": null,
-  "last_reconciled_main_sha": null,
-  "status": "not_initialized"
+  "last_linear_sync_at": "2026-09-02T16:36:41+05:00",
+  "last_readme_dashboard_update_at": "2026-09-02T15:36:51+05:00",
+  "last_reconciled_main_sha": "806bf6ca608fef2eca7f4c9bdfed9496ec12db50",
+  "status": "idle_synced"
 }
