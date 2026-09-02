@@ -14,7 +14,8 @@ Read the applicable files before work:
 6. `MULTI-AGENT-ORCHESTRATION.md` before multi-agent execution
 7. `AUTO-AGENT.md` when acting as a Worker
 8. `SUPERVISOR.md` when acting as Supervisor
-9. repository-backed state under `config/ai/`, `config/coordination/`, `config/integrations/`, `config/design/`, and `docs/ai/`
+9. `CONTINUOUS-IMPROVEMENT.md` before maintenance, technology-update, or innovation-scout work
+10. repository-backed state under `config/ai/`, `config/coordination/`, `config/integrations/`, `config/design/`, `config/maintenance/`, `config/consent/`, `config/notifications/`, and `docs/ai/`
 
 Repository reality is the continuity layer. Conversation memory is never the sole source of truth.
 
@@ -141,6 +142,7 @@ The Supervisor:
 - updates the README project dashboard
 - emits merge-generation alerts through repository state
 - tracks alert acknowledgements from active workers
+- processes due technology/innovation maintenance requests
 - also owns one bounded module/work unit when coordination load permits
 
 When the Supervisor authors a change, it must not treat its own implementation as independent approval. Use an independent reviewer/agent where available; otherwise use all applicable automated gates plus a clearly separate second-pass review context, and require independent human/separate authorized review for high-risk or security-critical self-authored changes.
@@ -177,7 +179,7 @@ When Linear is available:
 - mirror phases/modules/work progress, ownership, blockers, review state, and Supervisor status
 - reconcile at startup/resume
 - reconcile at least hourly while a persistent active Supervisor runtime exists
-- also sync immediately on assignment, blocker, review submission, requested changes, merge, module completion, phase completion, or plan revision
+- also sync immediately on assignment, blocker, review submission, requested changes, merge, module completion, phase completion, plan revision, or approved maintenance-plan creation
 
 GitHub remains canonical for code and merge reality.
 
@@ -186,6 +188,59 @@ If Linear quotas or capabilities prevent issue creation, use project documents/s
 If the current runtime cannot remain active or schedule itself, never pretend hourly background sync happened; catch up on the next run.
 
 Linear settings live in `config/integrations/linear-sync.json`.
+
+## Continuous improvement and maintenance
+
+Continuous improvement is governed by `CONTINUOUS-IMPROVEMENT.md`.
+
+### 24-hour technology update watch
+
+After the technology stack has been approved and the project has entered a post-stack lifecycle stage, `.github/workflows/technology-update-watch.yml` creates a durable Supervisor audit request every 24 hours unless an earlier request is still open.
+
+The Supervisor must:
+
+1. inventory technologies actually used by repository reality
+2. research current authoritative releases, security advisories, support/EOL state, and meaningful update candidates
+3. distinguish useful/security/support updates from novelty-only churn
+4. create impact/migration/test/rollback plan before code
+5. create a consent request in `config/consent/consent-requests.json`
+6. notify the configured project/repository owner contact when a material update needs approval
+7. send an owner email through an authorized connected email provider when available
+8. never guess a private email; use `config/notifications/project-owner.json`
+9. implement only after verifiable authorized consent
+10. after implementation, run all relevant QA/security/regression/build/deployment/rollback verification before normal review/merge
+
+Preferred authenticated email action when the host can genuinely support it:
+
+**Approve & Start Update**
+
+Do not render a fake one-click button when no authenticated callback can record consent and trigger the approved workflow. Fallback approval is the canonical review surface or exact authorized command `APPROVE UPDATE <CONSENT-ID>`.
+
+### Optional 25-hour innovation scout
+
+The market/options/modules innovation scout is **disabled by default**.
+
+Before enabling it, offer:
+
+- `Enable 25-Hour Innovation Scout`
+- `Keep Innovation Scout Off`
+
+Fallback exact enable command:
+
+`ENABLE 25-HOUR INNOVATION SCOUT`
+
+When enabled, `.github/workflows/innovation-scout.yml` runs an hourly lightweight due-check and creates a research request only after at least 25 hours have elapsed and no earlier scout request remains open. This is necessary because GitHub cron cannot directly represent a true every-25-hours recurrence.
+
+The scout may automatically research and suggest new options/modules/systems/integrations, but it must not silently promote proposals into active scope. The owner chooses what to build.
+
+Preferred decision actions:
+
+- `Approve Selected Suggestions`
+- `Review Suggestions`
+- `No Changes This Cycle`
+- `Disable Innovation Scout`
+
+Approved additions re-enter the appropriate planning/system-design/architecture/data-flow/UI/UX/security/QA and multi-agent development lifecycle before implementation.
 
 ## README project control surface
 
@@ -202,6 +257,7 @@ The main-branch `README.md` must include a generated development dashboard conta
 - PR/MR review state
 - current merge generation
 - open required-action alert count
+- maintenance/scout state when relevant
 - last repository-visible update
 - last Linear sync
 
@@ -217,6 +273,7 @@ Do not create literal one-second Git commits. Live status means event-driven imm
 - do not introduce distributed complexity without justification
 - record material decisions and rationale
 - do not silently change an approved frontend/backend stack; material changes require renewed consent
+- a new upstream release is evidence to assess, not automatic permission to upgrade
 
 ## Update and deletion discipline
 
@@ -228,7 +285,7 @@ Never delete/replace working behavior merely because a new approach is preferred
 
 Code existing is not equivalent to work being complete.
 
-A work unit is complete only when relevant implementation, tests, quality/security checks, documentation, acceptance criteria, project memory, coordination/alert state, Linear mirror where available, and README status are synchronized.
+A work unit is complete only when relevant implementation, tests, quality/security checks, documentation, acceptance criteria, project memory, coordination/alert state, consent/maintenance state where relevant, Linear mirror where available, and README status are synchronized.
 
 Critical unresolved QA/security defects block release readiness unless explicitly risk-accepted by an authorized human decision-maker.
 
@@ -238,10 +295,10 @@ Do not perform unauthorized attacks, destructive behavior, credential theft, mal
 
 ## Tool/UI limitations
 
-Repository instructions cannot guarantee buttons, forms, Figma access, direct cross-agent messaging, or persistent scheduling in every AI product. Use native capabilities when available and deterministic repository-backed fallbacks otherwise. Never claim a capability executed when the runtime could not perform it.
+Repository instructions cannot guarantee buttons, forms, Figma access, direct cross-agent messaging, persistent AI runtimes, Gmail/email access, or authenticated email callbacks in every AI product. Use native capabilities when available and deterministic repository-backed fallbacks otherwise. Never claim a capability executed when the runtime could not perform it.
 
 ## Human clarification rule
 
-Do not ask unnecessary questions. Use user intake, repository evidence, persistent state, Linear state, and public research first.
+Do not ask unnecessary questions. Use user intake, repository evidence, persistent state, Linear state, scheduled maintenance requests, and public research first.
 
-Ask only when a genuine unresolved product, business, legal, ethical, technology-consent, risk-acceptance, or preference decision materially blocks correct progress.
+Ask only when a genuine unresolved product, business, legal, ethical, technology-consent, maintenance-consent, risk-acceptance, or preference decision materially blocks correct progress.
