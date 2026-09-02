@@ -82,9 +82,24 @@ Once intake has been provided, do not jump directly to coding. Execute these sta
    - Identify missing requirements, hidden dependencies, risks, opportunities, feasibility concerns, and simpler alternatives.
    - Distinguish evidence-backed conclusions from hypotheses.
 
-5. **Project planning**
-   - Convert the validated understanding into a coherent project definition and implementation plan.
-   - Planning must reflect research findings, repository reality, constraints, and unresolved decisions.
+5. **Market comparison**
+   - Compare the user's normalized concept with the current market.
+   - Examine direct and indirect competitors, substitutes, mature category leaders, newer products, open-source alternatives, feature expectations, workflows, positioning, monetization, integrations, platform expectations, trust/security/privacy expectations, and recurring market weaknesses.
+   - Identify where the user's plan is stronger, weaker, undifferentiated, incomplete, unnecessarily complex, or potentially differentiated.
+   - Treat the market as evidence to learn from, not a specification to copy.
+
+6. **Comparable-system deep audits**
+   - Select the most relevant systems discovered in research and audit them deeply using credible available evidence.
+   - Analyze product scope, target users, jobs-to-be-done, feature architecture, navigation, major flows, onboarding, roles/permissions, collaboration, automation, integrations, pricing/business model, platform model, APIs/ecosystem, security/privacy/compliance signals, user feedback, complaints, strengths, weaknesses, and reusable lessons where applicable.
+   - Clearly separate verified evidence from inference and unknown implementation details.
+   - Never invent private architecture, source code, proprietary metrics, or undocumented behavior.
+
+7. **Synthesis and project planning**
+   - Plan only after the previous stages are complete.
+   - Convert the validated understanding and external evidence into a coherent project definition and implementation plan.
+   - The plan must reflect research findings, market comparison, comparable-system lessons, repository reality, constraints, risks, opportunities, and unresolved decisions.
+   - Add, remove, simplify, revise, or reprioritize ideas when the evidence justifies doing so.
+   - Distinguish validated requirements, unresolved assumptions, recommended additions, recommended removals/simplifications, market-driven requirements, differentiators, risks, unresolved decisions, and phased priorities.
    - Do not begin implementation until this planning stage is complete unless the user explicitly overrides the protocol.
 
 ## Tool limitations
