@@ -40,39 +40,55 @@ When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and ini
 32. **Optional 25-Hour Innovation Scout** — disabled by default. After explicit owner opt-in, GitHub performs an hourly lightweight due-check and creates a market/options/modules research request only after at least 25 hours. AI researches new useful capabilities/options/modules/systems, presents selectable suggestions, and adds only owner-approved items back into the normal planning/architecture/QA/security development lifecycle.
 33. **GitHub Governance / Rules** — AI continuously verifies repository rulesets and merge settings against `config/github/ruleset-policy.json`. When an authenticated admin-capable GitHub interface is available, it applies and re-verifies the desired default-branch protections automatically; otherwise it records governance drift instead of pretending the rules are active.
 34. **Adaptive Code Quality** — universal repository integrity, dependency review, CodeQL-for-Actions, OpenSSF Scorecard, pinned Actions, and Dependabot are built into the template. After stack approval, AI selects and applies the best mature stack-specific formatter/linter/static-analysis/test/build/security tools and makes them part of the merge gates.
+35. **Template Bootstrap / Instance Reset** — child repositories initialize a new project identity and clear inherited runtime/Linear/claim/alert/consent state through a safe dry-run-first bootstrap engine before development scales.
+36. **Atomic Worker Claim + Lease** — queue JSON is a mirror, not the distributed lock. A deterministic GitHub claim ref arbitrates ownership; first successful ref creation wins and the Worker carries claim ID/nonce, base SHA, lease expiry, coordination epoch, heartbeat, and fencing token.
+37. **Supervisor Election + Failover** — exactly one Supervisor is authoritative per coordination epoch. Election uses an atomic deterministic GitHub epoch ref, live lease, expiry, and fencing token; stale Supervisors become read-only and failover requires evidence-based reconciliation.
+38. **Durable Orchestrator Contract** — `ORCHESTRATOR.md` defines the persistent GitHub App/service/self-hosted runtime needed for continuous dispatch, heartbeats, stale-claim recovery, review/merge, alerts, Linear sync, consent, maintenance, and idempotency without falsely claiming such a runtime is already deployed.
+39. **AI Manifest / Context Router** — `.ai/manifest.json` routes each AI to common + role-specific instructions. `AGENTS.md` is a compact router instead of an ever-growing master prompt.
+40. **Formal Schemas + State Machine** — core coordination state uses formal JSON Schemas and canonical Worker/Supervisor transitions; invalid active claims/leaders without lease/fencing evidence are rejected by repository validation.
+41. **Protocol Versioning + Upstream Migration Channel** — ANPOS version/instance/migration state is persisted, and child projects can detect newer upstream protocol versions without automatically overwriting project code.
+42. **Thin AI Vendor Adapters** — Claude Code, Gemini, GitHub Copilot, Cursor, and Windsurf adapters route into the same central protocol rather than duplicating rules.
+43. **Requirements Traceability** — maintain Requirement → Option → Module → Work Unit → Branch/PR → Test Evidence → Release links; code existence alone never proves a requirement verified.
+44. **Path Ownership / CODEOWNERS** — high-risk/shared paths have role-based ownership policy plus a GitHub CODEOWNERS baseline; child repositories must regenerate valid owner/team identities during bootstrap.
 
 ## Current project control surface
 
 <!-- AI-PROJECT-DASHBOARD:START -->
 
-**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–34 currently represented in the repository protocol.
+**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–44 are represented in the repository protocol/control plane.
 
 **Current merge generation:** `0`  
 **Open required-action agent alerts:** `0`  
+**Active Supervisor:** `none` — lease/failover protocol is implemented; no persistent Supervisor is being invented  
+**Active Workers:** `0`  
 **Technology update watch:** Configured; activates for post-stack project lifecycle  
 **Innovation Scout:** `OFF` by default; explicit owner opt-in required  
 **GitHub governance:** Desired policy recorded; current repository governance drift remains open until admin-capable rules/settings write is available  
-**Universal quality gates:** Active; Repository Integrity and CodeQL verified passing on `main`  
+**Universal quality gates:** Active; final-core Repository Integrity verified passing; CodeQL remains an active required security workflow  
+**ANPOS protocol version:** `1.0.0`  
+**Instance status:** `template_source`  
 **Linear project:** AI Native Project Operating System  
-**Last repository-visible protocol update:** 2026-09-02 18:04 PKT  
-**Last Linear sync:** 2026-09-02 17:48 PKT
+**Last repository-visible protocol update:** 2026-09-02 20:29 PKT  
+**Last Linear sync:** 2026-09-02 20:28 PKT
 
 | Module | Description | Owner | Status | Progress | Start | End/Target | Review / Blocker |
 |---|---|---|---|---:|---|---|---|
 | P01 | Start/intake, internet discovery, research, reasoning, market comparison, comparable-system audits, synthesis | AI | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
 | P02 | System design, stack selection/consent, architecture, data flow, UI/UX, development, QA, security | AI | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
 | P03 | AI-native ownership, memory bank, pre-plan, options/modules banks, small work-unit execution | AI | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
-| P04 | Linear planning/progress mirror and hourly/event-driven reconciliation protocol | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Linear free issue quota reached; project status/milestone fallback active |
+| P04 | Linear planning/progress mirror and hourly/event-driven reconciliation protocol | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Linear free issue quota reached; project status/document fallback remains supported |
 | P05 | Dynamic development-AI selection and multi-agent worker pool | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Runtime agent availability discovered per host |
-| P06 | Supervisor/worker queue, deterministic claims, PR/MR review, merge generation, required-action alert inbox, worker acknowledgement | Supervisor + Workers | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
+| P06 | Supervisor/worker queue, PR/MR review, merge generation, required-action alert inbox, worker acknowledgement | Supervisor + Workers | Complete | 100% | 2026-09-02 | 2026-09-02 | Final-core atomic claims/leases/fencing now harden this layer |
 | P07 | Optional Figma/design intake and AI-created design fallback | UI/UX AI | Complete | 100% | 2026-09-02 | 2026-09-02 | Figma access depends on host connection |
 | P08 | Main README generated progress/control dashboard | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Event-driven refresh; no one-second commit churn |
 | P09 | 24-hour technology update audit, owner notification/consent, controlled update implementation and full retest protocol | Supervisor + Maintenance Worker | Complete | 100% | 2026-09-02 | 2026-09-02 | Runtime AI/email callback availability handled by deterministic fallbacks |
 | P10 | Optional 25-hour market/options/modules innovation scout with owner-selectable scope consent | Supervisor + Research AI | Complete | 100% | 2026-09-02 | 2026-09-02 | Disabled by default until explicit owner opt-in |
-| P11 | GitHub ruleset/merge-governance desired policy, automated drift audit, and admin-capability auto-apply contract | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Actual GitHub ruleset/settings write is not exposed by current connector; governance issue #1 tracks enforcement gap |
-| P12 | Universal code-quality/security gates plus stack-adaptive tool-selection policy | Supervisor + SQA + Security | Complete | 100% | 2026-09-02 | 2026-09-02 | Repository Integrity + CodeQL verified passing; stack-specific gates generated after stack approval |
+| P11 | GitHub ruleset/merge-governance desired policy, automated drift audit, and admin-capability auto-apply contract | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Actual GitHub ruleset/template/settings write is not exposed by current connector; governance issue #1 tracks enforcement gap |
+| P12 | Universal code-quality/security gates plus stack-adaptive tool-selection policy | Supervisor + SQA + Security | Complete | 100% | 2026-09-02 | 2026-09-02 | Repository Integrity verified; stack-specific gates generated after stack approval |
+| P13 | Final-core distributed runtime: child bootstrap/reset, atomic Worker claims/leases, Supervisor election/failover/fencing | Supervisor + Platform AI | Protocol Complete | 100% | 2026-09-02 | 2026-09-02 | Persistent external orchestrator host must be provisioned per deployment for continuous autonomous execution |
+| P14 | Manifest router, formal schemas/state machine, protocol version/migrations, vendor adapters, traceability, path ownership/CODEOWNERS | Platform AI + Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Child repositories regenerate instance/ownership state during bootstrap |
 
-> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, `config/maintenance/`, `config/consent/`, `config/github/`, `config/quality/`, Git/PR state, and Linear state.
+> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, `config/protocol/`, `config/traceability/`, `config/maintenance/`, `config/consent/`, `config/github/`, `config/quality/`, Git/PR state, and Linear state.
 
 <!-- AI-PROJECT-DASHBOARD:END -->
 
@@ -80,15 +96,21 @@ When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and ini
 
 Persistent core artifacts:
 
+- `.ai/manifest.json` — role-aware instruction/context router.
+- `config/protocol/version.json` — ANPOS protocol version and upstream identity.
+- `config/protocol/instance.json` — template-source/child-project instance identity and bootstrap state.
+- `config/protocol/migrations.json` — applied/pending upstream control-plane migrations.
+- `config/protocol/state-machine.json` — legal Worker/Supervisor state transitions and fencing invariants.
 - `config/ai/project-state.json` — where the project is now and where work resumes.
 - `config/ai/options-bank.json` — reusable capability/option catalog.
 - `config/ai/modules-bank.json` — canonical module catalog with attached option IDs.
 - `config/ai/execution-plan.json` — dependency-aware phases/modules/work-unit graph.
 - `config/ai/agent-catalog.json` — available/selected development-agent pool.
-- `config/coordination/agent-work-queue.json` — deterministic multi-agent slots and claims.
-- `config/coordination/supervisor-state.json` — Supervisor identity/status, merge generation, sync timestamps.
+- `config/coordination/agent-work-queue.json` — lease-aware multi-agent slot/claim mirror; deterministic GitHub refs arbitrate ownership.
+- `config/coordination/supervisor-state.json` — Supervisor election epoch, lease/fencing state, merge generation, and sync timestamps.
 - `config/coordination/merge-events.json` — immutable-style cross-agent main-merge event log.
 - `config/coordination/agent-alerts.json` — required-action merge/reconcile alerts and per-worker acknowledgements.
+- `config/traceability/requirements-traceability.json` — requirement-to-release evidence graph.
 - `config/integrations/linear-sync.json` — Linear planning/progress mirror and sync policy.
 - `config/design/design-intake.json` — optional Figma/design source and audit state.
 - `config/maintenance/technology-watch.json` — 24-hour technology audit policy/state.
@@ -96,6 +118,7 @@ Persistent core artifacts:
 - `config/consent/consent-requests.json` — canonical maintenance/scope consent records.
 - `config/notifications/project-owner.json` — safe project-owner notification/contact policy.
 - `config/github/ruleset-policy.json` — desired default-branch governance and merge policy.
+- `config/github/path-ownership.json` — role-based ownership for shared/high-risk paths.
 - `config/quality/quality-policy.json` — universal and stack-adaptive code-quality requirements.
 - `docs/ai/PRE-PLAN.md` — living engineering pre-plan.
 
@@ -105,9 +128,11 @@ Repository/Git/test reality wins over stale memory records.
 
 The coordination hierarchy is:
 
-**Supervisor → Phase/Milestone → Module Slot → Worker → PR/MR → Quality/Security Gates → Supervisor Review → Merge → Merge-Generation Alert → Worker Reconciliation/Acknowledgement**
+**Supervisor Lease/Epoch → Phase/Milestone → Module Slot → Atomic Worker Claim/Lease → Worker → PR/MR → Quality/Security Gates → Supervisor Review → Merge → Merge-Generation Alert → Worker Reconciliation/Acknowledgement**
 
-Workers use isolated deterministic claim branches. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, repository-backed alerts, maintenance requests, owner consent routing, governance/quality drift, and README status. Direct push messaging between arbitrary AI chats is not assumed; repository queue/alert/consent state and merge generation provide deterministic cross-agent coordination.
+GitHub refs arbitrate distributed Worker/Supervisor ownership; JSON mirrors durable state. Fencing tokens prevent stale leaders/Workers from mutating shared coordination state. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, repository-backed alerts, maintenance requests, owner consent routing, governance/quality drift, protocol migrations, and README status.
+
+A repository protocol is not itself a continuously running AI service. `ORCHESTRATOR.md` defines the runtime contract for a GitHub App, self-hosted service/runner, CI-connected agent host, or equivalent persistent Supervisor runtime. Without such a host, ANPOS uses safe repository-backed continuation rather than pretending background execution occurred.
 
 ## Linear integration
 
@@ -124,6 +149,7 @@ Linear sync occurs:
 - on plan revisions
 - on approved maintenance/innovation scope changes
 - on governance or quality-policy drift/change
+- on protocol/orchestration changes
 
 If Linear issue quota/capability is unavailable, project documents/status updates plus repository state are the fallback and development continues.
 
@@ -170,7 +196,7 @@ The current template prefers PR-only integration into `main`, independent review
 
 The universal template currently includes:
 
-- `AI Native Quality Gates` — validates repository-backed AI state/reference integrity, workflow action pinning, JSON/YAML correctness, and machine-file hygiene.
+- `AI Native Quality Gates` — validates repository-backed AI state/reference integrity, manifest routing, lease/fencing invariants, state-machine consistency, workflow action pinning, JSON/YAML correctness, and machine-file hygiene.
 - `Dependency Review` — blocks high-severity vulnerable dependency changes on pull requests.
 - `CodeQL` — scans GitHub Actions workflow code with the `security-extended` query suite.
 - `OpenSSF Scorecard` — periodically evaluates supply-chain/repository security posture.
@@ -178,15 +204,26 @@ The universal template currently includes:
 
 All external GitHub Actions are pinned to full commit SHAs. After the application stack is approved, the AI must add the mature ecosystem-specific formatter, linter, static/type analysis, test, build, dependency-audit, and security gates appropriate to that stack, plus additional E2E/accessibility/performance/migration/container/IaC/license/coverage checks where relevant.
 
+## Final-core runtime
+
+`FINAL-CORE.md` documents requirements 35–44. Key invariant:
+
+**GitHub refs arbitrate ownership; JSON mirrors state; fencing tokens block stale leaders/workers; repository/Git/PR/test reality remains canonical.**
+
+Child repositories run `scripts/bootstrap_instance.py` before scaling development. Workers use `scripts/claim_slot.py` or an equivalent atomic-ref mechanism. Supervisors use `scripts/supervisor_lease.py` or equivalent epoch-fenced election. Protocol upgrades are tracked through version/migration state and `.github/workflows/protocol-update-watch.yml` rather than blind file replacement.
+
 ## Protocol files
 
-- `AGENTS.md` — root authority and complete entry/coordination/maintenance/governance/quality contract.
+- `AGENTS.md` — compact universal router into the modular role-aware protocol.
+- `.ai/manifest.json` — role/common instruction routing manifest.
 - `START-HERE.md` — intake, research, market audit, and planning flow.
 - `DEVELOPMENT-LIFECYCLE.md` — system design through QA/security.
 - `AI-NATIVE-EXECUTION.md` — persistent ownership, memory, options/modules banks, and execution graph.
 - `MULTI-AGENT-ORCHESTRATION.md` — Linear, AI selection, Supervisor/Worker coordination, merges, alerts, Figma, and dashboard rules.
-- `AUTO-AGENT.md` — autonomous Worker entry, alert acknowledgement, and submission protocol.
-- `SUPERVISOR.md` — Supervisor coordination/review/merge/maintenance/owner-consent protocol.
+- `AUTO-AGENT.md` — autonomous Worker atomic-claim/lease/reconcile/submission protocol.
+- `SUPERVISOR.md` — Supervisor lease/failover/coordination/review/merge/maintenance protocol.
+- `ORCHESTRATOR.md` — durable external Supervisor runtime contract.
+- `FINAL-CORE.md` — requirements 35–44 distributed-control-plane specification.
 - `CONTINUOUS-IMPROVEMENT.md` — scheduled technology updates and optional market/options/modules innovation loops.
 - `GITHUB-GOVERNANCE.md` — desired GitHub rulesets/merge settings and enforcement behavior.
 - `CODE-QUALITY.md` — universal and stack-adaptive quality strategy.
