@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "worker_slot_transitions": {
     "free": ["claimed", "canceled"],
     "claimed": ["in_progress", "free", "blocked", "canceled"],
@@ -12,16 +12,38 @@
     "completed": [],
     "canceled": []
   },
+  "worker_lease_transitions": {
+    "not_acquired": ["active"],
+    "active": ["expired", "released", "revoked", "orphaned"],
+    "expired": ["recovered", "revoked"],
+    "orphaned": ["recovered", "revoked"],
+    "released": [],
+    "revoked": [],
+    "recovered": ["not_acquired", "active"]
+  },
   "supervisor_transitions": {
     "unassigned": ["active"],
     "active": ["expired", "relinquished"],
     "expired": ["active"],
     "relinquished": ["active"]
   },
+  "supervisor_lease_transitions": {
+    "not_acquired": ["active"],
+    "active": ["expired", "released", "revoked", "orphaned"],
+    "expired": ["recovered", "revoked"],
+    "orphaned": ["recovered", "revoked"],
+    "released": ["active"],
+    "revoked": ["active"],
+    "recovered": ["active"]
+  },
   "invariants": [
-    "claimed/in_progress Worker slots require claim_id, claimant, coordination_epoch, fencing_token and lease_expires_at",
-    "active Supervisor requires lease_id, fencing_token, election_ref and lease_expires_at",
-    "only the current Supervisor fencing token may mutate shared coordination state",
+    "active Worker slots require selected identity-verified claimant, claim_ref, claimant_identity_ref, claim_id, coordination_epoch, worker fencing token, active lease and expiry",
+    "Worker claim requires a live authoritative Supervisor epoch and complete typed handoff envelope",
+    "SUPERVISOR_ONLY or capability-restricted work cannot be claimed by unauthorized Workers",
+    "active Supervisor requires selected identity-verified agent, identity_ref, lease_id, active lease, fencing_token, election_ref and expiry",
+    "only the current Supervisor fencing token may perform shared coordination mutations",
+    "expired or orphaned locks require evidence reconciliation before reuse",
+    "coordination ref namespaces are protected infrastructure and require trusted runtime authorization",
     "repository reality overrides stale mirrored status"
   ]
 }
