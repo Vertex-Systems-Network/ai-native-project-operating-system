@@ -4,7 +4,7 @@ This protocol governs requirements 18–30 after a project has a validated plan 
 
 ## 1. Canonical systems
 
-- GitHub is authoritative for code, branches, commits, PR/MR state, merges, repository-backed memory, agent slots, and merge-generation state.
+- GitHub is authoritative for code, branches, commits, PR/MR state, merges, repository-backed memory, agent slots, alerts, and merge-generation state.
 - Linear is the planning/progress mirror for phases, modules, assignments, blockers, review state, progress summaries, and Supervisor status.
 - If Linear and GitHub disagree about code or merge reality, GitHub wins and Linear must be reconciled.
 
@@ -44,6 +44,7 @@ The Supervisor:
 - controls merge order
 - reconciles Linear
 - maintains README status
+- emits and closes repository-backed alerts
 - also executes one bounded development module/work unit when coordination load permits
 
 Workers:
@@ -51,7 +52,7 @@ Workers:
 - work only on claimed eligible slots
 - use isolated branches
 - keep scope bounded to the assigned module/work unit
-- continuously reconcile with current main and merge generation
+- continuously reconcile with current main, merge generation, and open required-action alerts
 - submit PR/MR for Supervisor review
 
 ## 5. Worker zero-question entry
@@ -64,12 +65,14 @@ The worker must:
 2. fetch/reconcile current `main`
 3. inspect `config/coordination/agent-work-queue.json`
 4. inspect `config/coordination/supervisor-state.json`
-5. inspect current merge generation
-6. claim the highest-priority dependency-satisfied free slot allowed for its role/capabilities using the slot's deterministic claim branch
-7. mirror/update the assignment in Linear when available
-8. begin work without asking the user which module to choose unless repository evidence contains a genuine unresolved decision
+5. inspect `config/coordination/agent-alerts.json`
+6. inspect current merge generation
+7. satisfy/acknowledge any applicable required-action alert before new substantive work
+8. claim the highest-priority dependency-satisfied free slot allowed for its role/capabilities using the slot's deterministic claim branch
+9. mirror/update the assignment in Linear when available
+10. begin work without asking the user which module to choose unless repository evidence contains a genuine unresolved decision
 
-The Supervisor does not need to push a message directly into arbitrary external AI chats. Repository-backed queue state is the deterministic assignment mechanism.
+The Supervisor does not need to push a message directly into arbitrary external AI chats. Repository-backed queue and alert state are the deterministic assignment/notification mechanisms.
 
 ## 6. Slot and branch isolation
 
@@ -81,13 +84,13 @@ Recommended claim branch shape:
 
 A slot is claimable only when dependencies are satisfied and no valid active claim exists.
 
-Shared coordination files should normally be Supervisor-owned. Workers should avoid writing shared state except through explicitly allowed claim/heartbeat/submission fields.
+Shared coordination files should normally be Supervisor-owned. Workers should avoid writing shared state except through explicitly allowed claim/heartbeat/submission/alert-acknowledgement fields.
 
 ## 7. Worker completion and review handoff
 
 When a worker has completed its bounded scope and all required checks pass, it must:
 
-- synchronize against the required current main according to merge-generation rules
+- synchronize against the required current main according to merge-generation and alert rules
 - push its branch
 - open/update the PR/MR
 - update queue and Linear review state when permitted
@@ -105,17 +108,26 @@ If defects exist, the Supervisor must either request targeted changes or make bo
 
 Merge only when acceptance gates pass and merge order is safe.
 
-## 9. Merge-generation alert protocol
+When the Supervisor authored the submitted change itself, it must not treat its own authorship as independent approval. Require an independent eligible reviewer/agent when available; otherwise require all applicable automated gates plus an explicit second-pass review context that is separate from the implementation pass, and record that reduced-independence condition. High-risk/security-critical self-authored changes require an independent human or separate authorized reviewer before merge.
 
-Every successful merge to main increments `merge_generation` in `config/coordination/supervisor-state.json` and appends a merge event to `config/coordination/merge-events.json`.
+## 9. Merge-generation alert and acknowledgement protocol
 
-This is the authoritative cross-agent alert.
+Every successful merge to main must:
 
-Before a worker starts or resumes implementation, before pushing a substantial continuation, and before final submission, it must compare its acknowledged generation to the current generation.
+1. increment `merge_generation` in `config/coordination/supervisor-state.json`
+2. append a merge event to `config/coordination/merge-events.json`
+3. append a required-action alert to `config/coordination/agent-alerts.json` addressed to all active workers or specifically affected slots
+4. mirror the rebase/reconcile requirement in Linear when available
 
-If main advanced, the worker must fetch and integrate/rebase/merge the required current main, resolve conflicts, rerun impacted tests, update its acknowledged generation, and only then continue.
+The alert message must instruct workers to integrate current main before continuing substantive development.
 
-Linear should receive a corresponding merge/rebase-needed status update when available.
+Before a worker starts or resumes implementation, before pushing a substantial continuation, and before final submission, it must compare its acknowledged generation to the current generation and inspect applicable open alerts.
+
+If main advanced, the worker must fetch and integrate/rebase/merge the required current main, resolve conflicts, rerun impacted tests, update its acknowledged generation, acknowledge the corresponding alert with the integrated main SHA and verification status, and only then continue.
+
+The Supervisor may close an alert only after all intended active recipients have acknowledged it, their slots have ended/canceled, or the alert has been superseded by a later merge-generation alert.
+
+Repository-backed alert state is mandatory. Direct chat/notification delivery to external AI sessions is optional and additive; never assume it exists.
 
 ## 10. Optional Figma/design intake
 
@@ -152,6 +164,7 @@ It must contain a generated project dashboard with:
 - target/end date
 - PR/MR/review state
 - current merge generation
+- open required-action alert count
 - last repository-visible update
 - last Linear sync
 
@@ -162,10 +175,10 @@ Do **not** create literal one-second Git commits. That would create destructive 
 ## 12. Failure and degraded modes
 
 - If Linear issue creation is unavailable or quota-limited, use a Linear project document/status update and repository state; do not block development.
-- If direct cross-agent messaging is unavailable, queue state + merge generation + Linear mirror are the communication layer.
+- If direct cross-agent messaging is unavailable, queue state + agent alerts + merge generation + Linear mirror are the communication layer.
 - If no external development-agent integration is available, the current capable AI may act as Supervisor and/or Worker while preserving role isolation.
 - If Figma cannot be accessed, request an export only when required; otherwise design from requirements.
 
 ## 13. Completion discipline
 
-Supervisor coordination is not complete until queue state, GitHub merge reality, Linear mirror, project memory, and README dashboard agree.
+Supervisor coordination is not complete until queue state, GitHub merge reality, alert acknowledgements, Linear mirror, project memory, and README dashboard agree.
