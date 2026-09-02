@@ -1,13 +1,15 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "template_blueprint",
+  "provider_id": "linear",
+  "managed_by": "config/integrations/project-management.json",
   "enabled": false,
-  "activation_scope": "child_project_only",
-  "role": "planning_progress_mirror",
+  "activation_scope": "child_project_only_when_selected",
+  "role": "planning_progress_mirror_adapter",
   "canonical_code_system": "github",
   "connection": {
-    "required_during_child_initialization": true,
-    "method": "host_connector_or_oauth",
+    "required_only_when_linear_selected": true,
+    "method": "host_connector_or_oauth_or_mcp",
     "never_collect_raw_password": true,
     "preferred_action": "Connect Linear",
     "fallback": "Ask the user to connect/authenticate Linear in the host UI, then resume setup."
@@ -44,6 +46,6 @@
   "last_error": null,
   "last_reconciled_main_sha": null,
   "last_linear_status_update_id": null,
-  "sync_result": "not_connected_template_blueprint",
-  "degraded_mode": "If Linear is unavailable, keep GitHub/repository state canonical and mark Linear setup pending in the child project."
+  "sync_result": "not_selected_template_blueprint",
+  "degraded_mode": "If Linear is selected but unavailable, keep GitHub/repository state canonical, mark provider sync degraded, and catch up when connectivity returns."
 }
