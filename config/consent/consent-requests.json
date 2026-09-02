@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "next_sequence": 1,
+  "requests": [],
+  "request_schema": {
+    "id": "CONSENT-000001",
+    "type": "technology_update_or_scope_addition",
+    "title": "",
+    "summary": "",
+    "requested_by": "supervisor",
+    "requested_at": null,
+    "owner_identity": null,
+    "canonical_review_reference": null,
+    "email_notification_reference": null,
+    "proposed_changes": [],
+    "affected_modules": [],
+    "risk": "unknown",
+    "status": "pending",
+    "approved_scope": [],
+    "decision_by": null,
+    "decision_at": null,
+    "decision_evidence": null,
+    "implementation_reference": null,
+    "verification_reference": null
+  },
+  "status_values": [
+    "pending",
+    "approved",
+    "partially_approved",
+    "rejected",
+    "expired",
+    "implemented",
+    "verified",
+    "closed"
+  ]
+}
