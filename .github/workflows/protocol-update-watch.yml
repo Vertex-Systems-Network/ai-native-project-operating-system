@@ -1,0 +1,81 @@
+name: AI Native - Protocol Update Watch
+
+on:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ai-native-protocol-update-watch
+  cancel-in-progress: false
+
+jobs:
+  compare-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Compare protocol version with upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python - <<'PY' > /tmp/protocol-env
+          import json
+          from pathlib import Path
+          instance = json.loads(Path('config/protocol/instance.json').read_text())
+          version = json.loads(Path('config/protocol/version.json').read_text())
+          print('INSTANCE_STATUS=' + str(instance.get('instance_status', 'unknown')))
+          print('LOCAL_VERSION=' + str(version['version']))
+          print('UPSTREAM=' + str(version['upstream']['repository']))
+          PY
+          source /tmp/protocol-env
+
+          if [ "$INSTANCE_STATUS" = "template_source" ]; then
+            echo "Template source is the upstream; no child migration request required."
+            exit 0
+          fi
+
+          gh api "repos/$UPSTREAM/contents/config/protocol/version.json?ref=main" --jq '.content' | tr -d '\n' | base64 -d > /tmp/upstream-version.json
+          UPSTREAM_VERSION="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/upstream-version.json'))['version'])
+          PY
+          )"
+
+          NEWER="$(python - "$LOCAL_VERSION" "$UPSTREAM_VERSION" <<'PY'
+          import sys
+          def v(s):
+              return tuple(int(x) for x in s.split('.')[:3])
+          print('true' if v(sys.argv[2]) > v(sys.argv[1]) else 'false')
+          PY
+          )"
+
+          if [ "$NEWER" != "true" ]; then
+            echo "Protocol is current: local=$LOCAL_VERSION upstream=$UPSTREAM_VERSION"
+            exit 0
+          fi
+
+          TITLE="[AI-NATIVE] Protocol Update Available: $LOCAL_VERSION -> $UPSTREAM_VERSION"
+          EXISTING="$(gh issue list --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -n1)"
+          if [ -n "$EXISTING" ]; then
+            echo "Protocol update issue already exists: #$EXISTING"
+            exit 0
+          fi
+
+          cat > /tmp/body.md <<EOF
+          A newer ANPOS control-plane version is available from **$UPSTREAM**.
+
+          - current project protocol: `$LOCAL_VERSION`
+          - upstream protocol: `$UPSTREAM_VERSION`
+
+          This is **not permission to overwrite project code**. The Supervisor must compare protocol/control-plane changes, record an impact/migration entry in `config/protocol/migrations.json`, identify project-specific conflicts, obtain consent for material behavior changes, migrate incrementally, run protocol/application quality gates, and only then mark the migration applied.
+          EOF
+          gh issue create --title "$TITLE" --body-file /tmp/body.md
