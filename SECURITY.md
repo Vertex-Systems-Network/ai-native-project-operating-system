@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Do not disclose exploitable security issues in public issues, pull requests, logs, README dashboards, Linear mirrors, or agent coordination files.
+Do not disclose exploitable security issues in public issues, pull requests, logs, README dashboards, project-management mirrors, or agent coordination files.
 
 Use GitHub private vulnerability reporting/security advisories when available, or another explicitly authorized private security channel configured by the project owner.
 
@@ -13,7 +13,7 @@ A report should include enough information to reproduce and assess the issue wit
 AI agents must:
 
 - treat credentials, tokens, private keys, personal data, exploit details, and sensitive logs as restricted information;
-- avoid copying secrets into prompts, repository state, issues, Linear, or README status;
+- avoid copying secrets into prompts, repository state, issues, project-management providers, or README status;
 - use the minimum information required for remediation;
 - record public coordination state using sanitized references rather than exploit payloads or credentials;
 - route critical/high findings through the Supervisor and authorized security review path;
