@@ -16,8 +16,8 @@
   "last_merge_at": null,
   "active_worker_count": 0,
   "open_required_action_alert_count": 0,
-  "last_linear_sync_at": "2026-09-02T17:35:04+05:00",
-  "last_readme_dashboard_update_at": "2026-09-02T17:35:04+05:00",
-  "last_reconciled_main_sha": "46ed77eaf1dd9241064010b843c658f03d8e7315",
+  "last_linear_sync_at": "2026-09-02T18:11:20+05:00",
+  "last_readme_dashboard_update_at": "2026-09-02T18:04:00+05:00",
+  "last_reconciled_main_sha": "15facefbfa2f90b74caa2c4c0b6148d6cf9164fa",
   "status": "idle_synced"
 }
