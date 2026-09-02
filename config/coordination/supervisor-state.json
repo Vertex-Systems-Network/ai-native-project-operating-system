@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "coordination_epoch": 0,
   "supervisor": {
     "status": "unassigned",
@@ -9,7 +9,18 @@
     "active_module_id": null,
     "active_work_unit_id": null,
     "started_at": null,
-    "heartbeat_at": null
+    "heartbeat_at": null,
+    "lease_id": null,
+    "lease_expires_at": null,
+    "fencing_token": null,
+    "election_ref": null
+  },
+  "lease_policy": {
+    "authority": "epoch_fenced_github_ref",
+    "election_ref_pattern": "supervisor/epoch-{next_coordination_epoch}",
+    "stale_supervisor_becomes_read_only": true,
+    "every_shared_write_must_verify_fencing_token": true,
+    "failover_requires_expired_or_relinquished_lease": true
   },
   "merge_generation": 0,
   "last_merge_sha": null,
