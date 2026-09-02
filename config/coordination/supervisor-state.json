@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "coordination_epoch": 0,
   "supervisor": {
     "status": "unassigned",
@@ -27,7 +27,7 @@
   "last_merge_at": null,
   "active_worker_count": 0,
   "open_required_action_alert_count": 0,
-  "last_linear_sync_at": null,
+  "last_pm_sync_at": null,
   "last_readme_dashboard_update_at": null,
   "last_reconciled_main_sha": null,
   "status": "template_unassigned"
