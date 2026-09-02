@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.0.1",
+  "current_protocol_version": "1.1.0",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -29,12 +29,42 @@
         "inactive runtime workflows are stored under blueprints/github/workflows",
         "README.md and PROJECT-INITIALIZATION.md define the source-vs-child boundary"
       ]
+    },
+    {
+      "id": "ANPOS-1.0.1-to-1.1.0",
+      "from_version": "1.0.1",
+      "to_version": "1.1.0",
+      "detected_at": "2026-09-03T00:00:00+05:00",
+      "impact": [
+        "Replace mandatory Linear-first setup with provider-agnostic Project Management selection",
+        "Keep Linear as the recommended optional adapter rather than a hard dependency",
+        "Add common PM adapter contract and provider switching policy",
+        "Add runtime-discovered Choose Development AI step during child initialization",
+        "Persist selected AI pool and Supervisor/Worker role assignments only in child projects",
+        "Generalize Supervisor, Worker, and orchestrator PM synchronization",
+        "Reset PM provider and AI selection state during child bootstrap",
+        "Strengthen template-source validation against live PM/AI attachment state"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "status": "applied",
+      "applied_at": "2026-09-03T00:00:00+05:00",
+      "verification_evidence": [
+        "PROJECT-MANAGEMENT.md defines provider-agnostic selection, mapping, adapter, sync, and switching behavior",
+        "config/integrations/project-management.json contains an unselected source provider catalog",
+        "config/integrations/linear-sync.json is an optional Linear adapter",
+        "config/ai/agent-catalog.json defines runtime-discovered Development AI selection and role assignment",
+        "PROJECT-INITIALIZATION.md and START-HERE.md include PM provider selection followed by Development AI selection",
+        "scripts/bootstrap_instance.py resets PM and AI selection for child projects",
+        "AGENTS.md, MULTI-AGENT-ORCHESTRATION.md, SUPERVISOR.md, AUTO-AGENT.md, ORCHESTRATOR.md and README.md use the provider-agnostic model",
+        "scripts/validate_ai_native_repo.py checks PM and AI source-template invariants"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.0.1-to-NEXT",
-    "from_version": "1.0.1",
+    "id": "ANPOS-1.1.0-to-NEXT",
+    "from_version": "1.1.0",
     "to_version": null,
     "detected_at": null,
     "impact": [],
