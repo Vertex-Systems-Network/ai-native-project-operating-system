@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "links": [],
+  "link_template": {
+    "requirement_id": "REQ-001",
+    "source": null,
+    "option_ids": [],
+    "module_ids": [],
+    "work_unit_ids": [],
+    "branch_refs": [],
+    "pull_request_refs": [],
+    "test_evidence": [],
+    "release_refs": [],
+    "status": "planned",
+    "verification_status": "unverified"
+  },
+  "status_values": ["proposed", "planned", "in_progress", "implemented", "verified", "released", "deprecated"],
+  "rule": "A requirement is not verified merely because code exists; verification requires linked acceptance/test evidence."
+}
