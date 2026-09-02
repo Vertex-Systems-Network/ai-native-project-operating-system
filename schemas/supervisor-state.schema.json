@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/supervisor-state.schema.json",
+  "title": "ANPOS Supervisor State",
+  "type": "object",
+  "required": ["schema_version", "coordination_epoch", "supervisor", "merge_generation", "status"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 2},
+    "coordination_epoch": {"type": "integer", "minimum": 0},
+    "merge_generation": {"type": "integer", "minimum": 0},
+    "status": {"enum": ["unassigned", "active", "expired", "relinquished", "idle_synced"]},
+    "supervisor": {
+      "type": "object",
+      "required": ["status", "agent_id", "heartbeat_at", "lease_id", "lease_expires_at", "fencing_token", "election_ref"],
+      "properties": {
+        "status": {"enum": ["unassigned", "active", "expired", "relinquished"]},
+        "agent_id": {"type": ["string", "null"]},
+        "agent_type": {"type": ["string", "null"]},
+        "heartbeat_at": {"type": ["string", "null"]},
+        "lease_id": {"type": ["string", "null"]},
+        "lease_expires_at": {"type": ["string", "null"]},
+        "fencing_token": {"type": ["string", "null"]},
+        "election_ref": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "active"}}},
+          "then": {"required": ["agent_id", "heartbeat_at", "lease_id", "lease_expires_at", "fencing_token", "election_ref"]}
+        }
+      ],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
