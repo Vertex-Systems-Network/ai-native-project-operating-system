@@ -1,92 +1,126 @@
 # GitHub Governance and Repository Rules
 
-GitHub governance is part of the **child-project initialization and control plane**. The canonical template source stores a reusable desired policy; it is not evidence that the source repository itself has those project rules applied.
+GitHub governance is part of **child-project initialization and control-plane enforcement**. The canonical template source stores desired policy only; it is not evidence that the source itself has child-project Rules applied.
 
-The desired machine-readable blueprint is `config/github/ruleset-policy.json`.
+Machine-readable blueprint: `config/github/ruleset-policy.json`.
 
 ## Source template boundary
 
 For `Vertex-Systems-Network/ai-native-project-operating-system`:
 
-- `config/github/ruleset-policy.json` is an inactive reusable blueprint;
-- do not report a missing child-project ruleset on the canonical source as governance drift for a real project;
-- do not silently apply child-project merge/ruleset settings to the canonical source;
-- `blueprints/github/workflows/governance-audit.yml` remains inactive until a child project reaches the Rules setup stage.
+- Rules policy is an inactive reusable blueprint;
+- missing child rules on the canonical source are not project-governance drift;
+- do not silently apply child merge/ruleset settings to the source;
+- `blueprints/github/workflows/governance-audit.yml` stays inactive on the source;
+- source repository settings are maintained separately from the child-project flow.
 
-## Child-project setup flow
+## Child setup and consent
 
-After child bootstrap and after baseline quality workflows have produced/established their actual check names, present:
+After bootstrap, capability-aware quality setup and observation of stable real check names, present:
 
 - **Apply Recommended GitHub Rules**
 - **Review GitHub Rules**
 
-The AI must not silently perform repository-administration writes before the project-start Rules decision.
+Repository-admin writes require this project-start user decision. A policy JSON is never proof of enforcement.
 
-If the user approves and an authenticated admin-capable GitHub interface is available, the AI should:
+If the user approves and an authenticated admin-capable GitHub interface exists:
 
-1. read the desired policy;
-2. inspect current child repository rulesets and merge settings;
-3. calculate a minimal safe change plan;
-4. verify real child-project status-check names;
-5. apply the approved policy;
-6. re-read GitHub rules/settings after the write;
-7. install/enable the governance-audit workflow in that child project when appropriate;
-8. mark setup complete only after verification.
+1. inspect current child repository settings, rulesets/branch protection, bypass actors and merge methods;
+2. read `config/github/ruleset-policy.json` and protected paths from `config/github/path-ownership.json`;
+3. verify actual installed/successful status-check contexts and platform capabilities;
+4. calculate/apply the minimal approved changes;
+5. protect default branch and control-plane coordination namespaces as supported;
+6. enable governance auditing when appropriate;
+7. re-read GitHub settings/rulesets and compare every material desired invariant;
+8. mark setup complete only after verified evidence.
 
-If the available interface cannot create/update rulesets/settings, the AI must not claim enforcement. It should:
+If administration writes are unavailable, provide exact manual settings and keep setup `pending_user_action` until re-read verification succeeds.
 
-1. tell the user that admin write capability is unavailable;
-2. show the exact required settings;
-3. keep Rules setup as `pending_user_action`;
-4. re-check after the user applies them.
+## Default branch baseline
 
-## Recommended default-branch policy
-
-For a child project's `main`, the intended baseline is:
+For child `main`/default branch, intended baseline is:
 
 - pull request required before merge;
-- at least one approval;
+- at least one approving review;
 - stale approvals dismissed after new pushes;
 - most recent reviewable push approved by someone other than its author where supported;
-- review conversations resolved;
-- required quality/status checks passing;
-- branch up to date before merge;
+- conversations resolved;
+- applicable observed required checks passing;
+- branch up to date where required by chosen merge strategy;
 - force pushes blocked;
 - branch deletion blocked/restricted;
 - linear history;
-- Supervisor self-authored high-risk/security-critical changes independently reviewed.
+- **CODEOWNER review required for protected paths**;
+- high-risk/security-critical Supervisor self-authored work independently reviewed;
+- bypass permissions minimized and explicitly documented.
 
-After successful child-project CI runs, verify the exact status-check context names before marking them required in GitHub.
+Protected control-plane paths include AI instructions/router/adapters, orchestration/coordination, protocol/security/consent/governance/quality/release policy, validators/schemas/scripts, workflows/blueprints and other paths listed by `config/github/path-ownership.json`.
+
+## Coordination ref namespaces
+
+`claims/**` and `supervisor/**` refs are distributed coordination infrastructure, not normal feature branches.
+
+Where GitHub plan/ruleset capability supports it, restrict create/update/delete for these namespaces to the trusted orchestrator/Supervisor runtime identity. Normal Workers must not be able to manufacture or delete coordination authority.
+
+Where GitHub cannot enforce namespace actor restrictions, the child runtime must provide an equivalent authenticated gateway, least-privilege token separation and audited mutation/recovery. Lack of platform enforcement is recorded as a residual control, not silently ignored.
+
+## Required-check policy is capability-aware
+
+Never hard-code a check as required merely because a blueprint exists.
+
+Potential checks include:
+
+- `AI Native Quality Gates / repository-integrity`;
+- Dependency Review when supported/installed;
+- CodeQL when supported/installed;
+- stack-specific test/build/security/design/accessibility/migration checks after technology approval.
+
+Before making a check required:
+
+1. verify the workflow/feature is actually supported and enabled in that child;
+2. observe the exact stable context name on a successful run;
+3. ensure the check does not require unavailable billing/licensing/permissions;
+4. then add it to the enforced ruleset.
+
+If a platform security feature is unavailable, use an appropriate alternative where possible and record the unavailable control. Do not create a permanently red branch-protection configuration.
+
+## Trusted CI and control-plane changes
+
+Workflow/validator changes cannot be their own sole trust anchor. Protected-path changes require CODEOWNER/independent review. The repository-quality blueprint runs the proposed validator and, on PRs, the protected base revision's validator against the proposed tree where possible, plus control-plane conformance tests.
+
+Any change that weakens governance/quality/security must be treated as a control-plane change and reviewed according to risk.
 
 ## Merge policy
 
-For multi-agent child-project work, prefer squash merging into `main`. This keeps each bounded Worker/Supervisor PR as one auditable integration event and simplifies merge-generation synchronization.
+For multi-agent child work, prefer squash merging into `main`:
 
-Recommended settings:
+- squash merge enabled;
+- merge commits disabled;
+- rebase merge disabled by default for the ANPOS model;
+- auto-merge enabled when supported and desired;
+- update-branch enabled when supported;
+- delete merged feature branches when safe;
+- merge queue recommended when available/practical for concurrent Workers.
 
-- squash merge: enabled;
-- merge commits: disabled;
-- rebase merge: disabled;
-- auto-merge: enabled;
-- update branch: enabled;
-- merge queue: recommended when available and practical.
+Merge policy must not delete protected coordination refs or destroy evidence needed for stale-claim recovery.
 
-Merge queue is especially useful once multiple Workers frequently submit concurrently, but it should not be required when the GitHub plan or repository mode does not support it.
+## Identity and token separation
 
-## Required checks baseline
+GitHub permissions should follow least privilege:
 
-Candidate universal child-project checks are:
+- Worker credentials: feature branch/review scope only as needed, no repository-admin or coordination-namespace authority by default;
+- Supervisor/orchestrator: only permissions required for coordination/review/merge/governance operations;
+- deployment identity: environment-scoped, short-lived/OIDC where supported;
+- security scanners: minimal read/write permissions required for their outputs.
 
-- `AI Native Quality Gates / repository-integrity`
-- `Dependency Review / dependency-review`
-- `CodeQL / analyze-actions`
-
-These are desired names from the supplied workflow blueprints, not proof that a specific child repository has produced them. Confirm the actual check contexts in that child before enforcing them.
-
-Stack-specific checks are added after technology approval and should become required once their stable check names have been observed.
+Never reuse a broad personal token as the universal Worker/Supervisor/deployment identity when a narrower mechanism exists.
 
 ## Drift monitoring
 
-`blueprints/github/workflows/governance-audit.yml` is the reusable child-project audit blueprint. It is installed/enabled only after the child Rules setup stage. It can report drift, but `GITHUB_TOKEN` is not treated as an administration credential for silently changing repository governance.
+`blueprints/github/workflows/governance-audit.yml` is a child blueprint enabled after Rules setup. It reports observed drift but does not silently use `GITHUB_TOKEN` as a repository-administration credential.
 
-Governance changes must be performed through an authenticated administration-capable GitHub interface/API and verified afterward.
+A drift audit should compare the material desired policy, not merely check that *some* ruleset exists. Unsupported/unobservable settings must be reported as unknown rather than assumed compliant.
+
+## Verification rule
+
+Governance is `verified` only after authenticated re-read of the child repository demonstrates the applicable policy. Config files, screenshots, AI statements or PM status alone are insufficient evidence.
