@@ -133,7 +133,7 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     supervisor["last_merge_at"] = None
     supervisor["active_worker_count"] = 0
     supervisor["open_required_action_alert_count"] = 0
-    supervisor["last_linear_sync_at"] = None
+    supervisor["last_pm_sync_at"] = None
     supervisor["last_readme_dashboard_update_at"] = None
     supervisor["last_reconciled_main_sha"] = None
     supervisor["status"] = "unassigned"
@@ -197,6 +197,7 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     agents["available_agents"] = []
     agents["selected_agents"] = []
     agents["suggested_but_unavailable"] = []
+    agents["role_assignments"] = {"supervisor_agent_id": None, "worker_agent_ids": []}
     changed["config/ai/agent-catalog.json"] = json.dumps(agents, indent=2) + "\n"
 
     # Baseline workflows are installed automatically in the child, but must still
