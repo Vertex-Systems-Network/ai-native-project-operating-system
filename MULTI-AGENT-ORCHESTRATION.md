@@ -1,34 +1,38 @@
 # Multi-Agent Orchestration and Control Plane
 
-This protocol governs requirements 18–30 after a project has a validated plan and executable module graph.
+This protocol governs multi-agent execution after a child project has a validated plan and executable module graph.
 
 ## 1. Canonical systems
 
-- GitHub is authoritative for code, branches, commits, PR/MR state, merges, repository-backed memory, agent slots, alerts, and merge-generation state.
-- Linear is the planning/progress mirror for phases, modules, assignments, blockers, review state, progress summaries, and Supervisor status.
-- If Linear and GitHub disagree about code or merge reality, GitHub wins and Linear must be reconciled.
+- GitHub/repository state is authoritative for code, branches, commits, PR/MR state, merges, tests, repository-backed memory, agent slots, alerts, merge-generation state, and release evidence.
+- The selected project-management provider is the planning/progress collaboration mirror for phases, modules, assignments, blockers, review state, progress summaries, and Supervisor status.
+- If the PM provider disagrees with GitHub about code, review, merge, or verified-completion reality, GitHub wins and the PM provider must be reconciled.
 
-## 2. Linear planning and hourly synchronization
+Use `PROJECT-MANAGEMENT.md` and `config/integrations/project-management.json`. Linear is one recommended adapter, not a hard dependency.
 
-When Linear is available, create or attach a Linear project for the software project and mirror the approved Phase → Module → Work Unit plan.
+## 2. PM planning and synchronization
 
-During active development the Supervisor must reconcile GitHub ↔ Linear:
+When a PM provider is selected and verified, mirror the approved Project → Phase/Milestone → Module → Work Unit plan using the provider adapter contract.
 
-- at startup/resume
-- at least once per hour while the Supervisor is actively running
-- immediately after material events: claim, blocker, review submission, requested changes, merge, module completion, phase completion, or plan revision
+During active development the Supervisor reconciles repository ↔ PM provider:
 
-If the host cannot run continuously or schedule work, record the missed heartbeat and perform catch-up reconciliation on the next Supervisor run. Never pretend a background sync occurred when no persistent runner existed.
+- at startup/resume;
+- at least once per hour only while a persistent Supervisor runtime actually exists;
+- immediately after material events such as claim, reassignment, blocker, review submission, requested changes, merge, module completion, phase completion, release change, or plan revision.
+
+If the provider or host is unavailable, record degraded state and catch up later. Never pretend a background sync occurred.
 
 ## 3. Development AI selection
 
-Before multi-agent implementation begins, discover which development agents/tools are actually available or attachable in the current host.
+Development-AI selection occurs during child initialization and can be revised later.
 
-Present only usable choices as primary buttons/actions under **Choose Development AI**. Examples may include Codex, Claude Code, GitHub Copilot, Gemini, Cursor, Windsurf, or other capable agents, but an option may be selectable only when the current host can actually use, attach, invoke, or hand work to it.
+Use `config/ai/agent-catalog.json`.
 
-Unavailable suggestions may be shown separately as recommendations, never as active buttons that imply integration exists.
+Discover which development agents/tools are actually available or attachable in the current host and present only usable choices under **Choose Development AI**. Examples may include Codex/ChatGPT, Claude Code, GitHub Copilot, Gemini, Cursor, Windsurf, or other compatible agents.
 
-Allow one or more compatible agent types to be selected for the worker pool. Record the approved pool in `config/ai/agent-catalog.json`.
+Unavailable suggestions may be shown separately, never as active controls implying integration exists.
+
+Allow one or more verified agent types when the host supports a pool. Record the selected pool and role assignments. A typical setup may use one selected capable agent as Supervisor and one or more selected capable agents as Workers.
 
 ## 4. Multi-agent operating model
 
@@ -36,64 +40,64 @@ There must be exactly one active **Supervisor** for a coordination epoch.
 
 The Supervisor:
 
-- owns whole-project coordination
-- maintains the queue and dependency graph
-- assigns/opens module slots
-- detects conflicting/shared writes
-- reviews worker submissions
-- controls merge order
-- reconciles Linear
-- maintains README status
-- emits and closes repository-backed alerts
-- also executes one bounded development module/work unit when coordination load permits
+- owns whole-project coordination;
+- maintains the queue and dependency graph;
+- assigns/opens module slots;
+- detects conflicting/shared writes;
+- reviews Worker submissions;
+- controls merge order;
+- reconciles the selected PM provider;
+- maintains README status;
+- emits and closes repository-backed alerts;
+- may also execute one bounded development module/work unit when coordination load permits.
 
 Workers:
 
-- work only on claimed eligible slots
-- use isolated branches
-- keep scope bounded to the assigned module/work unit
-- continuously reconcile with current main, merge generation, and open required-action alerts
-- submit PR/MR for Supervisor review
+- work only on claimed eligible slots;
+- use isolated branches;
+- keep scope bounded to the assigned module/work unit;
+- continuously reconcile with current main, merge generation, and open required-action alerts;
+- submit PR/MR for Supervisor review.
 
 ## 5. Worker zero-question entry
 
-A new worker should need only the repository URL plus a request to start/continue development.
+A new Worker should need only the child repository URL plus a request to start/continue development.
 
-The worker must:
+The Worker must:
 
-1. read `AGENTS.md`, `AUTO-AGENT.md`, `AI-NATIVE-EXECUTION.md`, and this file
-2. fetch/reconcile current `main`
-3. inspect `config/coordination/agent-work-queue.json`
-4. inspect `config/coordination/supervisor-state.json`
-5. inspect `config/coordination/agent-alerts.json`
-6. inspect current merge generation
-7. satisfy/acknowledge any applicable required-action alert before new substantive work
-8. claim the highest-priority dependency-satisfied free slot allowed for its role/capabilities using the slot's deterministic claim branch
-9. mirror/update the assignment in Linear when available
-10. begin work without asking the user which module to choose unless repository evidence contains a genuine unresolved decision
+1. read `AGENTS.md`, `AUTO-AGENT.md`, `AI-NATIVE-EXECUTION.md`, and this file;
+2. fetch/reconcile current `main`;
+3. inspect `config/coordination/agent-work-queue.json`;
+4. inspect `config/coordination/supervisor-state.json`;
+5. inspect `config/coordination/agent-alerts.json`;
+6. inspect current merge generation;
+7. satisfy/acknowledge applicable required-action alerts before new substantive work;
+8. claim the highest-priority dependency-satisfied free slot allowed for its role/capabilities using the atomic claim protocol;
+9. mirror/update assignment in the selected PM provider when connected and permitted;
+10. begin work without asking the user which module to choose unless repository evidence contains a genuine unresolved decision.
 
-The Supervisor does not need to push a message directly into arbitrary external AI chats. Repository-backed queue and alert state are the deterministic assignment/notification mechanisms.
+Repository-backed queue and alert state are the deterministic assignment/notification mechanisms. Direct messaging to external AI chats is optional.
 
 ## 6. Slot and branch isolation
 
-Every executable slot has a stable ID, module ID, priority, dependencies, eligibility, deterministic claim branch, status, claimant, base SHA, review reference, and Linear reference when available.
+Every executable slot has a stable ID, module ID, priority, dependencies, eligibility, deterministic claim reference/branch, status, claimant, base SHA, review reference, and PM reference when available.
 
-Recommended claim branch shape:
+Recommended work branch shape:
 
 `agent/<slot-id>/<sanitized-module-name>`
 
 A slot is claimable only when dependencies are satisfied and no valid active claim exists.
 
-Shared coordination files should normally be Supervisor-owned. Workers should avoid writing shared state except through explicitly allowed claim/heartbeat/submission/alert-acknowledgement fields.
+Shared coordination files are normally Supervisor-owned. Workers should avoid shared-state writes except through explicitly allowed claim/heartbeat/submission/alert-acknowledgement fields.
 
 ## 7. Worker completion and review handoff
 
-When a worker has completed its bounded scope and all required checks pass, it must:
+When a Worker has completed its bounded scope and all required checks pass, it must:
 
-- synchronize against the required current main according to merge-generation and alert rules
-- push its branch
-- open/update the PR/MR
-- update queue and Linear review state when permitted
+- synchronize against required current main according to merge-generation and alert rules;
+- push its branch;
+- open/update the PR/MR;
+- update queue and PM review state when permitted;
 - send the exact completion state:
 
 **ALL DONE SUBMITTED FOR REVIEW AND MERGE**
@@ -102,83 +106,76 @@ The work is not merged merely because this message exists.
 
 ## 8. Supervisor review and merge
 
-The Supervisor must independently inspect the PR/MR, changed files, tests, architecture fit, security/quality impact, shared-state conflicts, and current main.
+The Supervisor independently inspects the PR/MR, changed files, tests, architecture fit, security/quality impact, shared-state conflicts, and current main.
 
-If defects exist, the Supervisor must either request targeted changes or make bounded corrective changes where authorized and safe, then rerun relevant verification.
+If defects exist, request targeted changes or make bounded corrective changes where authorized and safe, then rerun relevant verification.
 
 Merge only when acceptance gates pass and merge order is safe.
 
-When the Supervisor authored the submitted change itself, it must not treat its own authorship as independent approval. Require an independent eligible reviewer/agent when available; otherwise require all applicable automated gates plus an explicit second-pass review context that is separate from the implementation pass, and record that reduced-independence condition. High-risk/security-critical self-authored changes require an independent human or separate authorized reviewer before merge.
+When the Supervisor authored the submitted change itself, its authorship is not independent approval. Require an independent eligible reviewer/agent where available. High-risk/security-critical self-authored changes require an independent human or separate authorized reviewer before merge.
+
+After merge, update the connected PM provider only from verified repository reality.
 
 ## 9. Merge-generation alert and acknowledgement protocol
 
-Every successful merge to main must:
+Every successful merge to `main` must:
 
-1. increment `merge_generation` in `config/coordination/supervisor-state.json`
-2. append a merge event to `config/coordination/merge-events.json`
-3. append a required-action alert to `config/coordination/agent-alerts.json` addressed to all active workers or specifically affected slots
-4. mirror the rebase/reconcile requirement in Linear when available
+1. increment `merge_generation` in `config/coordination/supervisor-state.json`;
+2. append a merge event to `config/coordination/merge-events.json`;
+3. append a required-action alert to `config/coordination/agent-alerts.json` for affected active Workers;
+4. mirror the reconcile requirement in the selected PM provider when useful.
 
-The alert message must instruct workers to integrate current main before continuing substantive development.
+Before a Worker starts/resumes substantive implementation, before a substantial continuation, and before final submission, it compares its acknowledged generation to the current generation and inspects applicable open alerts.
 
-Before a worker starts or resumes implementation, before pushing a substantial continuation, and before final submission, it must compare its acknowledged generation to the current generation and inspect applicable open alerts.
+If main advanced, the Worker fetches/integrates current main, resolves conflicts, reruns impacted tests, acknowledges the new generation with evidence, then continues.
 
-If main advanced, the worker must fetch and integrate/rebase/merge the required current main, resolve conflicts, rerun impacted tests, update its acknowledged generation, acknowledge the corresponding alert with the integrated main SHA and verification status, and only then continue.
-
-The Supervisor may close an alert only after all intended active recipients have acknowledged it, their slots have ended/canceled, or the alert has been superseded by a later merge-generation alert.
-
-Repository-backed alert state is mandatory. Direct chat/notification delivery to external AI sessions is optional and additive; never assume it exists.
+The Supervisor closes an alert only after intended recipients acknowledge it, their slots end/cancel, or the alert is superseded.
 
 ## 10. Optional Figma/design intake
 
-Before detailed UI/UX execution, offer an optional design input.
+Before detailed UI/UX execution, offer:
 
-Preferred UI:
-
-- text/URL box label: **Figma / Existing Design Link**
+- text/URL box: **Figma / Existing Design Link**
 - primary action: `Add Figma Design`
 - secondary action: `Skip Design Link`
 
-If a Figma or other accessible design is supplied, the AI must audit it against validated requirements, flows, architecture, responsive/accessibility needs, and the approved design system before implementation. Existing design is evidence/input, not unquestionable authority.
+If an accessible design is supplied, audit it against validated requirements, flows, architecture, responsive/accessibility needs, and the approved design system. If no design exists or the user skips, create the UI/UX professionally from validated requirements.
 
-If no design is supplied or the user skips, the AI must create the UI/UX professionally from the validated product/system requirements.
-
-Record design source and audit state in `config/design/design-intake.json`.
+Record design source/audit state in `config/design/design-intake.json`.
 
 ## 11. README live development dashboard
 
-The main-branch README is the human-readable project control surface.
+The child project's main-branch README is the human-readable control surface.
 
-It must contain a generated project dashboard with:
+It should include where relevant:
 
-- overall project progress bar
-- total phases and modules
-- module ID/name
-- description
-- owner/agent
-- Supervisor current work
-- status
-- progress percentage/bar
-- dependencies/blockers
-- start date
-- target/end date
-- PR/MR/review state
-- current merge generation
-- open required-action alert count
-- last repository-visible update
-- last Linear sync
+- overall project progress;
+- selected PM provider + sync state;
+- selected Supervisor/Worker AI pool;
+- phases/modules/work units;
+- description/owner/status/progress;
+- blockers/dependencies;
+- start/target dates;
+- PR/MR/review state;
+- merge generation;
+- open required-action alert count;
+- last repository-visible update;
+- last PM-provider sync.
 
-Refresh the dashboard immediately after every repository-visible state transition and at active-run heartbeat intervals where a persistent runner exists.
-
-Do **not** create literal one-second Git commits. That would create destructive history churn and race conditions. "Live" means event-driven immediate updates, plus heartbeat refresh when supported.
+Refresh after repository-visible state transitions and supported heartbeat intervals. Do not create literal one-second Git commits.
 
 ## 12. Failure and degraded modes
 
-- If Linear issue creation is unavailable or quota-limited, use a Linear project document/status update and repository state; do not block development.
-- If direct cross-agent messaging is unavailable, queue state + agent alerts + merge generation + Linear mirror are the communication layer.
-- If no external development-agent integration is available, the current capable AI may act as Supervisor and/or Worker while preserving role isolation.
-- If Figma cannot be accessed, request an export only when required; otherwise design from requirements.
+- If the selected PM provider is unavailable/quota-limited, use repository state and provider documents/status surfaces where possible; do not block development unnecessarily.
+- If no PM provider is selected, repository-backed planning is sufficient.
+- If direct cross-agent messaging is unavailable, queue state + agent alerts + merge generation + optional PM mirror are the communication layer.
+- If only one development AI is available, it may act in separated Supervisor/Worker passes while preserving role and review safeguards.
+- If Figma cannot be accessed, design from requirements unless an export is genuinely needed.
 
-## 13. Completion discipline
+## 13. Provider switching
 
-Supervisor coordination is not complete until queue state, GitHub merge reality, alert acknowledgements, Linear mirror, project memory, and README dashboard agree.
+If the owner switches PM providers, reconcile GitHub first, connect/verify the replacement, rebuild active plan/task/review state from repository truth, verify counts/mappings, then disable old sync. Never migrate by trusting stale PM state over GitHub.
+
+## 14. Completion discipline
+
+Supervisor coordination is not complete until queue state, GitHub merge reality, alert acknowledgements, selected PM mirror when connected, project memory, and README dashboard agree.
