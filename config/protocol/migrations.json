@@ -42,8 +42,10 @@
         "Add runtime-discovered Choose Development AI step during child initialization",
         "Persist selected AI pool and Supervisor/Worker role assignments only in child projects",
         "Generalize Supervisor, Worker, and orchestrator PM synchronization",
+        "Rename coordination fields from last_linear_sync_at/linear_reference to last_pm_sync_at/pm_reference",
+        "Upgrade Supervisor/work-queue coordination schemas to v3 for generic PM state",
         "Reset PM provider and AI selection state during child bootstrap",
-        "Strengthen template-source validation against live PM/AI attachment state"
+        "Strengthen template-source validation against live PM/AI attachment state and legacy vendor-specific coordination fields"
       ],
       "project_conflicts": [],
       "requires_owner_consent": false,
@@ -55,9 +57,12 @@
         "config/integrations/linear-sync.json is an optional Linear adapter",
         "config/ai/agent-catalog.json defines runtime-discovered Development AI selection and role assignment",
         "PROJECT-INITIALIZATION.md and START-HERE.md include PM provider selection followed by Development AI selection",
+        "config/coordination/supervisor-state.json uses last_pm_sync_at",
+        "config/coordination/agent-work-queue.json uses pm_reference",
+        "schemas/supervisor-state.schema.json and schemas/agent-work-queue.schema.json require schema v3",
         "scripts/bootstrap_instance.py resets PM and AI selection for child projects",
-        "AGENTS.md, MULTI-AGENT-ORCHESTRATION.md, SUPERVISOR.md, AUTO-AGENT.md, ORCHESTRATOR.md and README.md use the provider-agnostic model",
-        "scripts/validate_ai_native_repo.py checks PM and AI source-template invariants"
+        "AGENTS.md, MULTI-AGENT-ORCHESTRATION.md, SUPERVISOR.md, AUTO-AGENT.md, ORCHESTRATOR.md, CONTINUOUS-IMPROVEMENT.md, FINAL-CORE.md and README.md use the provider-agnostic model",
+        "scripts/validate_ai_native_repo.py checks PM/AI source-template invariants and rejects legacy Linear-only coordination fields"
       ]
     }
   ],
