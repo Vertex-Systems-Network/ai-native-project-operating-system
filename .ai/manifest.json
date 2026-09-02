@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "protocol": "ANPOS",
   "purpose": "Role-aware instruction router. Agents read common files plus only the files required by their active role/scope.",
   "authority_order": [
@@ -87,7 +87,16 @@
       "blueprints/commercial/marketplace-webhook-contract.json",
       "blueprints/commercial/entitlement-envelope.example.json",
       "blueprints/commercial/service-api-contract.json",
+      "commercial-service/README.md",
+      "commercial-service/package.json",
+      "commercial-service/lib/env.ts",
+      "commercial-service/lib/db.ts",
+      "commercial-service/lib/crypto.ts",
+      "commercial-service/lib/github.ts",
+      "commercial-service/lib/auth.ts",
+      "commercial-service/lib/entitlements.ts",
       "scripts/validate_commercial_licensing.py",
+      "scripts/validate_commercial_service.py",
       "SECURITY.md",
       "CONTROL-PLANE-SECURITY.md",
       "config/security/trust-policy.json",
