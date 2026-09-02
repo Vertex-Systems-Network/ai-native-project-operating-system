@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "status": "active",
+  "universal_required_checks": [
+    "repository-integrity",
+    "dependency-review",
+    "codeql-actions"
+  ],
+  "scheduled_security_quality": [
+    "ossf-scorecard"
+  ],
+  "stack_specific_policy": {
+    "generate_after_stack_approval": true,
+    "required_categories": [
+      "formatter",
+      "linter",
+      "type_or_static_analysis",
+      "unit_tests",
+      "integration_tests",
+      "build",
+      "dependency_audit",
+      "security_scanning"
+    ],
+    "additional_when_relevant": [
+      "contract_tests",
+      "e2e_tests",
+      "accessibility_tests",
+      "performance_tests",
+      "migration_tests",
+      "container_scan",
+      "iac_scan",
+      "license_policy",
+      "coverage_gate"
+    ]
+  },
+  "quality_gate_rules": {
+    "no_merge_on_failed_required_check": true,
+    "no_silent_check_skips": true,
+    "changed_behavior_requires_tests": true,
+    "generated_code_requires_validation": true,
+    "critical_or_high_security_findings_block_merge": true,
+    "new_dependencies_require_dependency_review": true,
+    "github_actions_must_be_pinned_to_full_commit_sha": true
+  },
+  "tool_selection_rule": "Prefer mature, actively maintained, ecosystem-standard tools. Record the selected tool and rationale in the project technology/quality decisions after the application stack is known."
+}
