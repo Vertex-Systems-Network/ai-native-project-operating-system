@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Initialize a child repository created from the ANPOS template.
+
+Dry-run by default. Use --apply to write changes. The template source repository is
+protected unless --allow-source is explicitly supplied.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE_REPO = "Vertex-Systems-Network/ai-native-project-operating-system"
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def load(path: str) -> dict[str, Any]:
+    return json.loads((ROOT / path).read_text(encoding="utf-8"))
+
+
+def infer_repository() -> str | None:
+    env = os.getenv("GITHUB_REPOSITORY")
+    if env:
+        return env
+    try:
+        remote = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"], cwd=ROOT, text=True
+        ).strip()
+    except Exception:
+        return None
+    remote = remote.removesuffix(".git")
+    if remote.startswith("git@github.com:"):
+        return remote.split(":", 1)[1]
+    marker = "github.com/"
+    if marker in remote:
+        return remote.split(marker, 1)[1]
+    return None
+
+
+def reset_runtime(repository: str, project_name: str, owner: str | None, linear_id: str | None, linear_url: str | None) -> dict[str, str]:
+    timestamp = now()
+    changed: dict[str, str] = {}
+
+    instance = load("config/protocol/instance.json")
+    instance.update({
+        "instance_status": "active_project",
+        "instance_id": str(uuid.uuid4()),
+        "project_name": project_name,
+        "repository": repository,
+        "repository_owner": repository.split("/", 1)[0],
+        "initialized_at": timestamp,
+        "initialized_by": owner,
+        "bootstrap_completed": True,
+    })
+    changed["config/protocol/instance.json"] = json.dumps(instance, indent=2) + "\n"
+
+    state = load("config/ai/project-state.json")
+    state.update({
+        "lifecycle_stage": "not_started",
+        "current_phase": None,
+        "current_module": None,
+        "current_work_unit": None,
+        "last_verified_completion": None,
+        "next_valid_work_unit": None,
+        "outstanding_updates": [],
+        "outstanding_removals": [],
+        "unresolved_decisions": [],
+        "critical_defects": [],
+        "last_reconciled_repository_ref": None,
+        "last_reconciled_at": None,
+    })
+    if isinstance(state.get("progress"), dict):
+        for key in state["progress"]:
+            state["progress"][key] = 0
+    changed["config/ai/project-state.json"] = json.dumps(state, indent=2) + "\n"
+
+    queue = load("config/coordination/agent-work-queue.json")
+    queue["slots"] = []
+    queue["updated_at"] = timestamp
+    changed["config/coordination/agent-work-queue.json"] = json.dumps(queue, indent=2) + "\n"
+
+    supervisor = load("config/coordination/supervisor-state.json")
+    supervisor["coordination_epoch"] = 0
+    supervisor["merge_generation"] = 0
+    supervisor["last_merge_sha"] = None
+    supervisor["last_merge_at"] = None
+    supervisor["active_worker_count"] = 0
+    supervisor["open_required_action_alert_count"] = 0
+    supervisor["last_linear_sync_at"] = None
+    supervisor["last_readme_dashboard_update_at"] = None
+    supervisor["last_reconciled_main_sha"] = None
+    supervisor["status"] = "unassigned"
+    supervisor["supervisor"] = {
+        "status": "unassigned", "agent_id": None, "agent_type": None, "branch": None,
+        "active_module_id": None, "active_work_unit_id": None, "started_at": None,
+        "heartbeat_at": None, "lease_id": None, "lease_expires_at": None,
+        "fencing_token": None, "election_ref": None,
+    }
+    changed["config/coordination/supervisor-state.json"] = json.dumps(supervisor, indent=2) + "\n"
+
+    for path, list_key in [
+        ("config/coordination/merge-events.json", "events"),
+        ("config/coordination/agent-alerts.json", "alerts"),
+        ("config/consent/consent-requests.json", "requests"),
+    ]:
+        doc = load(path)
+        doc[list_key] = []
+        if "next_sequence" in doc:
+            doc["next_sequence"] = 1
+        changed[path] = json.dumps(doc, indent=2) + "\n"
+
+    linear = load("config/integrations/linear-sync.json")
+    linear["project"] = {
+        "name": project_name,
+        "id": linear_id,
+        "url": linear_url,
+    }
+    for key in ["last_successful_sync_at", "last_attempt_at", "last_error", "last_reconciled_main_sha", "last_linear_status_update_id"]:
+        if key in linear:
+            linear[key] = None
+    linear["sync_result"] = "bootstrap_pending_reconciliation"
+    changed["config/integrations/linear-sync.json"] = json.dumps(linear, indent=2) + "\n"
+
+    if owner:
+        handle = owner.lstrip("@")
+        codeowners = f"""# Generated by scripts/bootstrap_instance.py for {repository}\n* @{handle}\n/.github/ @{handle}\n/config/coordination/ @{handle}\n/config/protocol/ @{handle}\n/config/github/ @{handle}\n/schemas/ @{handle}\n/scripts/ @{handle}\n/SECURITY.md @{handle}\n"""
+        changed[".github/CODEOWNERS"] = codeowners
+
+    return changed
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--allow-source", action="store_true")
+    parser.add_argument("--repository")
+    parser.add_argument("--project-name")
+    parser.add_argument("--github-owner", help="GitHub user/team handle used to render initial CODEOWNERS")
+    parser.add_argument("--linear-project-id")
+    parser.add_argument("--linear-project-url")
+    args = parser.parse_args()
+
+    repository = args.repository or infer_repository()
+    if not repository or "/" not in repository:
+        raise SystemExit("Unable to determine owner/repository. Pass --repository owner/name.")
+    if repository == SOURCE_REPO and not args.allow_source:
+        raise SystemExit("Refusing to bootstrap the template source repository. Use --allow-source only for deliberate testing.")
+
+    project_name = args.project_name or repository.split("/", 1)[1].replace("-", " ").strip().title()
+    changes = reset_runtime(repository, project_name, args.github_owner, args.linear_project_id, args.linear_project_url)
+
+    if not args.apply:
+        print("DRY RUN - no files written")
+        print("Would initialize:", repository)
+        for path in sorted(changes):
+            print("-", path)
+        return 0
+
+    for relative, content in changes.items():
+        target = ROOT / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    print(f"Initialized ANPOS project instance {repository} with {len(changes)} reset/generated files.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
