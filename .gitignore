@@ -10,6 +10,13 @@ htmlcov/
 .venv/
 venv/
 
+# Commercial service / Node tooling
+commercial-service/node_modules/
+commercial-service/.next/
+commercial-service/.vercel/
+commercial-service/coverage/
+commercial-service/*.tsbuildinfo
+
 # Local environment / secrets
 .env
 .env.*
