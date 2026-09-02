@@ -4,6 +4,10 @@
   "scope": "default_branch",
   "target_branch": "main",
   "enforcement": "active",
+  "repository_settings": {
+    "is_template": true,
+    "delete_branch_on_merge": true
+  },
   "rules": {
     "require_pull_request": true,
     "required_approving_reviews": 1,
@@ -36,8 +40,8 @@
     "shared_coordination_state_requires_supervisor_review": true
   },
   "notes": [
-    "Apply through GitHub repository/organization rulesets when an authenticated administration-capable API is available.",
-    "Do not claim this policy is enforced until repository ruleset state is verified.",
-    "Required status-check names should be verified after their first successful runs before activating the ruleset."
+    "Apply through GitHub repository/organization administration when an authenticated administration-capable API is available.",
+    "Do not claim this policy is enforced until repository settings/ruleset state is verified.",
+    "Required status-check names should be verified after their first successful pull-request runs before activating the ruleset."
   ]
 }
