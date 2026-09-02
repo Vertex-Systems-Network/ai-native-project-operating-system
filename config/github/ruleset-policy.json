@@ -1,11 +1,19 @@
 {
-  "schema_version": 1,
-  "status": "desired_policy",
+  "schema_version": 2,
+  "status": "template_blueprint",
+  "activation_scope": "child_project_only",
+  "template_source_enforcement": "not_applicable",
   "scope": "default_branch",
   "target_branch": "main",
-  "enforcement": "active",
+  "setup_flow": {
+    "ask_user_before_applying": true,
+    "preferred_action": "Apply Recommended GitHub Rules",
+    "secondary_action": "Review GitHub Rules",
+    "if_admin_capable_ai": "apply_after_user_approval_then_re_read_and_verify",
+    "if_ai_cannot_apply": "show_exact_manual_rules_setup_steps_and_mark_pending",
+    "never_claim_applied_without_github_verification": true
+  },
   "repository_settings": {
-    "is_template": true,
     "delete_branch_on_merge": true
   },
   "rules": {
@@ -40,8 +48,8 @@
     "shared_coordination_state_requires_supervisor_review": true
   },
   "notes": [
-    "Apply through GitHub repository/organization administration when an authenticated administration-capable API is available.",
-    "Do not claim this policy is enforced until repository settings/ruleset state is verified.",
-    "Required status-check names should be verified after their first successful pull-request runs before activating the ruleset."
+    "This file is a reusable desired-policy blueprint, not evidence that the template source repository has these rules applied.",
+    "Apply only to a child/new project after the user approves the rules setup.",
+    "Required status-check names must be verified in that child repository after the quality workflows are installed and have run successfully."
   ]
 }
