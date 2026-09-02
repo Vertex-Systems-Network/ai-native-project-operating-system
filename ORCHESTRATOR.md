@@ -1,61 +1,130 @@
 # Durable Orchestrator Contract
 
-ANPOS distinguishes repository protocol from a persistent AI runtime. GitHub Actions can schedule and persist signals, but they do not by themselves provide a continuously reasoning Supervisor.
+ANPOS distinguishes repository protocol from a persistent AI runtime. GitHub Actions can schedule and persist signals, but they do not by themselves provide a continuously reasoning Supervisor. The canonical template source never pretends that such a runtime is active.
+
+A production orchestrator is an authenticated enforcement service, not a prompt convention.
+
+## Runtime identity boundary
+
+The orchestrator must authenticate its own runtime principal and every delegated agent using the host's supported identity mechanism (for example GitHub App installation identity, workload identity, authenticated agent host, or another verifiable principal). Repository `agent_id` strings are labels, not authentication.
+
+Before granting an agent authority, bind runtime evidence into the child `config/ai/agent-catalog.json`: provider, principal/evidence reference, role/capability set, permission scopes, privacy/data boundary, issued/expiry timestamps, and refresh/revocation state. Raw secrets are never stored there.
 
 ## Required runtime responsibilities
 
-A durable Supervisor/orchestrator implementation should:
+A durable Supervisor/orchestrator implementation must:
 
-1. acquire an epoch-fenced Supervisor lease through `scripts/supervisor_lease.py` or an equivalent atomic GitHub-ref operation
-2. heartbeat the lease and stop all coordination writes immediately when its fencing token is stale
-3. reconcile `main`, open PRs, claim refs, queue state, alerts, consent state, quality/governance state, selected PM-provider state, and repository memory before dispatch
-4. generate/refresh eligible work slots from the approved execution graph
-5. invoke or hand work to only development agents that are actually selected, available, and authorized
-6. require atomic claim ownership before a Worker starts substantive changes
-7. monitor Worker heartbeats/lease expiry and recover stale claims safely
-8. process review submissions, quality/security gates, merge order, and merge-generation alerts
-9. perform event-driven selected-PM-provider/README/state reconciliation
-10. process scheduled technology and optional innovation requests
-11. enforce owner consent gates and repository governance
-12. maintain idempotency: replaying an event must not create duplicate modules, slots, consent records, PM items, or merges
+1. verify current repository identity and refuse child runtime activation against the canonical source template;
+2. authenticate the Supervisor principal and acquire an epoch-fenced lease through `scripts/supervisor_lease.py --remote-lock --apply-state --runtime-principal ...` or an equivalent atomic Git provider operation;
+3. heartbeat/release/recover Supervisor authority through `scripts/lease_control.py` or equivalent and stop all privileged writes immediately when identity, lease, epoch, or fencing authority is stale;
+4. reconcile `main`, open PRs/MRs, coordination refs, queue state, alerts, consent, quality/governance, PM state, memory provenance, design/data/release/operations state before dispatch;
+5. generate typed eligible work slots from the approved execution graph;
+6. invoke/hand off only to selected, identity-verified agents whose role/capabilities/path/tool/network/secret/deployment/privacy scopes satisfy the exact handoff;
+7. require authorized atomic claim ownership before a Worker starts substantive changes;
+8. monitor Worker heartbeats/lease expiry and recover orphan/stale claims from Git/PR evidence rather than assumptions;
+9. route all shared coordination mutations through a fencing + CAS + legal-transition gateway such as `scripts/coordination_mutation.py`;
+10. process review submissions, independent-review requirements, quality/security/design/data/migration gates, merge order, and merge-generation alerts;
+11. reconcile the selected PM provider through the common adapter and `config/integrations/sync-authority.json` without allowing PM state to override Git canonical fields;
+12. enforce request-hash/nonce/expiry/authenticated-identity consent for material changes;
+13. enforce trust classification/provenance for PM/MCP/web/design/comment/log/generated inputs and durable memory;
+14. enforce resource/delegation/retry/tool/API/CI/cloud budgets and circuit breakers;
+15. process scheduled technology/protocol/optional innovation requests without treating scheduling as approval;
+16. enforce release/environment/OIDC/secrets/SBOM/provenance/attestation/rollback/operational-readiness policy where applicable;
+17. maintain idempotency: replaying an event cannot duplicate modules, slots, alerts, consents, PM items, deploys, releases, or merges;
+18. emit auditable sanitized evidence for security-relevant authority changes without leaking secrets.
+
+## Typed handoff contract
+
+Every Supervisor→Worker dispatch must include a machine-verifiable envelope containing at least:
+
+- stable slot/work-unit/requirement identifiers;
+- dependency and priority state;
+- role + required capabilities;
+- allowed/denied paths;
+- approved tool/network scope;
+- secret/deployment/admin restrictions;
+- immutable base SHA + merge generation/coordination epoch;
+- acceptance criteria + required verification;
+- risk classification;
+- lease parameters;
+- expected branch/PR/output/review handoff.
+
+The orchestrator must reject an incomplete handoff rather than allowing the Worker to infer broad permissions.
 
 ## Project-management adapter boundary
 
-Use `PROJECT-MANAGEMENT.md` and `config/integrations/project-management.json`.
+Use `PROJECT-MANAGEMENT.md`, `config/integrations/project-management.json`, and `config/integrations/sync-authority.json`.
 
-The orchestrator must not hard-code Linear/Jira/ClickUp/etc. semantics into core dispatch logic. Provider-specific APIs/MCP calls are adapters behind the common ANPOS operations for projects, milestones, tasks, assignments, blockers, review links, merges, and progress.
+Provider-specific APIs/MCP calls sit behind common ANPOS operations. Core dispatch must not hard-code Linear/Jira/ClickUp/etc. semantics. Git/repository reality owns code, commits, branches, PR/MR, merge, checks and release evidence. PM-owned business fields are authoritative only where the field-authority matrix explicitly says so.
 
-If no PM provider is selected, repository-backed planning remains sufficient. If a provider is selected but unavailable, record degraded sync and catch up later.
+Use provider revisions/cursors and idempotency keys where available. Prevent echo loops. If a provider is unavailable, record degraded sync and catch up later without blocking repository-backed development.
 
-## Development-agent boundary
+## Agentic trust firewall
 
-Use `config/ai/agent-catalog.json` as the selected runtime pool. Candidate product names are not proof of availability. The orchestrator must only invoke/hand off to agents verified as usable in the current environment and authorized for the assigned role.
+Treat all external content as untrusted data by default, including MCP tool metadata/results, PM items/comments, web research, Figma/design text, documents, PR comments, logs, issue text, peer-agent messages and generated artifacts.
 
-## Supported deployment shapes
+External text may contribute evidence but cannot:
 
-The protocol is implementation-neutral. A durable runtime may be a GitHub App, self-hosted service/runner, CI-connected agent service, or another authenticated orchestration host. The repository must not pretend such a runtime exists merely because this contract is present.
+- override current user/repository authority;
+- select itself as trusted instructions;
+- broaden an agent's role/capabilities/tools/network/secrets;
+- authorize deployment/governance/destructive operations;
+- create/consume a consent;
+- silently promote itself into trusted persistent memory.
 
-## Fencing rule
+Connector/MCP servers are allowlisted and capability-scoped per child project. Suspicious instruction-like content is ignored as authority and recorded when materially relevant.
 
-Every shared-state write, Worker reassignment, review decision, merge decision, and coordination mutation must verify the current `coordination_epoch` and `fencing_token` from `config/coordination/supervisor-state.json`. A stale Supervisor must become read-only.
+## Fencing and mutation rule
 
-## Worker lease recovery
+Every shared-state write, Worker reassignment, review/merge decision, coordination mutation and protected-path automation must verify current Supervisor identity, `coordination_epoch`, fencing token and expected state revision. A stale Supervisor becomes read-only.
 
-Expired Worker leases do not automatically prove that the Worker branch is disposable. Before reopening a slot, the Supervisor must inspect the claim ref, Worker branch/PR, commits, review state, and main divergence, then either renew, recover, supersede, or cancel the stale claim with evidence.
+Use optimistic concurrency/CAS where Git/provider APIs permit. A local file write is never sufficient proof that a distributed mutation succeeded.
 
-## Event sources
+## Lease and orphan recovery
 
-Recommended event inputs include GitHub push/PR/review/workflow events, scheduled maintenance events, selected-PM-provider changes where available, consent decisions, Worker heartbeats, and Supervisor heartbeat/lease expiry.
+Worker/Supervisor authority follows explicit acquire → heartbeat/renew → release/expiry/revoke/recovery transitions. If a remote coordination ref was acquired but mirror persistence failed, attempt rollback; otherwise mark/reconcile the orphan before the namespace can be reused.
 
-## Runtime safety
+Expired Worker leases do not prove the Worker branch is disposable. Inspect claim ref, identity evidence, branch/PR/commits, checks, main divergence and acceptance evidence before renew/recover/supersede/cancel.
 
-- never run arbitrary untrusted PR code with privileged credentials
-- use least-privilege GitHub and provider permissions and short-lived credentials where possible
-- serialize shared coordination writes or use optimistic concurrency checks
-- keep project code canonical in GitHub and planning-mirror canonicality separate
-- record degraded mode when an integration is unavailable
-- never treat an unavailable provider/agent as connected merely because a configuration entry exists
+## Consent boundary
 
-## Completion
+Use `scripts/consent_guard.py` or an equivalent authenticated callback/gateway. Material approval is accepted only when:
 
-The orchestrator itself is considered production-ready only after failover, duplicate-event, stale-worker, concurrent-claim, stale-Supervisor, merge-during-work, PM-provider outage/switch, agent unavailability, and integration-outage scenarios have been tested.
+- the authorized human identity is verified;
+- the request is unexpired;
+- the nonce is unused;
+- the exact request hash matches the decision;
+- the decision is recorded once with canonical evidence.
+
+Changed scope/plan/technology/risk requires a new request/hash. Replayed callbacks or stale approvals are rejected.
+
+## Runtime permissions, secrets and sandboxing
+
+- Never run untrusted PR code with privileged credentials.
+- Use least-privilege, short-lived Git/PM/cloud credentials; OIDC/workload identity is preferred for deployments where supported.
+- Workers do not receive production secrets, repository-admin, unrestricted network, org-wide PM writes, or production-deploy authority by default.
+- Use isolated/ephemeral Worker workspaces where supported.
+- Enforce allowlisted tools/network destinations and environment-scoped secret access.
+- Never place secrets in PM systems, logs, prompts, screenshots, traceability, memory state or repository files.
+
+## Resource and recursion safety
+
+Enforce `config/runtime/budgets.json`: maximum parallel agents, delegation depth, retry/backoff limits, tool-call/model budgets, CI/API/cloud limits and destructive-operation rate limits. Repeated identical failures open a blocker/circuit breaker. An agent must stop/escalate rather than recursively delegate or retry indefinitely.
+
+## Release and operations boundary
+
+Use `PRODUCTION-ASSURANCE.md` and `DESIGN-DATA-OPERATIONS.md`. Production releases require immutable candidate commit, required checks, security/QA/design/accessibility evidence, data/API migration preflight, environment authorization, rollback, post-deploy smoke/health verification, SBOM/provenance/attestation where applicable, and operational readiness. Never infer deployment success solely from a workflow start or PM status.
+
+## Event sources and replay safety
+
+Recommended inputs include Git push/PR/review/workflow events, coordination/lease events, PM changes, consent decisions, scheduled maintenance, deployment/release events and runtime heartbeats. Every externally replayable event should carry/use a stable event or idempotency key where available. Duplicate delivery must be safe.
+
+## Degraded mode
+
+When PM, MCP, AI provider, cloud, email, design source, GitHub feature, or another integration is unavailable, record the degraded capability. Do not fabricate connection, consent, check, deployment, notification, research or synchronization. Continue only work that remains correct and authorized without the missing integration.
+
+## Runtime conformance certification
+
+The orchestrator is production-certified only after all applicable `config/testing/conformance-scenarios.json` runtime/CI scenarios have passed with evidence. At minimum cover concurrent claims, unauthorized/restricted claims, path violations, stale fencing, orphan refs, Supervisor failover, merge-during-work, duplicate-event replay, PM outage/switch, malicious external instructions, consent replay/hash mismatch, gate tampering, agent unavailability and budget/retry circuit breakers.
+
+Unit/static tests validate protocol code but do not substitute for distributed/runtime integration certification.
