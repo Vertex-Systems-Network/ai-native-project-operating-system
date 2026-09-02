@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "coordination_mode": "multi_agent",
+  "updated_at": null,
+  "slots": [],
+  "slot_schema": {
+    "id": "SLOT-001",
+    "phase_id": "PHASE-001",
+    "module_id": "MOD-001",
+    "work_unit_id": "WU-001",
+    "title": "Example bounded work unit",
+    "description": "",
+    "priority": 100,
+    "dependencies": [],
+    "eligibility": ["ANY"],
+    "status": "free",
+    "claim_branch": "agent/SLOT-001/example-bounded-work-unit",
+    "claimant": null,
+    "agent_type": null,
+    "base_sha": null,
+    "acknowledged_merge_generation": 0,
+    "claimed_at": null,
+    "heartbeat_at": null,
+    "submitted_at": null,
+    "review_reference": null,
+    "linear_reference": null,
+    "blockers": [],
+    "notes": []
+  },
+  "status_values": [
+    "free",
+    "claimed",
+    "in_progress",
+    "blocked",
+    "submitted_for_review",
+    "changes_requested",
+    "approved",
+    "merged",
+    "completed",
+    "canceled"
+  ]
+}
