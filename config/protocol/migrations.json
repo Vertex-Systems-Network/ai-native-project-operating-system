@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "current_protocol_version": "1.0.0",
+  "applied_migrations": [],
+  "pending_migrations": [],
+  "migration_record_template": {
+    "id": "ANPOS-1.0.0-to-1.1.0",
+    "from_version": "1.0.0",
+    "to_version": "1.1.0",
+    "detected_at": null,
+    "impact": [],
+    "project_conflicts": [],
+    "requires_owner_consent": false,
+    "status": "pending",
+    "applied_at": null,
+    "verification_evidence": []
+  },
+  "rule": "Protocol migrations modify control-plane/runtime contracts incrementally. They must not overwrite project-specific implementation or approved architecture without impact analysis and applicable consent."
+}
