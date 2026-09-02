@@ -14,7 +14,8 @@
         "type": "object",
         "required": [
           "id", "work_unit_id", "priority", "risk_classification", "delegation_depth", "status", "dependencies", "eligibility",
-          "required_roles", "required_capabilities", "allowed_paths", "acceptance_criteria", "required_checks", "lease_status"
+          "required_roles", "required_capabilities", "allowed_paths", "denied_paths", "allowed_tools", "network_policy",
+          "network_allowlist", "pm_scope", "secret_scope", "deployment_scope", "acceptance_criteria", "required_checks", "lease_status"
         ],
         "properties": {
           "id": {"type": "string", "minLength": 1},
@@ -31,8 +32,13 @@
           "allowed_paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
           "denied_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "allowed_tools": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-          "acceptance_criteria": {"type": "array", "items": {"type": "string"}, "minItems": 1},
-          "required_checks": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "network_policy": {"type": "string", "minLength": 1},
+          "network_allowlist": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "pm_scope": {"type": "string", "minLength": 1},
+          "secret_scope": {"type": "string", "minLength": 1},
+          "deployment_scope": {"type": "string", "minLength": 1},
+          "acceptance_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "required_checks": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
           "claim_ref": {"type": ["string", "null"]},
           "claimant": {"type": ["string", "null"]},
           "claimant_identity_ref": {"type": ["string", "null"]},
@@ -48,7 +54,10 @@
         },
         "allOf": [
           {
-            "if": {"properties": {"status": {"enum": ["claimed", "in_progress", "blocked", "submitted_for_review", "changes_requested", "approved"]}}},
+            "if": {
+              "properties": {"status": {"enum": ["claimed", "in_progress", "blocked", "submitted_for_review", "changes_requested", "approved"]}},
+              "required": ["status"]
+            },
             "then": {
               "required": ["claim_ref", "claimant", "claimant_identity_ref", "claim_id", "claim_branch", "coordination_epoch", "fencing_token", "lease_expires_at", "base_sha"],
               "properties": {"lease_status": {"const": "active"}}
