@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "coordination_mode": "multi_agent",
   "updated_at": null,
   "slots": [],
@@ -14,10 +14,15 @@
     "dependencies": [],
     "eligibility": ["ANY"],
     "status": "free",
-    "claim_branch": "agent/SLOT-001/example-bounded-work-unit",
+    "claim_branch": null,
     "claimant": null,
     "agent_type": null,
     "base_sha": null,
+    "claim_id": null,
+    "claim_nonce": null,
+    "coordination_epoch": null,
+    "fencing_token": null,
+    "lease_expires_at": null,
     "acknowledged_merge_generation": 0,
     "claimed_at": null,
     "heartbeat_at": null,
@@ -26,6 +31,13 @@
     "linear_reference": null,
     "blockers": [],
     "notes": []
+  },
+  "claim_protocol": {
+    "authority": "deterministic_github_ref",
+    "ref_pattern": "claims/epoch-{coordination_epoch}/{slot_id}",
+    "first_successful_ref_creation_wins": true,
+    "json_is_mirror_not_lock": true,
+    "expired_lease_requires_supervisor_evidence_reconciliation": true
   },
   "status_values": [
     "free",
