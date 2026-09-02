@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.2.1",
+  "current_protocol_version": "1.3.0",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -122,14 +122,52 @@
         ".gitignore exists and is protected by control-plane policy, path ownership and CODEOWNERS",
         "scripts/bootstrap_instance.py generates explicit child ownership for .gitignore",
         "scripts/validate_ai_native_repo.py requires and protects .gitignore and no longer requires FINAL-CORE.md",
-        "Full post-cleanup compile, unit/conformance and repository-validator certification must pass before this migration is treated as release-certified"
+        "Full post-cleanup compile, unit/conformance and repository-validator certification passed before final source inertness was restored"
+      ]
+    },
+    {
+      "id": "ANPOS-1.2.1-to-1.3.0",
+      "from_version": "1.2.1",
+      "to_version": "1.3.0",
+      "detected_at": "2026-09-03T04:15:00+05:00",
+      "impact": [
+        "Requirements 75-82: add optional commercial distribution/licensing architecture without making core child-project execution a paid runtime dependency",
+        "Add GitHub Marketplace as the recommended GitHub-native commercial adapter with provider-agnostic fallback distribution modes",
+        "Define server-side entitlement authority and non-authoritative repository entitlement references",
+        "Require asymmetrically signed portable entitlement claims while keeping signing private keys and webhook secrets outside repositories",
+        "Require marketplace_purchase purchased/changed/cancelled handling, X-Hub-Signature-256 verification, X-GitHub-Delivery deduplication, idempotency and API reconciliation",
+        "Define non-destructive cancellation/expiry that may gate future premium provisioning/updates/services/support but may not delete or sabotage generated customer projects",
+        "Add draft external-pricing product catalog for Developer, Pro, Team and Enterprise plans without creating billing commitments in repository code",
+        "Add commercial customer-data minimization and cancelled-trial cleanup policy",
+        "Add commercial launch gates for publisher/listing/financial onboarding, key management, entitlement ledger backup/recovery, support/refund/cancellation, privacy and operator-supplied legal terms",
+        "Protect commercial policies/configs/blueprints/schemas/tests/validators through ANPOS control-plane ownership",
+        "Add commercial runtime conformance scenarios and a dedicated commercial licensing validator to the repository quality blueprint",
+        "Keep canonical source commercial runtime disabled and free of customer records, live plan IDs, payment data, webhook secrets, App private keys and entitlement-signing private keys"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Commercial licensing remains optional for existing child projects. Do not introduce billing checks into normal build/test/runtime paths merely by adopting ANPOS 1.3.0. Customer entitlement references may be added only when the operator intentionally enables commercial distribution/update/service access, and existing generated project functionality must remain non-destructive on expiry.",
+      "status": "applied",
+      "applied_at": "2026-09-03T04:15:00+05:00",
+      "verification_evidence": [
+        "COMMERCIAL-LICENSING.md maps requirements 75-82 and defines source-vs-commercial-runtime boundary",
+        "config/licensing/commercial-policy.json remains disabled template_blueprint/commercial_distribution_only",
+        "config/licensing/marketplace-adapter.json remains unconfigured and defines verified/idempotent Marketplace event handling",
+        "config/licensing/entitlement-reference.json remains unbound and explicitly non-authoritative",
+        "schemas/license-entitlement.schema.json defines portable signed entitlement/reference structure",
+        "blueprints/commercial/marketplace-webhook-contract.json defines signature, replay, reconciliation, idempotency and non-destructive cancellation behavior",
+        "config/testing/conformance-scenarios.json includes commercial webhook replay, non-destructive expiry and plan-change reconciliation scenarios",
+        "tests/test_commercial_licensing.py and scripts/validate_commercial_licensing.py validate commercial source/security invariants",
+        "blueprints/github/workflows/repository-quality.yml runs both core and commercial validators",
+        ".ai/manifest.json exposes commercial_distribution as an isolated role",
+        "AGENTS.md, control-plane policy, path ownership and CODEOWNERS protect commercial licensing assets"
       ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.2.1-to-NEXT",
-    "from_version": "1.2.1",
+    "id": "ANPOS-1.3.0-to-NEXT",
+    "from_version": "1.3.0",
     "to_version": null,
     "detected_at": null,
     "impact": [],
@@ -139,5 +177,5 @@
     "applied_at": null,
     "verification_evidence": []
   },
-  "rule": "Protocol migrations modify control-plane/runtime contracts incrementally. They must not overwrite project-specific implementation or approved architecture without impact analysis and applicable consent."
+  "rule": "Protocol migrations modify control-plane/runtime/commercial contracts incrementally. They must not overwrite project-specific implementation, approved architecture, customer code, or legal/commercial terms without impact analysis and applicable consent."
 }
