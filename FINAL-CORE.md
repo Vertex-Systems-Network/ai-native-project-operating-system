@@ -4,7 +4,7 @@ These requirements define the reusable distributed multi-agent control plane tha
 
 ## 35 — Template Bootstrap / Instance Reset
 
-Child repositories must initialize project identity and clear inherited runtime state before scaling development. `scripts/bootstrap_instance.py` resets project/coordination/consent/Linear runtime identity, creates a new instance UUID, regenerates child CODEOWNERS, and installs child runtime/quality blueprints. It is dry-run by default and refuses to reset the canonical upstream source repo without explicit override.
+Child repositories must initialize project identity and clear inherited runtime state before scaling development. `scripts/bootstrap_instance.py` resets project/coordination/consent/PM-provider/AI-selection runtime identity, creates a new instance UUID, regenerates child CODEOWNERS, and installs child runtime/quality blueprints. It is dry-run by default and refuses to reset the canonical upstream source repo without explicit override.
 
 ## 36 — Atomic Worker Claims + Leases
 
@@ -16,7 +16,7 @@ Exactly one Supervisor is active per coordination epoch. Election uses the next 
 
 ## 38 — Durable Orchestrator Runtime Contract
 
-`ORCHESTRATOR.md` defines the responsibilities of a persistent GitHub App/service/self-hosted agent runtime: lease heartbeats, queue dispatch, stale-claim recovery, PR review/merge, alerts, Linear sync, consent routing, maintenance, idempotency, and failover. Repository docs do not falsely claim that a persistent runtime already exists.
+`ORCHESTRATOR.md` defines the responsibilities of a persistent GitHub App/service/self-hosted agent runtime: lease heartbeats, queue dispatch, stale-claim recovery, PR review/merge, alerts, selected PM-provider sync, development-agent dispatch, consent routing, maintenance, idempotency, and failover. Repository docs do not falsely claim that a persistent runtime already exists.
 
 ## 39 — AI Manifest / Context Router
 
@@ -24,7 +24,7 @@ Exactly one Supervisor is active per coordination epoch. Election uses the next 
 
 ## 40 — Formal State Schemas + State Machine
 
-Core JSON Schemas live in `schemas/`. `config/protocol/state-machine.json` defines legal Worker/Supervisor transitions and fencing invariants. Queue/Supervisor runtime state uses lease-aware schema v2. Repository validation checks these invariants plus the source-template boundary.
+Core JSON Schemas live in `schemas/`. `config/protocol/state-machine.json` defines legal Worker/Supervisor transitions and fencing invariants. Queue/Supervisor runtime state uses lease-aware schema v2. Repository validation checks these invariants plus source-template provider/agent boundaries.
 
 ## 41 — Protocol Versioning + Upstream Migration Channel
 
@@ -32,7 +32,7 @@ Core JSON Schemas live in `schemas/`. `config/protocol/state-machine.json` defin
 
 ## 42 — Thin AI Vendor Adapters
 
-Vendor adapters route Claude Code, Gemini, GitHub Copilot, Cursor, and Windsurf to `AGENTS.md` + `.ai/manifest.json`. They do not duplicate the full protocol.
+Vendor adapters route Claude Code, Gemini, GitHub Copilot, Cursor, Windsurf, and other compatible development AIs to the same `AGENTS.md` + `.ai/manifest.json` authority model. `config/ai/agent-catalog.json` records only agents actually available/attachable in each child project.
 
 ## 43 — Requirements Traceability
 
@@ -42,6 +42,12 @@ Vendor adapters route Claude Code, Gemini, GitHub Copilot, Cursor, and Windsurf 
 
 `config/github/path-ownership.json` defines role ownership for shared/high-risk paths. `.github/CODEOWNERS` provides a source-template baseline. Child repositories regenerate valid owner/team identities during bootstrap.
 
+## Provider-agnostic project management
+
+ANPOS 1.1+ adds `PROJECT-MANAGEMENT.md` and `config/integrations/project-management.json` as the common planning/progress adapter layer. Linear is recommended but optional; GitHub Projects, Jira, ClickUp, GitLab, Azure DevOps, Plane, Asana, monday.com, Notion, or another verified compatible provider may be selected per child project.
+
+GitHub/repository reality remains canonical regardless of provider.
+
 ## Source vs child invariant
 
-**Canonical source stores instructions and inactive blueprints. Child repositories activate integrations/workflows/project state. GitHub refs arbitrate ownership; JSON mirrors state; fencing tokens prevent stale leaders/workers from mutating shared coordination state. GitHub code/branch/PR/merge reality remains canonical.**
+**Canonical source stores instructions, provider catalogs, adapter contracts, and inactive blueprints. Child repositories activate integrations/workflows/project state. GitHub refs arbitrate ownership; JSON mirrors state; fencing tokens prevent stale leaders/workers from mutating shared coordination state. GitHub code/branch/PR/merge/test reality remains canonical.**
