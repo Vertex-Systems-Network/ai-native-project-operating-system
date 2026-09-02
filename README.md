@@ -1,88 +1,134 @@
 # AI Native Project Operating System
 
-A repository-first protocol for turning a raw idea into a researched, designed, engineered, tested, security-hardened, and continuously executable AI-native software project.
+A repository-first operating system for turning a raw idea into a researched, designed, engineered, tested, security-hardened, stateful, and multi-agent AI-native software project.
 
 ## First-run experience
 
-When a user gives this repository URL to an AI, the AI must read `AGENTS.md` and `START-HERE.md` before doing project work.
+When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and initializes the project flow.
 
-The flow is intentionally structured:
+1. **Start Development** — offer `Start Development` as the primary action/button when supported; otherwise use the exact text fallback.
+2. **Project Intake** — collect one free-form **Idea / Thoughts / Plan / Research / Search / Assumptions** input.
+3. **Discover → Research → Reason** — search the internet, research the strongest possibilities, and challenge assumptions.
+4. **Market Compare → Deep Audit Existing Systems** — compare the idea with current products/competitors and deeply audit the most useful comparable systems.
+5. **Synthesize → Plan** — revise the project plan from evidence rather than merely restating the user's first idea.
+6. **System Design** — design system boundaries, actors, subsystems, integrations, non-functional requirements, reliability, scalability, security, privacy, observability, deployment, and extension points.
+7. **Technology Recommendation + Consent** — compare frontend/backend/database/infrastructure/testing/deployment options and obtain explicit `Approve Technology Stack` consent before detailed implementation architecture/coding.
+8. **Development Architecture** — define repository/module boundaries, contracts, persistence, APIs, state, testing architecture, CI/CD, deployment topology, rollback, and engineering conventions.
+9. **Data Flow Design** — design end-to-end data movement, stores, transformations, integrations, trust boundaries, failure/retry, retention/deletion, and audit paths.
+10. **Professional UI/UX** — audit optional Figma/existing design input or create the product design from requirements.
+11. **Development + DevOps** — implement frontend, backend, persistence, integrations, tests, infrastructure, CI/CD, observability, deployment, and synchronized docs.
+12. **SQA** — validate static quality, unit/integration/contract/E2E/regression/responsive/accessibility/performance/failure/deployment/recovery behavior.
+13. **Security Engineering** — perform authorized defensive threat modeling and adversarial hardening.
+14. **AI-Native Project Ownership** — AI treats the repository as an active engineering responsibility, not disconnected prompts.
+15. **Repository Memory Bank** — persist what is done, partial, blocked, remaining, update-required, removal/deprecation-required, and where to resume.
+16. **Pre-Plan + Options Bank + Modules Bank** — document the system first and attach reusable options/capabilities to stable modules.
+17. **Phase → Module → Small Work Unit** — decompose large phases into small dependency-aware slices that are easy to implement, review, test, and finish.
+18. **Linear Planning + Hourly Sync** — mirror phases/modules/progress, ownership, blockers, reviews, and Supervisor state to Linear; reconcile at least hourly while an active persistent Supervisor runtime exists and immediately on material events.
+19. **Choose Development AI** — discover only agents actually available/attachable in the current host and present usable choices as buttons/actions.
+20. **Multi-Agent Development** — execute multiple isolated module/work-unit slots concurrently under repository-backed coordination.
+21. **One Supervisor** — exactly one active Supervisor owns project-wide coordination, review, merge ordering, worker correction, state reconciliation, and overall development oversight.
+22. **Worker Auto-Routing** — a new worker only needs the repo link/start request; it reads `AUTO-AGENT.md` and deterministically claims the highest-priority valid free eligible slot.
+23. **Review Handoff** — completed workers submit PR/MR and send exactly `ALL DONE SUBMITTED FOR REVIEW AND MERGE`.
+24. **Supervisor Review/Fix/Merge** — Supervisor independently validates each submission, requests or applies bounded fixes, reruns checks, and merges only when gates pass.
+25. **Merge-Generation Alert** — every main merge increments repository merge generation; active workers must integrate current main and reverify before continuing.
+26. **Supervisor Also Develops** — when coordination load permits, Supervisor owns one bounded module/work unit as well.
+27. **Optional Figma Input** — offer **Figma / Existing Design Link** with `Add Figma Design` and `Skip Design Link` actions; audit supplied design when accessible.
+28. **AI-Created Design Fallback** — if no design exists or the user skips, AI creates the professional UI/UX from validated requirements.
+29. **Main README Control Surface** — repository-visible state transitions immediately refresh the main-branch dashboard; supported persistent runtimes may also heartbeat-refresh it. Literal one-second Git commits are intentionally forbidden.
+30. **Plan/Module Progress Table** — README tracks module descriptions, owners, progress, dates, blockers, review state, and merge generation.
 
-1. **Start Development** — offer one primary `Start Development` action/button when supported; otherwise use the exact text fallback.
-2. **Project Intake** — collect one free-form input containing any mix of Idea, Thoughts, Plan, Research, Search notes, Assumptions, constraints, references, competitors, or rough notes.
-3. **Discover → Research → Reason** — search the internet for possibilities and evidence, research the strongest findings deeply, and independently challenge assumptions.
-4. **Market Compare → Deep Audit Existing Systems** — compare the concept against competitors, substitutes, category leaders, newer products, and relevant open-source systems; deeply audit the most useful comparable systems using credible available evidence.
-5. **Synthesize → Plan** — create/revise the project plan from evidence, not merely from the user's original assumptions.
-6. **System Design** — act as a System Design Engineer and design the complete system boundaries, actors, subsystems, integrations, non-functional requirements, reliability, scalability, security, privacy, observability, deployment environments, and extension points.
-7. **Technology Recommendation + Consent** — compare the best-fit frontend, backend, database, infrastructure, testing, deployment, and supporting technologies for current and credible future needs. Before detailed implementation architecture or coding, request explicit consent using `Approve Technology Stack` as the preferred primary action and `Review Alternatives` where useful.
-8. **Development Architecture** — after technology approval, act as a Senior Software / Structure Architecture Engineer and define repository structure, module boundaries, contracts, persistence, APIs, state, integrations, testing architecture, CI/CD, deployment topology, rollback strategy, and engineering conventions.
-9. **Data Flow Design** — act as a Data Flow Engineer and design important end-to-end reads/writes, actors, APIs, stores, transformations, integrations, trust boundaries, failures, retries, retention, deletion, and audit paths.
-10. **Professional UI/UX Design** — act as a Senior UI/UX Engineer / Product Designer and define information architecture, journeys, task flows, screens, states, responsive behavior, component system, accessibility, onboarding, and interaction behavior.
-11. **Development + DevOps** — act as a Senior Developer and DevOps Engineer and implement the approved system incrementally with frontend, backend, persistence, integrations, tests, infrastructure, CI/CD, observability, deployment automation, recovery considerations, and synchronized documentation.
-12. **SQA** — independently validate the system as an SQA Engineer using the relevant static, unit, integration, contract, E2E, regression, responsive, accessibility, performance, failure/retry, deployment, backup/restore, upgrade, and rollback tests.
-13. **Security Engineering + Authorized Adversarial Assessment** — act as a Security Engineer and Ethical Hacker. White-hat, realistic hostile/black-hat-style, green-hat/novice, insider, and automated-abuse perspectives are defensive lenses only against explicitly authorized project scope.
-14. **AI-Native Project Ownership** — the AI now treats the repository as an active engineering responsibility, not as disconnected prompts. It determines the next valid work itself when repository evidence is sufficient and no human decision blocks progress.
-15. **Repository-Backed Memory Bank** — persistent project state tracks what is complete, partial, blocked, remaining, needs update, needs removal/deprecation, and where work must resume. Chat history is never the project source of truth.
-16. **Pre-Plan + Options Bank + Modules Bank** — before large-scale implementation, maintain a living pre-plan, a reusable options/capabilities bank, and a canonical modules bank. Modules attach reusable capabilities by stable option IDs.
-17. **Phase → Module → Small Work Unit Execution** — convert the project into outcome-oriented phases/milestones, modules, and small dependency-aware executable work units that are easy to implement, review, test, and complete without creating meaningless micro-task overhead.
+## Current project control surface
 
-## Repository-backed AI continuity
+<!-- AI-PROJECT-DASHBOARD:START -->
 
-AI-native execution is defined in `AI-NATIVE-EXECUTION.md`.
+**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–30 currently represented in the repository protocol.
+
+**Current merge generation:** `0`  
+**Linear project:** AI Native Project Operating System  
+**Last repository-visible protocol update:** 2026-09-02  
+**Last Linear planning initialization:** 2026-09-02
+
+| Module | Description | Owner | Status | Progress | Start | End/Target | Review / Blocker |
+|---|---|---|---|---:|---|---|---|
+| P01 | Start/intake, internet discovery, research, reasoning, market comparison, comparable-system audits, synthesis | AI | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
+| P02 | System design, stack selection/consent, architecture, data flow, UI/UX, development, QA, security | AI | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
+| P03 | AI-native ownership, memory bank, pre-plan, options/modules banks, small work-unit execution | AI | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
+| P04 | Linear planning/progress mirror and hourly/event-driven reconciliation protocol | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Linear free issue quota reached; project document/milestone fallback active |
+| P05 | Dynamic development-AI selection and multi-agent worker pool | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Runtime agent availability discovered per host |
+| P06 | Supervisor/worker queue, deterministic claims, PR/MR review, merge generation and worker sync | Supervisor + Workers | Complete | 100% | 2026-09-02 | 2026-09-02 | — |
+| P07 | Optional Figma/design intake and AI-created design fallback | UI/UX AI | Complete | 100% | 2026-09-02 | 2026-09-02 | Figma access depends on host connection |
+| P08 | Main README generated progress/control dashboard | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Event-driven refresh; no one-second commit churn |
+
+> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, Git/PR state, and Linear state.
+
+<!-- AI-PROJECT-DASHBOARD:END -->
+
+## Repository-backed continuity
 
 Persistent core artifacts:
 
-- `config/ai/project-state.json` — compact answer to where the project is now and where work resumes.
+- `config/ai/project-state.json` — where the project is now and where work resumes.
 - `config/ai/options-bank.json` — reusable capability/option catalog.
 - `config/ai/modules-bank.json` — canonical module catalog with attached option IDs.
-- `config/ai/execution-plan.json` — dependency-aware phases, modules, and work-unit graph.
-- `docs/ai/PRE-PLAN.md` — living engineering pre-plan and decomposition document.
+- `config/ai/execution-plan.json` — dependency-aware phases/modules/work-unit graph.
+- `config/ai/agent-catalog.json` — available/selected development-agent pool.
+- `config/coordination/agent-work-queue.json` — deterministic multi-agent slots and claims.
+- `config/coordination/supervisor-state.json` — Supervisor identity/status, merge generation, sync timestamps.
+- `config/coordination/merge-events.json` — cross-agent main-merge alerts.
+- `config/integrations/linear-sync.json` — Linear planning/progress mirror and sync policy.
+- `config/design/design-intake.json` — optional Figma/design source and audit state.
+- `docs/ai/PRE-PLAN.md` — living engineering pre-plan.
 
-Before new/resumed work, the AI reconciles these records against actual repository/Git/test reality. If recorded memory conflicts with verified repository reality, repository reality wins and the memory bank is repaired.
+Repository/Git/test reality wins over stale memory records.
 
-The target execution hierarchy is:
+## Multi-agent execution model
 
-**Project → Phase/Milestone → Module → Work Unit → Acceptance/Verification**
+The coordination hierarchy is:
 
-A work unit should be a small coherent slice that can be understood, implemented, reviewed, tested, and completed reliably.
+**Supervisor → Phase/Milestone → Module Slot → Worker → PR/MR → Supervisor Review → Merge → Merge-Generation Alert → Worker Reconciliation**
 
-## AI-native execution loop
+Workers use isolated deterministic claim branches. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, and README status. Direct push messaging between arbitrary AI chats is not assumed; repository queue state and merge generation provide deterministic cross-agent coordination.
 
-When development is authorized and no genuine human decision blocks progress, the AI repeatedly:
+## Linear integration
 
-1. inspects repository reality
-2. reconciles project memory/state
-3. identifies the active phase/module/work unit
-4. selects the next valid dependency-satisfied work unit
-5. implements a small coherent slice
-6. tests and verifies it
-7. updates documentation and persistent state
-8. identifies newly exposed work, updates, removals, risks, or decisions
-9. continues
+This operating-system repository is mirrored in Linear under **AI Native Project Operating System**. GitHub remains canonical for code and merge reality.
 
-The AI should not ask which module to work on when repository evidence can determine the answer.
+Linear sync occurs:
 
-## Engineering rules
+- on Supervisor startup/resume
+- at least hourly while a persistent active Supervisor runtime exists
+- on assignments and blockers
+- on review submission / requested changes
+- on merges
+- on module/phase completion
+- on plan revisions
 
-Security, quality, privacy, accessibility, observability, and operability are cross-cutting concerns from design onward.
+If Linear issue quota/capability is unavailable, project documents/status updates plus repository state are the fallback and development continues.
 
-Technology must be chosen from project-specific evidence rather than fashion or familiarity. Prefer the simplest architecture that safely satisfies validated needs, and do not introduce distributed-system complexity without justification.
+## Optional design intake
 
-Development includes adding, updating, migrating, deprecating, and removing artifacts. Deletion or replacement must be evidence-based and must account for dependencies, contracts, data migration, tests, user-visible behavior, and rollback implications.
+Before detailed UI/UX work:
 
-Code existing is not equivalent to work being complete. A work unit is complete only when relevant implementation, tests, quality/security checks, documentation, acceptance criteria, and persistent project state are synchronized.
+- input: **Figma / Existing Design Link**
+- action: `Add Figma Design`
+- action: `Skip Design Link`
 
-## Start prompt
-
-Give the repository URL to an AI and say:
-
-> Read this repository's AI instructions and initialize it.
-
-The repository instructions define the rest of the interaction.
+A supplied design is audited against validated flows, requirements, accessibility/responsiveness, and system constraints. If absent, AI designs the product itself.
 
 ## Protocol files
 
-- `AGENTS.md` — root agent contract and authority.
+- `AGENTS.md` — root authority and complete entry/coordination contract.
 - `START-HERE.md` — intake, research, market audit, and planning flow.
-- `DEVELOPMENT-LIFECYCLE.md` — system design through QA and authorized security hardening.
-- `AI-NATIVE-EXECUTION.md` — persistent ownership, memory bank, pre-plan, options/modules banks, decomposition, and autonomous continuation.
+- `DEVELOPMENT-LIFECYCLE.md` — system design through QA/security.
+- `AI-NATIVE-EXECUTION.md` — persistent ownership, memory, options/modules banks, and execution graph.
+- `MULTI-AGENT-ORCHESTRATION.md` — Linear, AI selection, Supervisor/Worker coordination, merges, Figma, and dashboard rules.
+- `AUTO-AGENT.md` — autonomous Worker entry and submission protocol.
+- `SUPERVISOR.md` — Supervisor coordination/review/merge protocol.
+
+## Start prompt
+
+Give the repository URL to a compatible AI and say:
+
+> Read this repository's AI instructions and initialize it.
+
+The repository defines the remaining interaction.
