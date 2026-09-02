@@ -13,6 +13,7 @@
     "description": "",
     "priority": 100,
     "risk_classification": "normal",
+    "delegation_depth": 0,
     "dependencies": [],
     "eligibility": ["ANY"],
     "required_roles": ["worker"],
@@ -57,21 +58,14 @@
     "selected_verified_agent_required": true,
     "eligibility_and_capability_enforced_before_ref_creation": true,
     "handoff_envelope_required_before_dispatch": true,
+    "budget_and_delegation_limits_enforced_before_claim": true,
     "expired_lease_requires_supervisor_evidence_reconciliation": true,
     "orphan_ref_requires_recovery_before_reuse": true,
     "lock_namespace_requires_trusted_runtime_protection_when_supported": true
   },
   "lease_status_values": ["not_acquired", "active", "expired", "released", "revoked", "orphaned", "recovered"],
   "status_values": [
-    "free",
-    "claimed",
-    "in_progress",
-    "blocked",
-    "submitted_for_review",
-    "changes_requested",
-    "approved",
-    "merged",
-    "completed",
-    "canceled"
+    "free", "claimed", "in_progress", "blocked", "submitted_for_review",
+    "changes_requested", "approved", "merged", "completed", "canceled"
   ]
 }
