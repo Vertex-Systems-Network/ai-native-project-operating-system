@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Initialize a child repository created from the ANPOS template.
 
-The source repository is an inert template. This script activates child-project
-runtime state and installs child runtime blueprints. It does NOT connect a live
-project-management provider, attach development AIs, or apply GitHub repository
-rules; those actions are completed by the AI/user setup flow afterward.
+The canonical source remains inert. Child bootstrap resets inherited runtime
+identity/state, activates repository-local policy, installs universally safe
+runtime blueprints and records feature-dependent quality checks for capability
+resolution. It does not connect PM providers, attach AIs, apply GitHub admin
+rules, configure production credentials, or invent platform capabilities.
 
-Dry-run by default. Use --apply to write changes. The template source repository
-is protected unless --allow-source is explicitly supplied for deliberate tests.
+Dry-run by default. Use --apply to write changes. The source repository is
+protected unless --allow-source is deliberately supplied for tests.
 """
 from __future__ import annotations
 
@@ -24,16 +25,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_REPO = "Vertex-Systems-Network/ai-native-project-operating-system"
 BLUEPRINT_ROOT = ROOT / "blueprints" / "github"
 
-# Governance is intentionally excluded because GitHub Rules require the explicit
-# project-start approval flow before application/monitoring.
-AUTO_INSTALL_WORKFLOWS = (
-    "codeql-actions.yml",
-    "dependency-review.yml",
+ALWAYS_INSTALL_WORKFLOWS = (
     "repository-quality.yml",
-    "scorecard.yml",
     "technology-update-watch.yml",
     "innovation-scout.yml",
     "protocol-update-watch.yml",
+)
+SECURITY_CAPABILITY_WORKFLOWS = (
+    "codeql-actions.yml",
+    "dependency-review.yml",
+    "scorecard.yml",
 )
 
 
@@ -64,21 +65,40 @@ def infer_repository() -> str | None:
     return None
 
 
-def add_runtime_blueprints(changed: dict[str, str]) -> None:
-    workflows = BLUEPRINT_ROOT / "workflows"
-    for filename in AUTO_INSTALL_WORKFLOWS:
-        source = workflows / filename
-        if not source.exists():
-            raise RuntimeError(f"Missing required child workflow blueprint: {source}")
-        changed[f".github/workflows/{filename}"] = source.read_text(encoding="utf-8")
+def add_workflow(changed: dict[str, str], filename: str) -> None:
+    source = BLUEPRINT_ROOT / "workflows" / filename
+    if not source.exists():
+        raise RuntimeError(f"Missing required child workflow blueprint: {source}")
+    changed[f".github/workflows/{filename}"] = source.read_text(encoding="utf-8")
+
+
+def add_runtime_blueprints(changed: dict[str, str], security_capability: str) -> list[str]:
+    installed: list[str] = []
+    for filename in ALWAYS_INSTALL_WORKFLOWS:
+        add_workflow(changed, filename)
+        installed.append(filename)
+
+    if security_capability == "enabled":
+        for filename in SECURITY_CAPABILITY_WORKFLOWS:
+            add_workflow(changed, filename)
+            installed.append(filename)
 
     dependabot = BLUEPRINT_ROOT / "dependabot.yml"
     if not dependabot.exists():
         raise RuntimeError(f"Missing required child Dependabot blueprint: {dependabot}")
     changed[".github/dependabot.yml"] = dependabot.read_text(encoding="utf-8")
+    installed.append("dependabot.yml")
+    return installed
 
 
-def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, str]:
+def child_policy(path: str, status: str = "active_policy") -> str:
+    doc = load(path)
+    doc["status"] = status
+    doc["activation_scope"] = "child_project"
+    return json.dumps(doc, indent=2) + "\n"
+
+
+def reset_runtime(repository: str, project_name: str, owner: str, security_capability: str) -> dict[str, str]:
     timestamp = now()
     changed: dict[str, str] = {}
 
@@ -109,8 +129,9 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
         "outstanding_removals": [],
         "unresolved_decisions": [
             "Choose a Project Management System or explicitly skip PM integration.",
-            "Choose the Development AI agent pool available in the current host.",
-            "Ask the user whether to apply the recommended GitHub Rules policy."
+            "Choose and identity-verify the Development AI agent pool available in the current host.",
+            "Ask the user whether to apply the recommended GitHub Rules policy.",
+            "Resolve capability-dependent GitHub security checks before making them required."
         ],
         "critical_defects": [],
         "last_reconciled_repository_ref": None,
@@ -138,9 +159,10 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     supervisor["last_reconciled_main_sha"] = None
     supervisor["status"] = "unassigned"
     supervisor["supervisor"] = {
-        "status": "unassigned", "agent_id": None, "agent_type": None, "branch": None,
-        "active_module_id": None, "active_work_unit_id": None, "started_at": None,
-        "heartbeat_at": None, "lease_id": None, "lease_expires_at": None,
+        "status": "unassigned", "agent_id": None, "agent_type": None, "identity_ref": None,
+        "branch": None, "active_module_id": None, "active_work_unit_id": None,
+        "started_at": None, "heartbeat_at": None, "lease_id": None,
+        "lease_status": "not_acquired", "lease_expires_at": None,
         "fencing_token": None, "election_ref": None,
     }
     changed["config/coordination/supervisor-state.json"] = json.dumps(supervisor, indent=2) + "\n"
@@ -160,33 +182,19 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     pm["status"] = "selection_required"
     pm["activation_scope"] = "child_project"
     pm["selection"] = {
-        "status": "not_selected",
-        "selected_provider_id": None,
-        "selected_provider_name": None,
-        "workspace_or_org_id": None,
-        "workspace_or_org_name": None,
-        "external_project_id": None,
-        "external_project_name": None,
-        "external_project_url": None,
-        "connected_at": None,
-        "verified_at": None,
-        "sync_enabled": False,
+        "status": "not_selected", "selected_provider_id": None, "selected_provider_name": None,
+        "workspace_or_org_id": None, "workspace_or_org_name": None, "external_project_id": None,
+        "external_project_name": None, "external_project_url": None, "connected_at": None,
+        "verified_at": None, "sync_enabled": False,
     }
     changed["config/integrations/project-management.json"] = json.dumps(pm, indent=2) + "\n"
 
-    # Linear remains one optional adapter and is unbound unless selected later.
     linear = load("config/integrations/linear-sync.json")
     linear["status"] = "not_selected"
     linear["enabled"] = False
     linear["activation_scope"] = "child_project_only_when_selected"
     linear["project"] = {"name": None, "id": None, "url": None}
-    for key in [
-        "last_successful_sync_at",
-        "last_attempt_at",
-        "last_error",
-        "last_reconciled_main_sha",
-        "last_linear_status_update_id",
-    ]:
+    for key in ["last_successful_sync_at", "last_attempt_at", "last_error", "last_reconciled_main_sha", "last_linear_status_update_id"]:
         if key in linear:
             linear[key] = None
     linear["sync_result"] = "provider_not_selected"
@@ -200,20 +208,21 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     agents["role_assignments"] = {"supervisor_agent_id": None, "worker_agent_ids": []}
     changed["config/ai/agent-catalog.json"] = json.dumps(agents, indent=2) + "\n"
 
-    # Baseline workflows are installed automatically in the child, but must still
-    # be observed running successfully before the AI claims them as passing.
+    installed = add_runtime_blueprints(changed, security_capability)
     quality = load("config/quality/quality-policy.json")
     quality["status"] = "installed_pending_verification"
     quality["activation_scope"] = "child_project"
     quality["setup_state"] = {
         "baseline_files_installed_by_bootstrap": True,
+        "installed_blueprints": installed,
         "baseline_verification": "pending_first_child_run",
+        "github_security_capability": security_capability,
+        "capability_dependent_workflows": list(SECURITY_CAPABILITY_WORKFLOWS),
+        "capability_resolution": "resolved" if security_capability in {"enabled", "unavailable"} else "pending_runtime_detection",
         "stack_specific_tooling": "awaiting_technology_approval",
     }
     changed["config/quality/quality-policy.json"] = json.dumps(quality, indent=2) + "\n"
 
-    # Rules remain a user decision. Bootstrap never mutates repository-admin
-    # settings or enables governance auditing before that decision.
     rules = load("config/github/ruleset-policy.json")
     rules["status"] = "pending_user_decision"
     rules["activation_scope"] = "child_project"
@@ -225,11 +234,32 @@ def reset_runtime(repository: str, project_name: str, owner: str) -> dict[str, s
     }
     changed["config/github/ruleset-policy.json"] = json.dumps(rules, indent=2) + "\n"
 
-    handle = owner.lstrip("@")
-    codeowners = f"""# Generated by scripts/bootstrap_instance.py for {repository}\n* @{handle}\n/.github/ @{handle}\n/config/coordination/ @{handle}\n/config/protocol/ @{handle}\n/config/github/ @{handle}\n/config/consent/ @{handle}\n/schemas/ @{handle}\n/scripts/ @{handle}\n/SECURITY.md @{handle}\n"""
-    changed[".github/CODEOWNERS"] = codeowners
+    # Security/production/design/data policies become child-local active or pending policy,
+    # but no external integration, credential, release or design approval is invented.
+    changed["config/security/control-plane-policy.json"] = child_policy("config/security/control-plane-policy.json")
+    changed["config/security/trust-policy.json"] = child_policy("config/security/trust-policy.json")
+    changed["config/security/threat-model.json"] = child_policy("config/security/threat-model.json", "pending_project_threat_model")
+    changed["config/runtime/budgets.json"] = child_policy("config/runtime/budgets.json", "active_guardrails")
+    changed["config/release/release-policy.json"] = child_policy("config/release/release-policy.json", "pending_environment_configuration")
+    changed["config/data/data-governance.json"] = child_policy("config/data/data-governance.json", "pending_project_data_classification")
+    changed["config/operations/operations-policy.json"] = child_policy("config/operations/operations-policy.json", "pending_operational_configuration")
+    changed["config/contracts/migration-policy.json"] = child_policy("config/contracts/migration-policy.json")
+    changed["config/integrations/sync-authority.json"] = child_policy("config/integrations/sync-authority.json")
+    changed["config/design/design-assurance.json"] = child_policy("config/design/design-assurance.json", "pending_design_decision")
 
-    add_runtime_blueprints(changed)
+    handle = owner.lstrip("@")
+    protected = [
+        "/AGENTS.md", "/.ai/", "/CLAUDE.md", "/GEMINI.md", "/.cursor/", "/.windsurf/",
+        "/.github/", "/blueprints/", "/PROJECT-INITIALIZATION.md", "/PROJECT-MANAGEMENT.md",
+        "/CONTROL-PLANE-SECURITY.md", "/PRODUCTION-ASSURANCE.md", "/DESIGN-DATA-OPERATIONS.md",
+        "/AUTO-AGENT.md", "/SUPERVISOR.md", "/ORCHESTRATOR.md", "/MULTI-AGENT-ORCHESTRATION.md",
+        "/config/ai/agent-catalog.json", "/config/coordination/", "/config/protocol/", "/config/security/",
+        "/config/consent/", "/config/github/", "/config/quality/", "/config/runtime/", "/config/release/",
+        "/schemas/", "/scripts/", "/SECURITY.md",
+    ]
+    codeowners = [f"# Generated by scripts/bootstrap_instance.py for {repository}", f"* @{handle}"]
+    codeowners.extend(f"{path} @{handle}" for path in protected)
+    changed[".github/CODEOWNERS"] = "\n".join(codeowners) + "\n"
     return changed
 
 
@@ -240,6 +270,12 @@ def main() -> int:
     parser.add_argument("--repository")
     parser.add_argument("--project-name")
     parser.add_argument("--github-owner", help="Authorized GitHub user/team handle used to render child CODEOWNERS")
+    parser.add_argument(
+        "--github-security-capability",
+        choices=["auto", "enabled", "unavailable"],
+        default="auto",
+        help="Whether child GitHub security workflows are known supported. auto records pending detection rather than inventing capability.",
+    )
     args = parser.parse_args()
 
     repository = args.repository or infer_repository()
@@ -248,21 +284,26 @@ def main() -> int:
     if repository == SOURCE_REPO and not args.allow_source:
         raise SystemExit("Refusing to bootstrap the template source repository. Use --allow-source only for deliberate testing.")
     if args.apply and not args.github_owner:
-        raise SystemExit("--github-owner is required with --apply so a child repository cannot inherit the template source CODEOWNERS identity.")
+        raise SystemExit("--github-owner is required with --apply so a child repository cannot inherit source CODEOWNERS identity.")
+
+    capability = args.github_security_capability
+    if capability == "auto":
+        env = str(os.getenv("ANPOS_GITHUB_SECURITY_CAPABLE") or "").strip().lower()
+        capability = "enabled" if env in {"1", "true", "yes"} else "unavailable" if env in {"0", "false", "no"} else "unknown"
 
     project_name = args.project_name or repository.split("/", 1)[1].replace("-", " ").strip().title()
     preview_owner = args.github_owner or "REQUIRED-ON-APPLY"
-    changes = reset_runtime(repository, project_name, preview_owner)
+    changes = reset_runtime(repository, project_name, preview_owner, capability)
 
     if not args.apply:
         print("DRY RUN - no files written")
         print("Would initialize child project:", repository)
+        print("GitHub security capability:", capability)
         if not args.github_owner:
             print("NOTE: --github-owner is required when --apply is used.")
-        print("NOTE: Project Management provider selection remains unresolved until the user chooses one or skips.")
-        print("NOTE: Development AI selection remains unresolved until runtime discovery + user selection.")
-        print("NOTE: Code Quality baseline is installed but remains pending verification until child checks run.")
-        print("NOTE: GitHub Rules remain unapplied until the user approves the Rules setup flow.")
+        print("NOTE: PM and Development AI selections remain unresolved until the user selects/connects them.")
+        print("NOTE: Only universally safe quality/runtime blueprints are installed unless security capability is verified.")
+        print("NOTE: GitHub Rules remain unapplied until user approval and capability/check verification.")
         for path in sorted(changes):
             print("-", path)
         return 0
@@ -272,7 +313,7 @@ def main() -> int:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
     print(f"Initialized ANPOS child project {repository} with {len(changes)} reset/generated files.")
-    print("NEXT: choose PM provider, connect/map it if selected, choose Development AI(s), verify Code Quality, then decide GitHub Rules.")
+    print("NEXT: resolve PM/AI selection, detect optional GitHub security capabilities, verify quality, then decide GitHub Rules.")
     return 0
 
 
