@@ -44,7 +44,7 @@ REQUIRED_CONFORMANCE = {
     "backup_restore_or_recovery_verification_failure",
 }
 PROTECTED_PATTERNS = {
-    "/AGENTS.md", "/.ai/**", "/.github/**", "/blueprints/**", "/START-HERE.md",
+    "/.gitignore", "/AGENTS.md", "/.ai/**", "/.github/**", "/blueprints/**", "/START-HERE.md",
     "/PROJECT-INITIALIZATION.md", "/PROJECT-MANAGEMENT.md", "/AI-NATIVE-EXECUTION.md",
     "/MULTI-AGENT-ORCHESTRATION.md", "/AUTO-AGENT.md", "/SUPERVISOR.md", "/ORCHESTRATOR.md",
     "/DEVELOPMENT-LIFECYCLE.md", "/CONTINUOUS-IMPROVEMENT.md", "/GITHUB-GOVERNANCE.md",
@@ -122,7 +122,7 @@ def require_true(doc: dict[str, Any], path: list[str], label: str) -> None:
 
 def validate_required_files() -> None:
     required = [
-        "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
+        ".gitignore", "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
         "AI-NATIVE-EXECUTION.md", "MULTI-AGENT-ORCHESTRATION.md", "AUTO-AGENT.md", "SUPERVISOR.md", "ORCHESTRATOR.md",
         "DEVELOPMENT-LIFECYCLE.md", "CONTINUOUS-IMPROVEMENT.md", "GITHUB-GOVERNANCE.md", "CODE-QUALITY.md", "SECURITY.md",
         "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "README.md",
@@ -364,7 +364,7 @@ def validate_control_plane() -> None:
 
     codeowners = (ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
     for marker in [
-        "/AGENTS.md", "/.ai/", "/blueprints/", "/config/security/", "/config/data/", "/config/operations/",
+        "/.gitignore", "/AGENTS.md", "/.ai/", "/blueprints/", "/config/security/", "/config/data/", "/config/operations/",
         "/config/contracts/", "/config/integrations/", "/config/design/", "/config/testing/", "/config/traceability/",
         "/schemas/", "/scripts/", "/tests/", "/requirements-anpos.txt"
     ]:
