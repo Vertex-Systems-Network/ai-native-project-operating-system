@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "instance_status": "template_source",
+  "instance_id": null,
+  "project_name": "AI Native Project Operating System",
+  "repository": "Vertex-Systems-Network/ai-native-project-operating-system",
+  "repository_owner": "Vertex-Systems-Network",
+  "initialized_at": null,
+  "initialized_by": null,
+  "source_protocol_version": "1.0.0",
+  "source_template_repository": "Vertex-Systems-Network/ai-native-project-operating-system",
+  "bootstrap_completed": false,
+  "notes": "Child repositories created from this template must run scripts/bootstrap_instance.py before project execution scales."
+}
