@@ -1,0 +1,103 @@
+name: AI Native - Technology Update Watch
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ai-native-technology-update-watch
+  cancel-in-progress: false
+
+jobs:
+  create-audit-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine whether technology watch is active
+        id: gate
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          cfg = json.loads(Path('config/maintenance/technology-watch.json').read_text())
+          state = json.loads(Path('config/ai/project-state.json').read_text())
+          stage = str(state.get('lifecycle_stage') or 'not_started').lower()
+          pre_stack = {
+              'not_started', 'intake', 'discovery', 'research', 'planning',
+              'system_design', 'technology_selection', 'technology_consent'
+          }
+          active = bool(cfg.get('enabled')) and stage not in pre_stack
+          print(f"active={'true' if active else 'false'}")
+          print(f"stage={stage}")
+          PY
+
+      - name: Create durable Supervisor technology-audit request
+        if: steps.gate.outputs.active == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TITLE='[AI-NATIVE] Technology Update Audit Due'
+          EXISTING="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == "[AI-NATIVE] Technology Update Audit Due") | .number' | head -n 1)"
+
+          if [ -n "$EXISTING" ]; then
+            echo "Technology audit request already open as #$EXISTING; not creating a duplicate."
+            exit 0
+          fi
+
+          MANIFESTS="$(find . -maxdepth 4 -type f \( \
+            -name 'package.json' -o -name 'package-lock.json' -o -name 'pnpm-lock.yaml' -o -name 'yarn.lock' -o \
+            -name 'composer.json' -o -name 'composer.lock' -o \
+            -name 'requirements.txt' -o -name 'pyproject.toml' -o -name 'poetry.lock' -o \
+            -name 'Cargo.toml' -o -name 'Cargo.lock' -o -name 'go.mod' -o -name 'go.sum' -o \
+            -name '*.csproj' -o -name '*.fsproj' -o -name 'Gemfile' -o -name 'Gemfile.lock' -o \
+            -name 'Dockerfile' -o -name 'docker-compose.yml' -o -name 'docker-compose.yaml' \
+          \) -not -path './.git/*' | sort | sed 's#^./#- `#; s#$#`#' | head -n 200)"
+
+          if [ -z "$MANIFESTS" ]; then
+            MANIFESTS='- No common dependency manifest detected yet. Supervisor should still inspect approved architecture/runtime/tooling records.'
+          fi
+
+          cat > /tmp/ai-native-tech-watch.md <<EOF
+          ## 24-hour technology update audit is due
+
+          This is a **research/audit request**, not permission to change code.
+
+          The active Supervisor must follow `CONTINUOUS-IMPROVEMENT.md` requirement 31:
+
+          1. Reconcile current `main`, approved architecture/stack, lockfiles, CI, infrastructure, and runtime versions.
+          2. Research current authoritative release/security sources for technologies actually used by the project.
+          3. Classify meaningful candidate updates and ignore novelty-only/no-value churn.
+          4. Produce impact/migration/test/rollback plan for recommended changes.
+          5. Create a consent record in `config/consent/consent-requests.json`.
+          6. Alert the Supervisor/project owner and send the configured owner email when an update needs consent.
+          7. **Do not implement before verified owner consent.**
+          8. After approval, implement in isolated maintenance slot(s), run required QA/security/regression/deployment tests, then use normal review/merge governance.
+
+          ### Repository technology/dependency manifests detected
+
+          $MANIFESTS
+
+          ### Trigger context
+
+          - Workflow: `${{ github.workflow }}`
+          - Run: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+          - Main SHA at trigger: `${{ github.sha }}`
+
+          Close this request only after the Supervisor records the audit result or explicitly records that no actionable update exists.
+          EOF
+
+          gh issue create --title "$TITLE" --body-file /tmp/ai-native-tech-watch.md
+
+      - name: Explain inactive watch
+        if: steps.gate.outputs.active != 'true'
+        run: echo "Technology watch skipped because the project has not reached a post-stack lifecycle stage or the watch is disabled."
