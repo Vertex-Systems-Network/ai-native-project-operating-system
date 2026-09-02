@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "default_owner_role": "worker",
+  "rules": [
+    {"pattern": "/.github/**", "owner_roles": ["supervisor", "devops"], "review_required": true},
+    {"pattern": "/config/coordination/**", "owner_roles": ["supervisor"], "review_required": true},
+    {"pattern": "/config/protocol/**", "owner_roles": ["supervisor", "architecture"], "review_required": true},
+    {"pattern": "/config/consent/**", "owner_roles": ["supervisor"], "review_required": true},
+    {"pattern": "/schemas/**", "owner_roles": ["supervisor", "architecture"], "review_required": true},
+    {"pattern": "/scripts/bootstrap_instance.py", "owner_roles": ["supervisor", "devops"], "review_required": true},
+    {"pattern": "/scripts/claim_slot.py", "owner_roles": ["supervisor", "devops"], "review_required": true},
+    {"pattern": "/scripts/supervisor_lease.py", "owner_roles": ["supervisor", "devops"], "review_required": true},
+    {"pattern": "/SECURITY.md", "owner_roles": ["security", "supervisor"], "review_required": true},
+    {"pattern": "/config/github/**", "owner_roles": ["supervisor", "devops"], "review_required": true}
+  ],
+  "codeowners_policy": "Bootstrap must render repository-valid CODEOWNERS identities from authorized GitHub users/teams. Role names are policy identities, not literal GitHub handles."
+}
