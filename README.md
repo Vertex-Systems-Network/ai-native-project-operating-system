@@ -1,12 +1,12 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.2.1`
+**Current protocol:** `1.3.0`
 
-ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, and continuous improvement.
+ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
 ## Canonical source boundary
 
-`Vertex-Systems-Network/ai-native-project-operating-system` is the **canonical reusable template source**, not a live application project.
+`Vertex-Systems-Network/ai-native-project-operating-system` is the **canonical reusable template source**, not a live application project or live billing service.
 
 The source must remain inert:
 
@@ -14,11 +14,12 @@ The source must remain inert:
 - no project-specific Supervisor/Worker AI pool is attached;
 - no child-project GitHub Rules are treated as applied to this source;
 - no child-project runtime/quality workflows or Dependabot config are active under source `.github/`;
-- no production credentials, environments, releases, claims, leases, runtime consent decisions, project progress, or PM sync timestamps are stored as live project state.
+- no production credentials, environments, releases, claims, leases, runtime consent decisions, project progress, or PM sync timestamps are stored as live project state;
+- no Marketplace customer records, live paid plan IDs, payment data, webhook secrets, GitHub App private keys, entitlement-signing private keys, or active customer entitlements are stored here.
 
-> **Canonical source = protocol + schemas + scripts + provider catalogs + policies + inactive blueprints. Child project = selected integrations + verified AI identities + approved/applied governance + active quality/runtime automation + project-specific implementation/state.**
+> **Canonical source = protocol + schemas + scripts + provider catalogs + policies + inactive blueprints. Child project = selected integrations + verified AI identities + approved/applied governance + active quality/runtime automation + project-specific implementation/state. Commercial runtime = separately deployed billing/entitlement/provisioning service.**
 
-Blueprint presence is never proof that a capability is enabled or verified in a child project.
+Blueprint presence is never proof that a capability is enabled, purchased, connected, deployed, or verified.
 
 ## New child-project startup
 
@@ -46,6 +47,8 @@ Blueprint presence is never proof that a capability is enabled or verified in a 
 - leaves PM selection, AI selection and GitHub Rules decisions unresolved.
 
 The canonical source refuses normal child bootstrap.
+
+Commercial licensing is **not** a mandatory child runtime dependency. A commercial customer project may later cache a non-secret entitlement reference for premium updates/services, but editing that reference never creates billing authority and expiry must not brick generated project code.
 
 ### 2. Choose Project Management System
 
@@ -203,9 +206,30 @@ Worker completion handoff remains exactly:
 
 **ALL DONE SUBMITTED FOR REVIEW AND MERGE**
 
-## Requirements 1–74 coverage
+## Commercial distribution and licensing
 
-ANPOS `1.2.1` represents the complete current protocol set:
+ANPOS `1.3.0` adds an optional commercial distribution layer defined by `COMMERCIAL-LICENSING.md`.
+
+Recommended GitHub-native model:
+
+**GitHub Marketplace App → verified purchase/change/cancel webhook → entitlement service → signed entitlement → private template/update/service provisioning.**
+
+Commercial rules:
+
+- GitHub Marketplace is recommended, not mandatory; Sponsors or an external checkout/private-repo model may be used when deliberately configured.
+- Marketplace webhook handling uses `marketplace_purchase` actions `purchased`, `changed`, and `cancelled`.
+- The commercial service verifies `X-Hub-Signature-256`, deduplicates `X-GitHub-Delivery`, validates events, reconciles ambiguity against the provider API, and applies idempotent side effects.
+- The server-side entitlement ledger/billing provider is commercial authority; `config/licensing/entitlement-reference.json` is only a cache/reference.
+- Portable entitlements use asymmetrically signed claims; private signing keys, webhook secrets and GitHub App private keys stay outside repositories.
+- Cancellation/expiry may gate **future** premium provisioning, updates, hosted orchestration and support, but may not delete repositories, encrypt customer code/data, intentionally break builds, or sabotage already-generated projects.
+- `config/licensing/product-catalog.json` contains draft plan shapes only. Prices and live Marketplace plan IDs remain external business configuration.
+- Paid launch still requires actual Marketplace/publisher/financial onboarding where applicable, deployed backend/webhook infrastructure, key management, privacy/retention, customer support/refund/cancellation procedures, and operator-supplied legally reviewed license/EULA/terms.
+
+The repository does not claim that a GitHub Marketplace listing or paid entitlement service is already deployed merely because the commercial blueprints exist.
+
+## Requirements 1–82 coverage
+
+ANPOS `1.3.0` represents the complete current protocol set:
 
 - **1–17 — Discovery, research, planning, engineering lifecycle, repository-backed project memory and decomposition**
 - **18–30 — PM sync, AI selection, multi-agent Worker/Supervisor orchestration, review/merge synchronization, optional design intake and README/status behavior**
@@ -214,29 +238,31 @@ ANPOS `1.2.1` represents the complete current protocol set:
 - **45–56 — Protected control plane, verified identity, eligibility, complete leases, lock namespaces, mutation fencing, trusted CI, MCP/input trust firewall, sandbox permissions, authenticated consent, memory provenance and conformance/chaos testing**
 - **57–66 — Capability-aware quality, workflow contracts, stack-adaptive dependencies, Draft 2020-12 schemas, release/environments, OIDC/secrets, SBOM/provenance, PM conflict engine, typed handoff and AI privacy boundaries**
 - **67–74 — Design revision lock, visual/accessibility evidence, WCAG 2.2 AA web baseline, data/privacy lifecycle, threat model, API/DB migration safety, SLO/incident/DR and budget/rate/retry/recursion guardrails**
+- **75–82 — Commercial distribution modes, billing authority, signed entitlements, webhook security/replay protection, non-destructive expiry, plan/seat entitlements, customer privacy, and commercial legal/operational launch gates**
 
-Protocol representation does **not** mean a child runtime has passed production certification. A production orchestrator must still pass the applicable integration/CI/adversarial scenarios in `config/testing/conformance-scenarios.json`.
+Protocol representation does **not** mean a child runtime or commercial service has passed production certification. A production orchestrator must pass applicable project runtime scenarios; a commercial entitlement service must additionally pass `commercial_runtime_integration` scenarios in `config/testing/conformance-scenarios.json`.
 
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.
 
-Stale duplicate protocol documents should be removed once their unique responsibilities have been absorbed into canonical routed documents, schemas and machine policies. Reference audits and the repository validator must remain the deletion safety gate.
+Stale duplicate protocol documents should be removed once their unique responsibilities have been absorbed into canonical routed documents, schemas and machine policies. Reference audits and validators remain the deletion safety gate.
 
 ## Certification model
 
-The child repository quality gate is designed to run:
+The child/source repository quality gate is designed to run:
 
 1. pinned ANPOS validation dependencies;
 2. Python compile checks;
-3. control-plane conformance unit tests;
+3. control-plane and commercial conformance unit tests;
 4. Draft 2020-12 JSON Schema validation;
-5. current-tree ANPOS validator;
-6. protected-base validator on PRs;
-7. workflow pinning/permission checks;
-8. machine/YAML hygiene checks.
+5. current-tree core ANPOS validator;
+6. commercial distribution/licensing validator;
+7. protected-base validator(s) on PRs;
+8. workflow pinning/permission checks;
+9. machine/YAML hygiene checks.
 
-Static/unit success is not sufficient to certify a persistent orchestrator. Runtime integration scenarios include concurrent claims, stale fencing, orphan locks, Supervisor crash/failover, merge-during-work, duplicate events, PM outages/switching, identity expiry, malicious external instructions, consent replay, CI tampering, budget loops and production assurance failures.
+Static/unit success is not sufficient to certify a persistent orchestrator or commercial billing service. Runtime integration scenarios include concurrent claims, stale fencing, orphan locks, Supervisor crash/failover, merge-during-work, duplicate events, PM outages/switching, identity expiry, malicious external instructions, consent replay, CI tampering, budget loops, production assurance failures, Marketplace webhook forgery/replay, plan-change reconciliation, and non-destructive license expiry.
 
 ## Release, design, data and operations assurance
 
@@ -268,8 +294,8 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 ## Important source files
 
 - `.gitignore` — minimal protected repository/tooling hygiene baseline
-- `AGENTS.md` — universal router + source/child authority boundary
-- `.ai/manifest.json` — role-aware context router
+- `AGENTS.md` — universal router + source/child/commercial authority boundaries
+- `.ai/manifest.json` — role-aware context router including `commercial_distribution`
 - `PROJECT-INITIALIZATION.md` — deterministic child setup
 - `PROJECT-MANAGEMENT.md` — provider-agnostic PM adapter/sync contract
 - `DEVELOPMENT-LIFECYCLE.md` — engineering lifecycle
@@ -280,11 +306,15 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 - `CONTROL-PLANE-SECURITY.md` — requirements 45–56
 - `PRODUCTION-ASSURANCE.md` — requirements 57–66
 - `DESIGN-DATA-OPERATIONS.md` — requirements 67–74
+- `COMMERCIAL-LICENSING.md` — requirements 75–82
+- `config/licensing/` — commercial policy, product catalog, Marketplace adapter and entitlement reference
+- `blueprints/commercial/` — inactive webhook and entitlement-envelope contracts
 - `CODE-QUALITY.md` — quality bootstrap and gates
 - `GITHUB-GOVERNANCE.md` — child Rules/CODEOWNERS policy
 - `SECURITY.md` — security handling/reporting
-- `config/testing/conformance-scenarios.json` — runtime certification scenarios
-- `scripts/validate_ai_native_repo.py` — repository certification validator
+- `config/testing/conformance-scenarios.json` — runtime and commercial certification scenarios
+- `scripts/validate_ai_native_repo.py` — core repository certification validator
+- `scripts/validate_commercial_licensing.py` — commercial distribution/licensing validator
 - `blueprints/github/` — inactive child workflow/Dependabot blueprints
 
 ## Start prompt
@@ -293,4 +323,4 @@ For a child repository created from this template, give its repository URL to a 
 
 > Read this repository's AI instructions and initialize the project.
 
-The repository then defines the remaining interaction.
+For commercial distribution work, ask a compatible AI to load the repository's `commercial_distribution` role and audit/configure the external Marketplace/licensing deployment without storing live secrets in this repository.
