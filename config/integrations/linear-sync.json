@@ -19,13 +19,14 @@
     "sync_on_module_completion": true,
     "sync_on_phase_completion": true,
     "sync_on_plan_revision": true,
+    "sync_on_governance_or_quality_change": true,
     "catch_up_on_resume": true
   },
-  "last_successful_sync_at": "2026-09-02T17:35:04+05:00",
-  "last_attempt_at": "2026-09-02T17:35:04+05:00",
+  "last_successful_sync_at": "2026-09-02T18:11:20+05:00",
+  "last_attempt_at": "2026-09-02T18:11:20+05:00",
   "last_error": null,
-  "last_reconciled_main_sha": "46ed77eaf1dd9241064010b843c658f03d8e7315",
-  "last_linear_status_update_id": "39b4b414-934f-4139-861d-0e84e90ad0b7",
-  "sync_result": "github_and_linear_reconciled_no_material_change",
+  "last_reconciled_main_sha": "15facefbfa2f90b74caa2c4c0b6148d6cf9164fa",
+  "last_linear_status_update_id": "13a5ca0c-999f-4278-9bf5-25a52760ed9e",
+  "sync_result": "governance_and_quality_layers_reconciled",
   "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
 }
