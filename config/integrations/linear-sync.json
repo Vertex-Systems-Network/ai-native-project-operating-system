@@ -23,11 +23,11 @@
     "sync_on_protocol_orchestration_change": true,
     "catch_up_on_resume": true
   },
-  "last_successful_sync_at": "2026-09-02T20:28:22+05:00",
-  "last_attempt_at": "2026-09-02T20:28:22+05:00",
+  "last_successful_sync_at": "2026-09-02T20:30:33+05:00",
+  "last_attempt_at": "2026-09-02T20:30:33+05:00",
   "last_error": null,
   "last_reconciled_main_sha": "cb218b93fac768c26403b9e5f0ad20180a169af2",
   "last_linear_status_update_id": "0876693e-89ac-4a35-bf5c-60213ee25f49",
-  "sync_result": "final_core_requirements_35_44_mirrored; quality_gate_passed; codeql_pending_at_sync",
+  "sync_result": "final_core_requirements_35_44_mirrored_and_verified; repository_integrity_success; codeql_success",
   "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
 }
