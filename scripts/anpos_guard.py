@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Shared ANPOS authorization/fencing helpers.
 
-This module enforces repository-visible policy. A durable orchestrator must also
-authenticate callers at the host boundary; repository JSON is never a substitute
-for OAuth/GitHub App/MCP/agent-host identity verification.
+Repository policy is only one layer. Privileged coordination operations require
+a host-authenticated runtime principal. A self-supplied agent/model name is not
+identity proof.
 """
 from __future__ import annotations
 
@@ -32,15 +32,7 @@ def now() -> datetime:
 
 
 def runtime_principal() -> str | None:
-    # Host runtimes should set ANPOS_RUNTIME_PRINCIPAL from an authenticated
-    # identity. GitHub Actions may use GITHUB_ACTOR_ID/GITHUB_ACTOR as a weaker
-    # host-bound fallback. Callers must not treat a self-supplied env var as
-    # cryptographic identity proof outside a trusted orchestrator boundary.
-    return (
-        os.getenv("ANPOS_RUNTIME_PRINCIPAL")
-        or os.getenv("GITHUB_ACTOR_ID")
-        or os.getenv("GITHUB_ACTOR")
-    )
+    return os.getenv("ANPOS_RUNTIME_PRINCIPAL") or os.getenv("GITHUB_ACTOR_ID") or os.getenv("GITHUB_ACTOR")
 
 
 def _agent_id(record: Any) -> str | None:
@@ -57,9 +49,7 @@ def selected_agent(agent_id: str) -> dict[str, Any]:
     for record in catalog.get("selected_agents", []):
         if _agent_id(record) == agent_id:
             if not isinstance(record, dict):
-                raise PermissionError(
-                    f"Selected agent {agent_id} lacks a structured verified identity record."
-                )
+                raise PermissionError(f"Selected agent {agent_id} lacks a structured verified identity record.")
             return record
     raise PermissionError(f"Agent {agent_id} is not in the selected child-project agent pool.")
 
@@ -76,10 +66,10 @@ def require_verified_agent(agent_id: str, role: str) -> dict[str, Any]:
     if not expected_principal or not identity.get("evidence_ref") or not identity.get("verified_at"):
         raise PermissionError(f"Agent {agent_id} has incomplete runtime identity evidence.")
     actual_principal = runtime_principal()
-    if actual_principal and str(actual_principal) != str(expected_principal):
-        raise PermissionError(
-            f"Runtime principal {actual_principal} does not match selected agent identity {expected_principal}."
-        )
+    if not actual_principal:
+        raise PermissionError("Privileged ANPOS operation requires a host-authenticated runtime principal.")
+    if str(actual_principal) != str(expected_principal):
+        raise PermissionError(f"Runtime principal {actual_principal} does not match selected agent identity {expected_principal}.")
     expires = parse_time(identity.get("expires_at"))
     if expires and expires <= now():
         raise PermissionError(f"Agent {agent_id} runtime identity evidence is expired.")
@@ -90,7 +80,7 @@ def live_supervisor() -> tuple[dict[str, Any], dict[str, Any]]:
     state = load_json("config/coordination/supervisor-state.json")
     supervisor = state.get("supervisor") or {}
     expiry = parse_time(supervisor.get("lease_expires_at"))
-    if supervisor.get("status") != "active" or not expiry or expiry <= now():
+    if supervisor.get("status") != "active" or supervisor.get("lease_status") != "active" or not expiry or expiry <= now():
         raise PermissionError("No live authoritative Supervisor lease exists for Worker dispatch.")
     return state, supervisor
 
@@ -133,10 +123,49 @@ def path_allowed(agent: dict[str, Any], path: str) -> bool:
     return any(fnmatch.fnmatch(normalized, p.lstrip("/")) for p in allowed)
 
 
+def _literal_prefix(pattern: str) -> str:
+    value = pattern.lstrip("/")
+    for marker in ("*", "?", "["):
+        if marker in value:
+            value = value.split(marker, 1)[0]
+    return value.rstrip("/")
+
+
+def _patterns_overlap(a: str, b: str) -> bool:
+    pa, pb = _literal_prefix(a), _literal_prefix(b)
+    if not pa or not pb:
+        return True
+    return pa == pb or pa.startswith(pb + "/") or pb.startswith(pa + "/")
+
+
 def authorize_slot_paths(slot: dict[str, Any], agent: dict[str, Any]) -> None:
+    capabilities = {str(v) for v in (agent.get("capabilities") or [])}
+    protected = load_json("config/security/control-plane-policy.json").get("protected_paths") or []
     for path in slot.get("allowed_paths") or []:
         if not path_allowed(agent, str(path)):
             raise PermissionError(f"Agent {agent.get('id')} is not authorized for slot path {path}.")
+        if "control_plane_write" not in capabilities and any(_patterns_overlap(str(path), str(p)) for p in protected):
+            raise PermissionError(f"Slot path {path} overlaps protected ANPOS control plane without control_plane_write capability.")
+
+
+def authorize_runtime_scope(slot: dict[str, Any], agent: dict[str, Any]) -> None:
+    permissions = agent.get("permissions") or {}
+    allowed_tools = {str(v) for v in (permissions.get("allowed_tools") or [])}
+    requested_tools = {str(v) for v in (slot.get("allowed_tools") or [])}
+    if requested_tools - allowed_tools:
+        raise PermissionError(f"Agent lacks requested tools: {sorted(requested_tools - allowed_tools)}")
+    network = str(slot.get("network_policy") or "project_policy")
+    agent_network = str(permissions.get("network_policy") or "deny_unless_required")
+    if network not in {"none", "deny", "project_policy"} and agent_network in {"none", "deny", "deny_unless_required"}:
+        raise PermissionError("Slot requests network access not authorized by the agent permission profile.")
+    secret_scope = str(slot.get("secret_scope") or "none")
+    allowed_secret_scope = str(permissions.get("secret_scope") or "none_by_default")
+    if secret_scope not in {"none", "no_secrets"} and allowed_secret_scope in {"none", "none_by_default", "no_secrets"}:
+        raise PermissionError("Slot requests secret access not authorized for this agent.")
+    deployment_scope = str(slot.get("deployment_scope") or "none")
+    allowed_deploy = str(permissions.get("deployment_scope") or "none_by_default")
+    if deployment_scope not in {"none", "no_deploy"} and allowed_deploy in {"none", "none_by_default", "no_deploy"}:
+        raise PermissionError("Slot requests deployment authority not authorized for this agent.")
 
 
 def verify_fencing(expected_epoch: int, expected_token: str, actor_agent_id: str | None = None) -> dict[str, Any]:
@@ -152,8 +181,8 @@ def verify_fencing(expected_epoch: int, expected_token: str, actor_agent_id: str
 
 def validate_handoff(slot: dict[str, Any]) -> None:
     required = [
-        "id", "work_unit_id", "base_sha", "required_capabilities", "allowed_paths",
-        "acceptance_criteria", "required_checks"
+        "id", "work_unit_id", "base_sha", "required_roles", "required_capabilities", "allowed_paths",
+        "acceptance_criteria", "required_checks", "risk_classification"
     ]
     missing = [key for key in required if slot.get(key) in (None, "", [])]
     if missing:
