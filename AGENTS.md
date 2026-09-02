@@ -15,7 +15,9 @@ Read the applicable files before work:
 7. `AUTO-AGENT.md` when acting as a Worker
 8. `SUPERVISOR.md` when acting as Supervisor
 9. `CONTINUOUS-IMPROVEMENT.md` before maintenance, technology-update, or innovation-scout work
-10. repository-backed state under `config/ai/`, `config/coordination/`, `config/integrations/`, `config/design/`, `config/maintenance/`, `config/consent/`, `config/notifications/`, and `docs/ai/`
+10. `GITHUB-GOVERNANCE.md` before repository governance/rules changes
+11. `CODE-QUALITY.md` before selecting or modifying quality gates
+12. repository-backed state under `config/ai/`, `config/coordination/`, `config/integrations/`, `config/design/`, `config/maintenance/`, `config/consent/`, `config/notifications/`, `config/github/`, `config/quality/`, and `docs/ai/`
 
 Repository reality is the continuity layer. Conversation memory is never the sole source of truth.
 
@@ -143,6 +145,7 @@ The Supervisor:
 - emits merge-generation alerts through repository state
 - tracks alert acknowledgements from active workers
 - processes due technology/innovation maintenance requests
+- monitors repository governance and quality-gate drift
 - also owns one bounded module/work unit when coordination load permits
 
 When the Supervisor authors a change, it must not treat its own implementation as independent approval. Use an independent reviewer/agent where available; otherwise use all applicable automated gates plus a clearly separate second-pass review context, and require independent human/separate authorized review for high-risk or security-critical self-authored changes.
@@ -179,7 +182,7 @@ When Linear is available:
 - mirror phases/modules/work progress, ownership, blockers, review state, and Supervisor status
 - reconcile at startup/resume
 - reconcile at least hourly while a persistent active Supervisor runtime exists
-- also sync immediately on assignment, blocker, review submission, requested changes, merge, module completion, phase completion, plan revision, or approved maintenance-plan creation
+- also sync immediately on assignment, blocker, review submission, requested changes, merge, module completion, phase completion, plan revision, approved maintenance-plan creation, governance drift, or quality-gate policy changes
 
 GitHub remains canonical for code and merge reality.
 
@@ -242,6 +245,45 @@ Preferred decision actions:
 
 Approved additions re-enter the appropriate planning/system-design/architecture/data-flow/UI/UX/security/QA and multi-agent development lifecycle before implementation.
 
+## GitHub governance and repository rules
+
+GitHub governance is governed by `GITHUB-GOVERNANCE.md` and `config/github/ruleset-policy.json`.
+
+On startup/resume and before release-critical merge activity, the Supervisor should inspect current rulesets, default-branch protection, and repository merge settings.
+
+If the current GitHub integration exposes authenticated repository/organization administration writes and the user has authorized this template to manage repository governance, the AI should:
+
+1. compare actual GitHub settings to `config/github/ruleset-policy.json`
+2. apply the minimum safe changes required to align the default branch
+3. verify actual ruleset/settings state after writing
+4. never report a rule as active solely because it exists in a local config file
+
+If the current integration cannot write repository rules/settings, create or refresh a governance-drift control item instead of pretending enforcement exists.
+
+Required baseline includes PR-before-merge, review discipline, required status checks, up-to-date branch checks, resolved conversations, force-push/deletion protection, and linear history. Squash merging is preferred for deterministic multi-agent integration. Merge queue should be enabled when available and useful at the project's concurrency level.
+
+Agents must never bypass repository governance merely to make their own merge easier.
+
+## Adaptive code quality system
+
+Code quality is governed by `CODE-QUALITY.md` and `config/quality/quality-policy.json`.
+
+Universal checks supplied by this template include:
+
+- `AI Native Quality Gates / repository-integrity`
+- `Dependency Review / dependency-review`
+- `CodeQL / analyze-actions`
+- scheduled `OpenSSF Scorecard / analysis`
+- Dependabot updates for GitHub Actions
+
+GitHub Actions from external repositories must be pinned to full 40-character commit SHAs. Dependabot should maintain those pins.
+
+After the technology stack is approved, the AI must select and configure mature stack-specific tooling before feature development scales up. At minimum, the actual application stack requires formatting, linting, type/static analysis where supported, unit tests, integration tests, build verification, dependency audit, and security scanning. Add E2E, accessibility, performance, migration, container/IaC, license, and coverage gates when relevant.
+
+Tool choices must be based on ecosystem fit, maintenance health, signal quality, CI performance, security, and project requirements—not popularity alone.
+
+Do not silently skip a required quality check. A skipped or unavailable check must have an explicit reason and remediation/decision state.
+
 ## README project control surface
 
 The main-branch `README.md` must include a generated development dashboard containing at minimum:
@@ -258,6 +300,7 @@ The main-branch `README.md` must include a generated development dashboard conta
 - current merge generation
 - open required-action alert count
 - maintenance/scout state when relevant
+- governance/quality drift when relevant
 - last repository-visible update
 - last Linear sync
 
@@ -285,9 +328,9 @@ Never delete/replace working behavior merely because a new approach is preferred
 
 Code existing is not equivalent to work being complete.
 
-A work unit is complete only when relevant implementation, tests, quality/security checks, documentation, acceptance criteria, project memory, coordination/alert state, consent/maintenance state where relevant, Linear mirror where available, and README status are synchronized.
+A work unit is complete only when relevant implementation, required quality gates, tests, quality/security checks, documentation, acceptance criteria, project memory, coordination/alert state, consent/maintenance state where relevant, Linear mirror where available, and README status are synchronized.
 
-Critical unresolved QA/security defects block release readiness unless explicitly risk-accepted by an authorized human decision-maker.
+Critical unresolved QA/security defects or failed required quality checks block release readiness unless explicitly risk-accepted by an authorized human decision-maker where such risk acceptance is appropriate.
 
 ## Security boundary
 
@@ -295,10 +338,10 @@ Do not perform unauthorized attacks, destructive behavior, credential theft, mal
 
 ## Tool/UI limitations
 
-Repository instructions cannot guarantee buttons, forms, Figma access, direct cross-agent messaging, persistent AI runtimes, Gmail/email access, or authenticated email callbacks in every AI product. Use native capabilities when available and deterministic repository-backed fallbacks otherwise. Never claim a capability executed when the runtime could not perform it.
+Repository instructions cannot guarantee buttons, forms, Figma access, direct cross-agent messaging, persistent AI runtimes, Gmail/email access, authenticated email callbacks, or GitHub administration writes in every AI product. Use native capabilities when available and deterministic repository-backed fallbacks otherwise. Never claim a capability executed when the runtime could not perform it.
 
 ## Human clarification rule
 
-Do not ask unnecessary questions. Use user intake, repository evidence, persistent state, Linear state, scheduled maintenance requests, and public research first.
+Do not ask unnecessary questions. Use user intake, repository evidence, persistent state, Linear state, scheduled maintenance requests, governance/quality state, and public research first.
 
-Ask only when a genuine unresolved product, business, legal, ethical, technology-consent, maintenance-consent, risk-acceptance, or preference decision materially blocks correct progress.
+Ask only when a genuine unresolved product, business, legal, ethical, technology-consent, maintenance-consent, governance authorization, risk-acceptance, or preference decision materially blocks correct progress.
