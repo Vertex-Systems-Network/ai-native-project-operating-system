@@ -234,7 +234,7 @@ def reset_runtime(repository: str, project_name: str, owner: str, security_capab
 
     handle = owner.lstrip("@")
     protected = [
-        "/AGENTS.md", "/.ai/", "/CLAUDE.md", "/GEMINI.md", "/.cursor/", "/.windsurf/", "/.github/", "/blueprints/",
+        "/.gitignore", "/AGENTS.md", "/.ai/", "/CLAUDE.md", "/GEMINI.md", "/.cursor/", "/.windsurf/", "/.github/", "/blueprints/",
         "/START-HERE.md", "/PROJECT-INITIALIZATION.md", "/PROJECT-MANAGEMENT.md", "/AI-NATIVE-EXECUTION.md",
         "/MULTI-AGENT-ORCHESTRATION.md", "/AUTO-AGENT.md", "/SUPERVISOR.md", "/ORCHESTRATOR.md",
         "/DEVELOPMENT-LIFECYCLE.md", "/CONTINUOUS-IMPROVEMENT.md", "/GITHUB-GOVERNANCE.md", "/CODE-QUALITY.md",
