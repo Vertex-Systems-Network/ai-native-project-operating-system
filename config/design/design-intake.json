@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "status": "not_requested",
+  "source_type": null,
+  "source_url": null,
+  "provided_by_user": false,
+  "audit_status": "not_started",
+  "audit_findings": [],
+  "design_authority": "validated_product_and_system_requirements",
+  "fallback": "If no usable design is supplied, the AI creates the professional UI/UX design from validated requirements.",
+  "ui": {
+    "label": "Figma / Existing Design Link",
+    "primary_action": "Add Figma Design",
+    "skip_action": "Skip Design Link"
+  }
+}
