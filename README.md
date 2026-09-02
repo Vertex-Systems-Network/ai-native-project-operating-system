@@ -1,6 +1,6 @@
 # AI Native Project Operating System
 
-A repository-first operating system for turning a raw idea into a researched, designed, engineered, tested, security-hardened, stateful, multi-agent, and continuously improving AI-native software project.
+A repository-first operating system for turning a raw idea into a researched, designed, engineered, tested, security-hardened, stateful, multi-agent, continuously improving, and governance-enforced AI-native software project.
 
 ## First-run experience
 
@@ -38,19 +38,23 @@ When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and ini
 30. **Plan/Module Progress Table** — README tracks module descriptions, owners, progress, dates, blockers, review state, merge generation, and required-action alerts.
 31. **24-Hour Technology Update Watch** — after stack approval/post-stack execution begins, GitHub schedules a daily Supervisor audit request. AI researches meaningful framework/runtime/dependency/platform/security updates, creates an impact/migration/test/rollback plan, alerts the Supervisor, notifies the configured owner by authorized email, obtains explicit consent, then implements only the approved scope and fully retests it.
 32. **Optional 25-Hour Innovation Scout** — disabled by default. After explicit owner opt-in, GitHub performs an hourly lightweight due-check and creates a market/options/modules research request only after at least 25 hours. AI researches new useful capabilities/options/modules/systems, presents selectable suggestions, and adds only owner-approved items back into the normal planning/architecture/QA/security development lifecycle.
+33. **GitHub Governance / Rules** — AI continuously verifies repository rulesets and merge settings against `config/github/ruleset-policy.json`. When an authenticated admin-capable GitHub interface is available, it applies and re-verifies the desired default-branch protections automatically; otherwise it records governance drift instead of pretending the rules are active.
+34. **Adaptive Code Quality** — universal repository integrity, dependency review, CodeQL-for-Actions, OpenSSF Scorecard, pinned Actions, and Dependabot are built into the template. After stack approval, AI selects and applies the best mature stack-specific formatter/linter/static-analysis/test/build/security tools and makes them part of the merge gates.
 
 ## Current project control surface
 
 <!-- AI-PROJECT-DASHBOARD:START -->
 
-**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–32 currently represented in the repository protocol.
+**Overall protocol scope progress:** `████████████████████ 100%` — requirements 1–34 currently represented in the repository protocol.
 
 **Current merge generation:** `0`  
 **Open required-action agent alerts:** `0`  
 **Technology update watch:** Configured; activates for post-stack project lifecycle  
 **Innovation Scout:** `OFF` by default; explicit owner opt-in required  
+**GitHub governance:** Desired policy recorded; current repository governance drift remains open until admin-capable rules/settings write is available  
+**Universal quality gates:** Active; Repository Integrity and CodeQL verified passing on `main`  
 **Linear project:** AI Native Project Operating System  
-**Last repository-visible protocol update:** 2026-09-02 17:49 PKT  
+**Last repository-visible protocol update:** 2026-09-02 18:04 PKT  
 **Last Linear sync:** 2026-09-02 17:48 PKT
 
 | Module | Description | Owner | Status | Progress | Start | End/Target | Review / Blocker |
@@ -65,8 +69,10 @@ When a user gives this repository URL to an AI, the AI reads `AGENTS.md` and ini
 | P08 | Main README generated progress/control dashboard | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Event-driven refresh; no one-second commit churn |
 | P09 | 24-hour technology update audit, owner notification/consent, controlled update implementation and full retest protocol | Supervisor + Maintenance Worker | Complete | 100% | 2026-09-02 | 2026-09-02 | Runtime AI/email callback availability handled by deterministic fallbacks |
 | P10 | Optional 25-hour market/options/modules innovation scout with owner-selectable scope consent | Supervisor + Research AI | Complete | 100% | 2026-09-02 | 2026-09-02 | Disabled by default until explicit owner opt-in |
+| P11 | GitHub ruleset/merge-governance desired policy, automated drift audit, and admin-capability auto-apply contract | Supervisor | Complete | 100% | 2026-09-02 | 2026-09-02 | Actual GitHub ruleset/settings write is not exposed by current connector; governance issue #1 tracks enforcement gap |
+| P12 | Universal code-quality/security gates plus stack-adaptive tool-selection policy | Supervisor + SQA + Security | Complete | 100% | 2026-09-02 | 2026-09-02 | Repository Integrity + CodeQL verified passing; stack-specific gates generated after stack approval |
 
-> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, `config/maintenance/`, `config/consent/`, Git/PR state, and Linear state.
+> For an actual project created from this operating system, this section becomes a generated runtime dashboard built from `config/ai/`, `config/coordination/`, `config/maintenance/`, `config/consent/`, `config/github/`, `config/quality/`, Git/PR state, and Linear state.
 
 <!-- AI-PROJECT-DASHBOARD:END -->
 
@@ -89,6 +95,8 @@ Persistent core artifacts:
 - `config/maintenance/innovation-scout.json` — optional 25-hour innovation-scout policy/state.
 - `config/consent/consent-requests.json` — canonical maintenance/scope consent records.
 - `config/notifications/project-owner.json` — safe project-owner notification/contact policy.
+- `config/github/ruleset-policy.json` — desired default-branch governance and merge policy.
+- `config/quality/quality-policy.json` — universal and stack-adaptive code-quality requirements.
 - `docs/ai/PRE-PLAN.md` — living engineering pre-plan.
 
 Repository/Git/test reality wins over stale memory records.
@@ -97,9 +105,9 @@ Repository/Git/test reality wins over stale memory records.
 
 The coordination hierarchy is:
 
-**Supervisor → Phase/Milestone → Module Slot → Worker → PR/MR → Supervisor Review → Merge → Merge-Generation Alert → Worker Reconciliation/Acknowledgement**
+**Supervisor → Phase/Milestone → Module Slot → Worker → PR/MR → Quality/Security Gates → Supervisor Review → Merge → Merge-Generation Alert → Worker Reconciliation/Acknowledgement**
 
-Workers use isolated deterministic claim branches. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, repository-backed alerts, maintenance requests, owner consent routing, and README status. Direct push messaging between arbitrary AI chats is not assumed; repository queue/alert/consent state and merge generation provide deterministic cross-agent coordination.
+Workers use isolated deterministic claim branches. The Supervisor owns shared coordination writes, review/merge order, Linear reconciliation, repository-backed alerts, maintenance requests, owner consent routing, governance/quality drift, and README status. Direct push messaging between arbitrary AI chats is not assumed; repository queue/alert/consent state and merge generation provide deterministic cross-agent coordination.
 
 ## Linear integration
 
@@ -115,6 +123,7 @@ Linear sync occurs:
 - on module/phase completion
 - on plan revisions
 - on approved maintenance/innovation scope changes
+- on governance or quality-policy drift/change
 
 If Linear issue quota/capability is unavailable, project documents/status updates plus repository state are the fallback and development continues.
 
@@ -149,9 +158,29 @@ Because GitHub cron cannot express a true every-25-hours recurrence, `.github/wo
 
 Research may discover new options/modules/systems, but those remain proposals until the owner selects/approves them. Approved additions re-enter the appropriate planning, design, architecture, security, QA, and multi-agent development flow.
 
+## GitHub governance
+
+`GITHUB-GOVERNANCE.md` and `config/github/ruleset-policy.json` define the desired repository rules. The AI must inspect actual GitHub state and, when its authenticated interface supports administration writes, apply and re-read the rules/settings automatically. When it cannot, governance drift remains explicit in GitHub rather than being represented as complete enforcement.
+
+The current template prefers PR-only integration into `main`, independent review, required CI checks, up-to-date branches, resolved conversations, force-push/deletion protection, linear history, and squash merging. Merge queue is recommended when supported and worthwhile for the project's concurrency level.
+
+## Code quality
+
+`CODE-QUALITY.md` and `config/quality/quality-policy.json` define the quality system.
+
+The universal template currently includes:
+
+- `AI Native Quality Gates` — validates repository-backed AI state/reference integrity, workflow action pinning, JSON/YAML correctness, and machine-file hygiene.
+- `Dependency Review` — blocks high-severity vulnerable dependency changes on pull requests.
+- `CodeQL` — scans GitHub Actions workflow code with the `security-extended` query suite.
+- `OpenSSF Scorecard` — periodically evaluates supply-chain/repository security posture.
+- Dependabot — keeps GitHub Actions dependencies current.
+
+All external GitHub Actions are pinned to full commit SHAs. After the application stack is approved, the AI must add the mature ecosystem-specific formatter, linter, static/type analysis, test, build, dependency-audit, and security gates appropriate to that stack, plus additional E2E/accessibility/performance/migration/container/IaC/license/coverage checks where relevant.
+
 ## Protocol files
 
-- `AGENTS.md` — root authority and complete entry/coordination/maintenance contract.
+- `AGENTS.md` — root authority and complete entry/coordination/maintenance/governance/quality contract.
 - `START-HERE.md` — intake, research, market audit, and planning flow.
 - `DEVELOPMENT-LIFECYCLE.md` — system design through QA/security.
 - `AI-NATIVE-EXECUTION.md` — persistent ownership, memory, options/modules banks, and execution graph.
@@ -159,6 +188,9 @@ Research may discover new options/modules/systems, but those remain proposals un
 - `AUTO-AGENT.md` — autonomous Worker entry, alert acknowledgement, and submission protocol.
 - `SUPERVISOR.md` — Supervisor coordination/review/merge/maintenance/owner-consent protocol.
 - `CONTINUOUS-IMPROVEMENT.md` — scheduled technology updates and optional market/options/modules innovation loops.
+- `GITHUB-GOVERNANCE.md` — desired GitHub rulesets/merge settings and enforcement behavior.
+- `CODE-QUALITY.md` — universal and stack-adaptive quality strategy.
+- `SECURITY.md` — private vulnerability-reporting and AI security-handling policy.
 
 ## Start prompt
 
