@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Claim an ANPOS worker slot using a deterministic GitHub ref as the lock.
+"""Claim an ANPOS Worker slot with authorization + deterministic GitHub ref lock.
 
-The GitHub ref creation is the arbitration point; queue JSON mirrors the winner.
-Use --remote-lock for a real claim. Without it the script is a dry-run planner.
+A real claim requires a live Supervisor, a selected/identity-verified Worker,
+eligibility/capability/path authorization, a complete handoff envelope, remote
+ref acquisition and queue-mirror persistence. A durable orchestrator must add
+host-authenticated CAS persistence around this reference implementation.
 """
 from __future__ import annotations
 
@@ -10,6 +12,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -18,6 +21,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 QUEUE = ROOT / "config/coordination/agent-work-queue.json"
 SUPERVISOR = ROOT / "config/coordination/supervisor-state.json"
+sys.path.insert(0, str(ROOT / "scripts"))
+from anpos_guard import (  # noqa: E402
+    authorize_slot_claim,
+    authorize_slot_paths,
+    live_supervisor,
+    validate_handoff,
+)
 
 
 def utcnow() -> datetime:
@@ -31,9 +41,13 @@ def iso(dt: datetime) -> str:
 def infer_repo() -> str:
     if os.getenv("GITHUB_REPOSITORY"):
         return os.environ["GITHUB_REPOSITORY"]
-    remote = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], cwd=ROOT, text=True).strip().removesuffix(".git")
+    remote = subprocess.check_output(
+        ["git", "config", "--get", "remote.origin.url"], cwd=ROOT, text=True
+    ).strip().removesuffix(".git")
     if remote.startswith("git@github.com:"):
         return remote.split(":", 1)[1]
+    if "github.com/" not in remote:
+        raise SystemExit("Unsupported/non-GitHub remote; pass --repository and use an equivalent authenticated lock adapter.")
     return remote.split("github.com/", 1)[1]
 
 
@@ -66,7 +80,8 @@ def pick_slot(queue: dict[str, Any], requested: str | None) -> dict[str, Any]:
     slots = [s for s in queue.get("slots", []) if isinstance(s, dict)]
     candidates = [
         s for s in slots
-        if s.get("status") == "free" and dependency_ready(s, slots)
+        if s.get("status") == "free"
+        and dependency_ready(s, slots)
         and (requested is None or s.get("id") == requested)
     ]
     if not candidates:
@@ -75,13 +90,24 @@ def pick_slot(queue: dict[str, Any], requested: str | None) -> dict[str, Any]:
     return candidates[0]
 
 
-def create_lock(repo: str, ref: str, sha: str) -> None:
-    cmd = ["gh", "api", f"repos/{repo}/git/refs", "-f", f"ref=refs/heads/{ref}", "-f", f"sha={sha}"]
-    result = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
+def gh_ref(repo: str, ref: str, sha: str) -> None:
+    result = subprocess.run(
+        ["gh", "api", f"repos/{repo}/git/refs", "-f", f"ref=refs/heads/{ref}", "-f", f"sha={sha}"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
     if result.returncode != 0:
         raise SystemExit(
-            "Atomic claim lost or GitHub ref creation failed. No queue claim was written.\n" + result.stderr.strip()
+            "Atomic claim lost or GitHub ref creation failed. No queue claim was written.\n"
+            + result.stderr.strip()
         )
+
+
+def delete_gh_ref(repo: str, ref: str) -> bool:
+    result = subprocess.run(
+        ["gh", "api", "-X", "DELETE", f"repos/{repo}/git/refs/heads/{ref}"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    return result.returncode == 0
 
 
 def main() -> int:
@@ -92,53 +118,79 @@ def main() -> int:
     p.add_argument("--base-sha")
     p.add_argument("--repository")
     p.add_argument("--lease-minutes", type=int, default=90)
-    p.add_argument("--remote-lock", action="store_true", help="Create the deterministic GitHub ref; required for a real distributed claim")
-    p.add_argument("--apply-state", action="store_true", help="Write the queue mirror after the remote lock succeeds")
+    p.add_argument("--remote-lock", action="store_true", help="Create deterministic GitHub claim ref")
+    p.add_argument("--apply-state", action="store_true", help="Persist the local queue mirror after lock acquisition")
     args = p.parse_args()
 
+    if args.remote_lock and not args.apply_state:
+        raise SystemExit("Refusing a ref-only claim: --remote-lock requires --apply-state to reduce orphan locks.")
+
     queue = load(QUEUE)
-    supervisor = load(SUPERVISOR)
     slot = pick_slot(queue, args.slot_id)
-    epoch = int(supervisor.get("coordination_epoch") or 0)
+    supervisor_state, supervisor = live_supervisor()
+    epoch = int(supervisor_state.get("coordination_epoch") or 0)
     base_sha = args.base_sha or infer_base_sha()
     repo = args.repository or infer_repo()
+
+    # Validate complete handoff against the exact base revision that will be claimed.
+    slot["base_sha"] = base_sha
+    validate_handoff(slot)
+    agent = authorize_slot_claim(slot, args.agent_id, role="worker")
+    authorize_slot_paths(slot, agent)
+
     claim_ref = f"claims/epoch-{epoch:06d}/{slot['id']}"
     lease_id = str(uuid.uuid4())
     claimed = utcnow()
     expires = claimed + timedelta(minutes=max(5, args.lease_minutes))
+    worker_fencing = f"worker:{epoch}:{lease_id}"
+    identity_ref = (agent.get("runtime_identity") or {}).get("evidence_ref")
 
     print(json.dumps({
-        "slot_id": slot["id"], "claim_ref": claim_ref, "base_sha": base_sha,
-        "agent_id": args.agent_id, "lease_id": lease_id, "lease_expires_at": iso(expires),
+        "slot_id": slot["id"],
+        "claim_ref": claim_ref,
+        "base_sha": base_sha,
+        "agent_id": args.agent_id,
+        "agent_identity_ref": identity_ref,
+        "lease_id": lease_id,
+        "lease_expires_at": iso(expires),
         "coordination_epoch": epoch,
+        "supervisor_fencing_token": supervisor.get("fencing_token"),
+        "worker_fencing_token": worker_fencing,
     }, indent=2))
 
     if not args.remote_lock:
-        print("DRY RUN - remote lock not created; this is not a distributed claim.")
+        print("DRY RUN - authorization passed, but remote lock was not created; this is not a claim.")
         return 0
 
-    create_lock(repo, claim_ref, base_sha)
-    if not args.apply_state:
-        print("Remote lock created. Caller must persist queue mirror before substantive work.")
-        return 0
+    gh_ref(repo, claim_ref, base_sha)
+    try:
+        slot.update({
+            "status": "claimed",
+            "claim_ref": claim_ref,
+            "claim_branch": claim_ref,
+            "claimant": args.agent_id,
+            "claimant_identity_ref": identity_ref,
+            "agent_type": args.agent_type,
+            "base_sha": base_sha,
+            "claim_id": lease_id,
+            "claim_nonce": lease_id,
+            "lease_status": "active",
+            "lease_expires_at": iso(expires),
+            "coordination_epoch": epoch,
+            "claimed_at": iso(claimed),
+            "heartbeat_at": iso(claimed),
+            "fencing_token": worker_fencing,
+        })
+        queue["updated_at"] = iso(claimed)
+        QUEUE.write_text(json.dumps(queue, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        rolled_back = delete_gh_ref(repo, claim_ref)
+        status = "rolled back remote claim ref" if rolled_back else "ORPHAN REF REQUIRES SUPERVISOR RECOVERY"
+        raise SystemExit(f"Queue mirror persistence failed: {exc}; {status}.") from exc
 
-    slot.update({
-        "status": "claimed",
-        "claim_branch": claim_ref,
-        "claimant": args.agent_id,
-        "agent_type": args.agent_type,
-        "base_sha": base_sha,
-        "claim_id": lease_id,
-        "claim_nonce": lease_id,
-        "lease_expires_at": iso(expires),
-        "coordination_epoch": epoch,
-        "claimed_at": iso(claimed),
-        "heartbeat_at": iso(claimed),
-        "fencing_token": f"{epoch}:{lease_id}",
-    })
-    queue["updated_at"] = iso(claimed)
-    QUEUE.write_text(json.dumps(queue, indent=2) + "\n", encoding="utf-8")
-    print("Remote lock won and local queue mirror updated. Commit/push the mirror before implementation.")
+    print(
+        "Remote lock won and authorized queue mirror updated. Commit/persist the mirror through the trusted coordination gateway before substantive work."
+    )
     return 0
 
 
