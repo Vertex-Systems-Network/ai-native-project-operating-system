@@ -11,12 +11,24 @@
     "node_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "version_or_revision": {"type": ["string", "null"]},
     "snapshot_ref": {"type": ["string", "null"]},
-    "approval_status": {"enum": ["not_approved", "approved", "rejected", "superseded"]}
+    "approval_status": {"enum": ["not_approved", "approved", "rejected", "superseded"]},
+    "approved_by": {"type": ["string", "null"]},
+    "approved_at": {"type": ["string", "null"]}
   },
   "allOf": [
     {
-      "if": {"properties": {"approval_status": {"const": "approved"}}},
-      "then": {"required": ["approved_by", "approved_at"], "anyOf": [{"required": ["version_or_revision"]}, {"required": ["snapshot_ref"]}]}
+      "if": {"properties": {"approval_status": {"const": "approved"}}, "required": ["approval_status"]},
+      "then": {
+        "properties": {
+          "approved_by": {"type": "string", "minLength": 1},
+          "approved_at": {"type": "string", "minLength": 1}
+        },
+        "required": ["approved_by", "approved_at"],
+        "anyOf": [
+          {"properties": {"version_or_revision": {"type": "string", "minLength": 1}}, "required": ["version_or_revision"]},
+          {"properties": {"snapshot_ref": {"type": "string", "minLength": 1}}, "required": ["snapshot_ref"]}
+        ]
+      }
     }
   ],
   "additionalProperties": true
