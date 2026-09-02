@@ -28,7 +28,6 @@
     "/CONTROL-PLANE-SECURITY.md",
     "/PRODUCTION-ASSURANCE.md",
     "/DESIGN-DATA-OPERATIONS.md",
-    "/FINAL-CORE.md",
     "/config/ai/agent-catalog.json",
     "/config/ai/memory-provenance.json",
     "/config/coordination/**",
