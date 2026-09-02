@@ -1,12 +1,27 @@
 {
-  "schema_version": 1,
-  "enabled": true,
+  "schema_version": 2,
+  "status": "template_blueprint",
+  "enabled": false,
+  "activation_scope": "child_project_only",
   "role": "planning_progress_mirror",
   "canonical_code_system": "github",
+  "connection": {
+    "required_during_child_initialization": true,
+    "method": "host_connector_or_oauth",
+    "never_collect_raw_password": true,
+    "preferred_action": "Connect Linear",
+    "fallback": "Ask the user to connect/authenticate Linear in the host UI, then resume setup."
+  },
   "project": {
-    "name": "AI Native Project Operating System",
-    "id": "337c1c1d-e7c8-4845-9000-33b746e72139",
-    "url": "https://linear.app/abdulhanan237/project/ai-native-project-operating-system-6a692feca736"
+    "name": null,
+    "id": null,
+    "url": null
+  },
+  "mapping_policy": {
+    "attach_existing_project_when_selected": true,
+    "create_project_when_needed_and_authorized": true,
+    "persist_mapping_only_in_child_project": true,
+    "template_source_must_remain_unmapped": true
   },
   "sync_policy": {
     "active_hourly_interval_minutes": 60,
@@ -21,13 +36,14 @@
     "sync_on_plan_revision": true,
     "sync_on_governance_or_quality_change": true,
     "sync_on_protocol_orchestration_change": true,
-    "catch_up_on_resume": true
+    "catch_up_on_resume": true,
+    "hourly_only_when_persistent_runtime_exists": true
   },
-  "last_successful_sync_at": "2026-09-02T20:30:33+05:00",
-  "last_attempt_at": "2026-09-02T20:30:33+05:00",
+  "last_successful_sync_at": null,
+  "last_attempt_at": null,
   "last_error": null,
-  "last_reconciled_main_sha": "cb218b93fac768c26403b9e5f0ad20180a169af2",
-  "last_linear_status_update_id": "0876693e-89ac-4a35-bf5c-60213ee25f49",
-  "sync_result": "final_core_requirements_35_44_mirrored_and_verified; repository_integrity_success; codeql_success",
-  "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
+  "last_reconciled_main_sha": null,
+  "last_linear_status_update_id": null,
+  "sync_result": "not_connected_template_blueprint",
+  "degraded_mode": "If Linear is unavailable, keep GitHub/repository state canonical and mark Linear setup pending in the child project."
 }
