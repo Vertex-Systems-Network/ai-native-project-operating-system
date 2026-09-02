@@ -1,10 +1,10 @@
 # ANPOS Final-Core Runtime — Requirements 35–44
 
-These requirements convert the repository from a strong AI-development protocol into a safer distributed multi-agent control plane.
+These requirements define the reusable distributed multi-agent control plane that child projects activate from this template. The canonical source remains an inert template/protocol repository.
 
 ## 35 — Template Bootstrap / Instance Reset
 
-Child repositories must initialize project identity and clear inherited runtime state before scaling development. `scripts/bootstrap_instance.py` resets project/coordination/consent/Linear runtime identity, creates a new instance UUID, and can render repository-valid CODEOWNERS. It is dry-run by default and refuses to reset the upstream source repo without explicit override.
+Child repositories must initialize project identity and clear inherited runtime state before scaling development. `scripts/bootstrap_instance.py` resets project/coordination/consent/Linear runtime identity, creates a new instance UUID, regenerates child CODEOWNERS, and installs child runtime/quality blueprints. It is dry-run by default and refuses to reset the canonical upstream source repo without explicit override.
 
 ## 36 — Atomic Worker Claims + Leases
 
@@ -24,11 +24,11 @@ Exactly one Supervisor is active per coordination epoch. Election uses the next 
 
 ## 40 — Formal State Schemas + State Machine
 
-Core JSON Schemas live in `schemas/`. `config/protocol/state-machine.json` defines legal Worker/Supervisor transitions and fencing invariants. Queue/Supervisor runtime state has been upgraded to lease-aware schema v2. Repository validation checks these invariants.
+Core JSON Schemas live in `schemas/`. `config/protocol/state-machine.json` defines legal Worker/Supervisor transitions and fencing invariants. Queue/Supervisor runtime state uses lease-aware schema v2. Repository validation checks these invariants plus the source-template boundary.
 
 ## 41 — Protocol Versioning + Upstream Migration Channel
 
-`config/protocol/version.json` records ANPOS version/upstream. `config/protocol/migrations.json` records applied/pending migrations. `.github/workflows/protocol-update-watch.yml` checks child projects for newer upstream protocol versions and opens a migration control item without modifying project code automatically.
+`config/protocol/version.json` records ANPOS version/upstream. `config/protocol/migrations.json` records applied/pending migrations. The canonical source stores `blueprints/github/workflows/protocol-update-watch.yml`; child bootstrap installs it as `.github/workflows/protocol-update-watch.yml`. The child workflow checks for newer upstream protocol versions and opens a migration control item without modifying project code automatically.
 
 ## 42 — Thin AI Vendor Adapters
 
@@ -40,8 +40,8 @@ Vendor adapters route Claude Code, Gemini, GitHub Copilot, Cursor, and Windsurf 
 
 ## 44 — Path Ownership / CODEOWNERS
 
-`config/github/path-ownership.json` defines role ownership for shared/high-risk paths. `.github/CODEOWNERS` provides a GitHub-enforceable source-repository baseline. Child repositories regenerate valid owner/team identities during bootstrap.
+`config/github/path-ownership.json` defines role ownership for shared/high-risk paths. `.github/CODEOWNERS` provides a source-template baseline. Child repositories regenerate valid owner/team identities during bootstrap.
 
-## Core distributed invariant
+## Source vs child invariant
 
-**GitHub refs arbitrate ownership; JSON mirrors state; fencing tokens prevent stale leaders/workers from mutating shared coordination state. GitHub code/branch/PR/merge reality remains canonical.**
+**Canonical source stores instructions and inactive blueprints. Child repositories activate integrations/workflows/project state. GitHub refs arbitrate ownership; JSON mirrors state; fencing tokens prevent stale leaders/workers from mutating shared coordination state. GitHub code/branch/PR/merge reality remains canonical.**
