@@ -1,5 +1,6 @@
 # Template-source CODEOWNERS. Child repos regenerate repository-valid owners via scripts/bootstrap_instance.py.
 * @wpessential
+/.gitignore @wpessential
 /AGENTS.md @wpessential
 /.ai/ @wpessential
 /CLAUDE.md @wpessential
