@@ -122,6 +122,33 @@ def validate_manifest() -> None:
             fail(f"manifest references missing path: {relative}")
 
 
+def validate_protocol_versioning() -> None:
+    version = load_json("config/protocol/version.json")
+    instance = load_json("config/protocol/instance.json")
+    migrations = load_json("config/protocol/migrations.json")
+
+    current = version.get("version")
+    if not isinstance(current, str) or not current:
+        fail("protocol version: config/protocol/version.json must contain a non-empty version")
+        return
+    if migrations.get("current_protocol_version") != current:
+        fail("protocol version: migrations.current_protocol_version must match version.json")
+    if instance.get("instance_status") == "template_source" and instance.get("source_protocol_version") != current:
+        fail("protocol version: template source instance.source_protocol_version must match version.json")
+
+    last_migration = version.get("last_protocol_migration")
+    applied = migrations.get("applied_migrations", [])
+    if last_migration:
+        if not isinstance(applied, list) or not any(
+            isinstance(record, dict)
+            and record.get("id") == last_migration
+            and record.get("status") == "applied"
+            and record.get("to_version") == current
+            for record in applied
+        ):
+            fail("protocol version: last_protocol_migration must reference an applied migration to the current version")
+
+
 def validate_template_boundary() -> None:
     instance = load_json("config/protocol/instance.json")
     linear = load_json("config/integrations/linear-sync.json")
@@ -134,10 +161,18 @@ def validate_template_boundary() -> None:
         project = linear.get("project") or {}
         if any(project.get(key) not in (None, "") for key in ("name", "id", "url")):
             fail("template source: Linear project mapping must be empty")
-        if rules.get("status") != "template_blueprint":
-            fail("template source: GitHub Rules policy must remain template_blueprint")
+        for key in ("last_successful_sync_at", "last_attempt_at", "last_reconciled_main_sha", "last_linear_status_update_id"):
+            if linear.get(key) not in (None, ""):
+                fail(f"template source: Linear runtime field {key} must be empty")
+        if rules.get("status") != "template_blueprint" or rules.get("activation_scope") != "child_project_only":
+            fail("template source: GitHub Rules policy must remain a child-project template_blueprint")
+        setup_flow = rules.get("setup_flow") or {}
+        if setup_flow.get("ask_user_before_applying") is not True:
+            fail("template source: child GitHub Rules setup must ask the user before applying")
         if quality.get("status") != "template_blueprint" or quality.get("apply_to_template_source") is not False:
             fail("template source: Code Quality policy must remain inactive blueprint")
+        if quality.get("activation_scope") != "child_project_only":
+            fail("template source: Code Quality activation_scope must be child_project_only")
         active_workflow_dir = ROOT / ".github" / "workflows"
         if active_workflow_dir.exists() and any(active_workflow_dir.glob("*.y*ml")):
             fail("template source: child runtime workflows must not exist in active .github/workflows")
@@ -260,6 +295,7 @@ def main() -> int:
     validate_required_files()
     validate_all_json()
     validate_manifest()
+    validate_protocol_versioning()
     validate_template_boundary()
     validate_ai_graph()
     validate_coordination()
