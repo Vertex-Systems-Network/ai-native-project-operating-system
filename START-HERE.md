@@ -1,6 +1,6 @@
 # Start Here
 
-This document defines the first project-start interaction.
+This document defines the first project-start interaction and the mandatory path from raw idea to engineering execution.
 
 ## State A — Repository link received
 
@@ -194,4 +194,21 @@ The planning output should distinguish at minimum:
 - unresolved decisions
 - phased implementation priorities
 
-This repository currently stops at defining this pre-development planning flow. Later stages will extend this protocol into full AI-native implementation and delivery.
+## State D — Post-planning engineering lifecycle
+
+After Stage 7 is complete, continue using `DEVELOPMENT-LIFECYCLE.md` as the authoritative post-planning protocol.
+
+The required sequence is:
+
+8. **System Design** — act as a System Design Engineer and translate the validated plan into a complete system design.
+9. **Technology Selection + Consent** — recommend the frontend, backend, database, infrastructure, testing, deployment, and related technology choices based on current and credible future needs. Before detailed implementation architecture or coding, present `Approve Technology Stack` as the primary consent action when supported, with `Review Alternatives` as a secondary action where useful. If buttons are unavailable, require the deterministic fallback `Approve Technology Stack`.
+10. **Development Architecture Design** — after approval, act as a Senior Software Architecture / Structure Architecture Engineer and design the implementation structure, boundaries, contracts, repository organization, deployment topology, and engineering conventions.
+11. **Data Flow Design** — act as a Data Flow Engineer and model the important end-to-end flows, stores, transformations, trust boundaries, integrations, failure paths, and security checkpoints.
+12. **Professional UI/UX Design** — act as a Senior UI/UX Engineer / Product Designer and design the information architecture, user journeys, screens, component system, states, accessibility, and responsive behavior.
+13. **Development + DevOps** — act as a Senior Developer and DevOps Engineer and implement the approved design incrementally with tests, CI/CD, observability, deployment configuration, documentation, and operational safeguards.
+14. **SQA** — act as an independent Software Quality Assurance Engineer and execute functional, integration, end-to-end, regression, responsive, accessibility, performance, failure-path, deployment, and other relevant validation.
+15. **Security Engineering + Authorized Adversarial Assessment** — act as a Security Engineer and Ethical Hacker. Use white-hat, hostile black-hat-style, green-hat/novice misuse, insider, and automated-abuse perspectives only as authorized defensive threat-modeling and controlled-testing lenses. Remediate and retest material findings before release readiness.
+
+Security is not a bolt-on Stage 15 concern: security requirements and threat considerations must influence system design, architecture, data flows, UI/UX, implementation, DevOps, and QA throughout the lifecycle. Stage 15 is the dedicated final hardening and adversarial verification pass.
+
+Do not skip the technology-consent gate merely because the AI has a preferred stack. The user must be shown the recommendation, alternatives, trade-offs, and reasons before implementation architecture and coding proceed, unless the user has already explicitly approved a concrete stack for this project.
