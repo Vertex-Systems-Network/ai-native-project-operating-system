@@ -1,1 +1,1 @@
-# AI-Native-Project-Operating-System
+# AI Native Project Operating System
