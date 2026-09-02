@@ -3,6 +3,7 @@
   "default_owner_role": "worker",
   "protected_control_plane_default_owner_roles": ["supervisor", "security", "architecture", "devops"],
   "rules": [
+    {"pattern": "/.gitignore", "owner_roles": ["supervisor", "devops", "security"], "review_required": true},
     {"pattern": "/AGENTS.md", "owner_roles": ["supervisor", "security", "architecture"], "review_required": true, "independent_review_required": true},
     {"pattern": "/.ai/**", "owner_roles": ["supervisor", "security", "architecture"], "review_required": true, "independent_review_required": true},
     {"pattern": "/CLAUDE.md", "owner_roles": ["supervisor", "security"], "review_required": true},
