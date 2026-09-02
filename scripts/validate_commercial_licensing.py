@@ -29,6 +29,7 @@ REQUIRED_FILES = [
     "schemas/license-entitlement.schema.json",
     "blueprints/commercial/marketplace-webhook-contract.json",
     "blueprints/commercial/entitlement-envelope.example.json",
+    "blueprints/commercial/service-api-contract.json",
     "scripts/validate_commercial_licensing.py",
     "tests/test_commercial_licensing.py",
 ]
@@ -154,6 +155,14 @@ def validate_authority_and_safety() -> None:
         if wh.get(key) is not True:
             fail(f"Marketplace webhook safeguard must remain true: {key}")
 
+    constraints = adapter.get("listing_constraints") or {}
+    if constraints.get("paid_listing_requires_verified_publisher") is not True:
+        fail("Marketplace paid listing must retain verified-publisher launch gate")
+    if constraints.get("paid_plan_requires_monthly_and_annual_usd_prices") is not True:
+        fail("Marketplace paid plan must retain monthly+annual pricing launch gate")
+    if constraints.get("constraints_must_be_rechecked_against_current_github_docs_before_launch") is not True:
+        fail("Marketplace constraints must be rechecked before commercial launch")
+
     secrets = adapter.get("secrets") or {}
     for key in ["webhook_secret_in_repository", "github_app_private_key_in_repository", "entitlement_signing_private_key_in_repository"]:
         if secrets.get(key) is not False:
@@ -205,6 +214,37 @@ def validate_catalog() -> None:
             fail(f"commercial plan {plan_id} must define feature entitlements")
 
 
+def validate_service_contract() -> None:
+    service = load("blueprints/commercial/service-api-contract.json")
+    endpoints = service.get("endpoints")
+    if not isinstance(endpoints, list):
+        fail("commercial service API contract endpoints must be a list")
+        return
+    seen = {(row.get("method"), row.get("path")) for row in endpoints if isinstance(row, dict)}
+    required = {
+        ("POST", "/webhooks/github/marketplace"),
+        ("GET", "/v1/entitlements/current"),
+        ("GET", "/v1/keys"),
+        ("POST", "/v1/provision"),
+        ("POST", "/v1/reconcile"),
+    }
+    missing = required - seen
+    if missing:
+        fail(f"commercial service API contract missing endpoints: {sorted(missing)}")
+    rules = service.get("cross_cutting_rules") or {}
+    for key in [
+        "canonical_subject_is_github_numeric_account_id",
+        "authorization_is_server_side",
+        "repository_reference_is_not_authorization",
+        "rate_limiting_required",
+        "structured_audit_logging_required",
+        "sensitive_fields_redacted_from_logs",
+        "no_remote_kill_switch_for_generated_customer_projects",
+    ]:
+        if rules.get(key) is not True:
+            fail(f"commercial service API safeguard must remain true: {key}")
+
+
 def validate_conformance() -> None:
     conformance = load("config/testing/conformance-scenarios.json")
     names = {
@@ -238,6 +278,7 @@ def validate_protection_and_routing() -> None:
             "config/licensing/product-catalog.json",
             "config/licensing/marketplace-adapter.json",
             "config/licensing/entitlement-reference.json",
+            "blueprints/commercial/service-api-contract.json",
             "scripts/validate_commercial_licensing.py",
         }
         missing = required_role_paths - set(role)
@@ -308,6 +349,7 @@ def main() -> int:
         validate_authority_and_safety()
         validate_entitlement_schema()
         validate_catalog()
+        validate_service_contract()
         validate_conformance()
         validate_protection_and_routing()
         validate_quality_integration()
