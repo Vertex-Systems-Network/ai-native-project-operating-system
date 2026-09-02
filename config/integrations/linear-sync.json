@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "role": "planning_progress_mirror",
+  "canonical_code_system": "github",
+  "project": {
+    "name": "AI Native Project Operating System",
+    "id": "337c1c1d-e7c8-4845-9000-33b746e72139",
+    "url": "https://linear.app/abdulhanan237/project/ai-native-project-operating-system-6a692feca736"
+  },
+  "sync_policy": {
+    "active_hourly_interval_minutes": 60,
+    "sync_on_startup": true,
+    "sync_on_assignment": true,
+    "sync_on_blocker": true,
+    "sync_on_review_submission": true,
+    "sync_on_changes_requested": true,
+    "sync_on_merge": true,
+    "sync_on_module_completion": true,
+    "sync_on_phase_completion": true,
+    "catch_up_on_resume": true
+  },
+  "last_successful_sync_at": null,
+  "last_attempt_at": null,
+  "last_error": null,
+  "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
+}
