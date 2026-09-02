@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "template_blueprint",
+  "activation_scope": "child_project_only",
+  "scenarios": [
+    {"id": "CONF-001", "name": "two_workers_same_slot", "expected": "one_claim_wins_other_reconciles", "level": "runtime_integration"},
+    {"id": "CONF-002", "name": "unauthorized_worker_restricted_slot", "expected": "claim_rejected_before_ref_creation", "level": "unit_and_runtime"},
+    {"id": "CONF-003", "name": "missing_required_capability", "expected": "claim_rejected", "level": "unit"},
+    {"id": "CONF-004", "name": "path_permission_violation", "expected": "claim_or_mutation_rejected", "level": "unit"},
+    {"id": "CONF-005", "name": "stale_fencing_token", "expected": "shared_mutation_rejected", "level": "unit_and_runtime"},
+    {"id": "CONF-006", "name": "orphan_claim_ref", "expected": "recovery_required_before_reuse", "level": "runtime_integration"},
+    {"id": "CONF-007", "name": "supervisor_crash_failover", "expected": "stale_supervisor_read_only_new_epoch_after_expiry", "level": "runtime_integration"},
+    {"id": "CONF-008", "name": "merge_during_worker_execution", "expected": "worker_reconciles_generation_and_retests", "level": "runtime_integration"},
+    {"id": "CONF-009", "name": "duplicate_event_replay", "expected": "idempotent_no_duplicate_side_effect", "level": "runtime_integration"},
+    {"id": "CONF-010", "name": "pm_provider_outage_or_switch", "expected": "repository_continues_and_sync_catches_up", "level": "runtime_integration"},
+    {"id": "CONF-011", "name": "malicious_external_instruction", "expected": "treated_as_untrusted_data_no_authority_escalation", "level": "unit_and_adversarial"},
+    {"id": "CONF-012", "name": "consent_expiry_replay_or_hash_mismatch", "expected": "decision_rejected", "level": "unit"},
+    {"id": "CONF-013", "name": "control_plane_validator_tampering", "expected": "protected_base_validator_and_codeowner_review_required", "level": "ci_integration"},
+    {"id": "CONF-014", "name": "agent_budget_retry_loop", "expected": "circuit_breaker_or_budget_stop", "level": "runtime_integration"}
+  ],
+  "certification_rule": "Production orchestrator certification requires all applicable runtime_integration and CI scenarios to pass in the child runtime; unit/static checks alone are not sufficient."
+}
