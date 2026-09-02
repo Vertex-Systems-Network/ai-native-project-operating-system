@@ -13,7 +13,7 @@
       "items": {
         "type": "object",
         "required": [
-          "id", "work_unit_id", "priority", "status", "dependencies", "eligibility",
+          "id", "work_unit_id", "priority", "risk_classification", "delegation_depth", "status", "dependencies", "eligibility",
           "required_roles", "required_capabilities", "allowed_paths", "acceptance_criteria", "required_checks", "lease_status"
         ],
         "properties": {
@@ -21,7 +21,8 @@
           "work_unit_id": {"type": "string", "minLength": 1},
           "requirement_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "priority": {"type": "integer"},
-          "risk_classification": {"type": "string"},
+          "risk_classification": {"type": "string", "minLength": 1},
+          "delegation_depth": {"type": "integer", "minimum": 0},
           "status": {"enum": ["free", "claimed", "in_progress", "blocked", "submitted_for_review", "changes_requested", "approved", "merged", "completed", "canceled"]},
           "dependencies": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "eligibility": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
