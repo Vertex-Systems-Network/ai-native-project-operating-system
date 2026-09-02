@@ -5,7 +5,7 @@
 ## Authority
 
 1. explicit current user instruction
-2. template-source vs child-project boundary
+2. canonical-template-source vs child-project boundary
 3. repository safety, consent, security, and GitHub governance
 4. this router
 5. manifest-selected role protocols
@@ -16,23 +16,31 @@ Repository reality overrides stale chat memory, Linear mirrors, dashboards, or J
 
 ## Template source boundary — mandatory
 
-Read `config/protocol/instance.json` immediately.
+Read both the actual current repository identity and `config/protocol/instance.json` immediately.
 
-If `instance_status` is `template_source`, this repository is an **inert reusable template/protocol source**, not a live application project. Do not:
+Canonical upstream source:
 
-- connect or map a real Linear project to the template source;
-- write project-specific Linear IDs/URLs/sync timestamps into template state;
-- apply the child project's GitHub Rules/rulesets/merge settings to the template source;
-- activate child-project code-quality/runtime workflows against the template source;
+`Vertex-Systems-Network/ai-native-project-operating-system`
+
+- If the current repository **is the canonical upstream source** and its instance state is `template_source`, this repository is an **inert reusable template/protocol source**, not a live application project.
+- If the current repository is **different from the canonical upstream source** but inherited `instance_status: template_source`, it is an **uninitialized child repository** and must be bootstrapped rather than treated as the source template.
+- If the current repository is a child with `instance_status: active_project`, reconcile and resume its existing setup/state; do not blindly reset it.
+
+Against the canonical source repository, do not:
+
+- connect or map a real Linear project;
+- write project-specific Linear IDs/URLs/sync timestamps;
+- apply child-project GitHub Rules/rulesets/merge settings;
+- activate child-project code-quality/runtime workflows;
 - treat blueprint configuration as proof that anything is already applied.
 
-The template source stores instructions, policies, schemas, scripts, and inactive blueprints only.
+The canonical source stores instructions, policies, schemas, scripts, and inactive blueprints only.
 
-For a new/child repository created from this template, load `PROJECT-INITIALIZATION.md` and run the child initialization flow.
+For a new/child repository, load `PROJECT-INITIALIZATION.md` and run the child initialization flow.
 
 ## Child instance bootstrap
 
-A child repository copied from the template must be initialized with `scripts/bootstrap_instance.py` before development scales. The script is dry-run by default and refuses to reset the upstream template source unless deliberately overridden for testing.
+A child repository copied from the template must be initialized with `scripts/bootstrap_instance.py` before development scales. The script is dry-run by default and refuses to reset the canonical upstream source unless deliberately overridden for testing.
 
 A child project must not inherit source-template Linear IDs, coordination leases, Worker claims, alerts, consent records, merge generations, stale runtime identity, or source-specific integration state.
 
@@ -40,8 +48,8 @@ After child bootstrap, complete `PROJECT-INITIALIZATION.md`:
 
 1. connect/authenticate Linear using the host's secure connected-app/OAuth flow; never ask for a raw password/token in normal chat;
 2. map/create the Linear project and enable verified auto-sync only in the child repository;
-3. ask the user whether to **Apply Recommended GitHub Rules**; if admin-capable and approved, apply + re-read + verify, otherwise provide the exact manual setup and keep it pending;
-4. install/apply the universal Code Quality baseline to the child automatically, then add stack-specific quality tooling after technology approval.
+3. install/apply the universal Code Quality baseline to the child automatically, then add stack-specific quality tooling after technology approval;
+4. ask the user whether to **Apply Recommended GitHub Rules**; if admin-capable and approved, apply + re-read + verify, otherwise provide the exact manual setup and keep it pending.
 
 ## First user flow
 
@@ -109,7 +117,7 @@ Unauthorized attacks, credential theft, destructive third-party actions, malware
 
 ## Linear
 
-`config/integrations/linear-sync.json` is a **connection blueprint** in the template source, not an attached project.
+`config/integrations/linear-sync.json` is a **connection blueprint** in the canonical template source, not an attached project.
 
 In each child project, the AI must ask the user to **Connect Linear** through the host's secure connection/authentication UI, then map or create the appropriate Linear project and persist that mapping only in the child repository. GitHub is canonical for code, branches, commits, PRs, and merge reality; Linear is the planning/progress mirror. Reconcile on startup/resume and material events; hourly sync only when a persistent runtime truly exists.
 
