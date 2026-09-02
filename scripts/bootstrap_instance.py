@@ -238,7 +238,7 @@ def reset_runtime(repository: str, project_name: str, owner: str, security_capab
         "/START-HERE.md", "/PROJECT-INITIALIZATION.md", "/PROJECT-MANAGEMENT.md", "/AI-NATIVE-EXECUTION.md",
         "/MULTI-AGENT-ORCHESTRATION.md", "/AUTO-AGENT.md", "/SUPERVISOR.md", "/ORCHESTRATOR.md",
         "/DEVELOPMENT-LIFECYCLE.md", "/CONTINUOUS-IMPROVEMENT.md", "/GITHUB-GOVERNANCE.md", "/CODE-QUALITY.md",
-        "/SECURITY.md", "/CONTROL-PLANE-SECURITY.md", "/PRODUCTION-ASSURANCE.md", "/DESIGN-DATA-OPERATIONS.md", "/FINAL-CORE.md",
+        "/SECURITY.md", "/CONTROL-PLANE-SECURITY.md", "/PRODUCTION-ASSURANCE.md", "/DESIGN-DATA-OPERATIONS.md",
         "/config/ai/agent-catalog.json", "/config/ai/memory-provenance.json", "/config/coordination/", "/config/protocol/",
         "/config/security/", "/config/consent/", "/config/github/", "/config/quality/", "/config/runtime/", "/config/release/",
         "/config/data/", "/config/operations/", "/config/contracts/", "/config/integrations/", "/config/design/", "/config/testing/",
