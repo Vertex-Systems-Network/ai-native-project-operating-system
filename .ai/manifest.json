@@ -86,6 +86,7 @@
       "schemas/license-entitlement.schema.json",
       "blueprints/commercial/marketplace-webhook-contract.json",
       "blueprints/commercial/entitlement-envelope.example.json",
+      "blueprints/commercial/service-api-contract.json",
       "scripts/validate_commercial_licensing.py",
       "SECURITY.md",
       "CONTROL-PLANE-SECURITY.md",
