@@ -1,6 +1,6 @@
 # Supervisor Protocol
 
-There must be exactly one active Supervisor per coordination epoch. Read `AGENTS.md`, `.ai/manifest.json`, this file, and `ORCHESTRATOR.md`.
+There must be exactly one active Supervisor per coordination epoch. Read `AGENTS.md`, `.ai/manifest.json`, this file, `PROJECT-MANAGEMENT.md`, and `ORCHESTRATOR.md`.
 
 ## Lease / election first
 
@@ -17,20 +17,21 @@ Failover is allowed only after the prior lease is expired or explicitly relinqui
 
 ## Responsibilities
 
-The Supervisor owns whole-project awareness, queue integrity, dependency ordering, slot eligibility, stale-claim recovery, shared-write coordination, path ownership, PR/MR review, merge order, quality/security gates, GitHub governance drift, Linear reconciliation, README/dashboard state, merge alerts, maintenance/innovation requests, owner consent routing, protocol migrations, and recovery from inconsistent state. When coordination load permits it also owns one bounded development work unit.
+The Supervisor owns whole-project awareness, queue integrity, dependency ordering, slot eligibility, stale-claim recovery, shared-write coordination, path ownership, PR/MR review, merge order, quality/security gates, GitHub governance drift, selected PM-provider reconciliation, README/dashboard state, merge alerts, maintenance/innovation requests, owner consent routing, protocol migrations, and recovery from inconsistent state. When coordination load permits it also owns one bounded development work unit.
 
 ## Startup / resume reconciliation
 
 Inspect at minimum:
 
 - current `main`, branches/claim refs, open PRs/MRs, workflow/check state
-- `config/ai/` execution/memory state
+- `config/ai/` execution/memory state and selected development-agent catalog
 - `config/coordination/` queue, Supervisor lease, merge generation, alerts
 - `config/traceability/requirements-traceability.json`
 - consent/maintenance/design/integration state
+- `config/integrations/project-management.json` and provider-specific adapter state when selected
 - GitHub rules/CODEOWNERS/quality state
 - protocol instance/version/migration state
-- Linear project state when available
+- selected PM project/workspace state when connected
 
 Repair stale mirrors from repository evidence. GitHub remains canonical for code/merge/coordination reality.
 
@@ -57,7 +58,20 @@ After every successful main merge:
 3. create required-action reconciliation alerts for active/affected Workers
 4. require stale Workers to integrate current main and reverify before continuing
 5. update module/work-unit/traceability state
-6. reconcile Linear and README/dashboard state
+6. reconcile the selected PM provider when connected
+7. refresh README/dashboard state
+
+## Project-management provider reconciliation
+
+Use `PROJECT-MANAGEMENT.md` rather than vendor-specific orchestration assumptions.
+
+When a provider is connected, synchronize approved plan, assignments, blockers, review state, merges, verified completion, and relevant Supervisor status through the common adapter contract.
+
+If the provider disagrees with GitHub about code/PR/merge/test/completion reality, GitHub wins and the PM provider is corrected.
+
+If the provider is unavailable, record degraded mode and catch up later. If the owner switches providers, reconcile GitHub first, verify the replacement mapping, rebuild current active plan state, then disable the old sync.
+
+Linear-specific state is used only when Linear is the selected provider.
 
 ## Independent review
 
@@ -69,9 +83,9 @@ Follow `CONTINUOUS-IMPROVEMENT.md` for technology and optional innovation cycles
 
 For upstream ANPOS changes, use `config/protocol/version.json` and `config/protocol/migrations.json`. Compare control-plane changes, identify project-specific conflicts, migrate incrementally, and never overwrite project implementation/approved architecture blindly.
 
-## Linear
+## PM synchronization cadence
 
-While a persistent Supervisor runtime genuinely exists, reconcile GitHub ↔ Linear at least hourly and on material events. If no persistent runtime exists, record degraded mode and catch up on next invocation rather than claiming background synchronization occurred.
+While a persistent Supervisor runtime genuinely exists and a PM provider is connected, reconcile GitHub/repository ↔ PM provider at least hourly and on material events. If no persistent runtime exists, record degraded mode and catch up on next invocation rather than claiming background synchronization occurred.
 
 ## Runtime boundary
 
