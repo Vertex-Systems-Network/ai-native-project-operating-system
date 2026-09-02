@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.2.0`
+**Current protocol:** `1.2.1`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, and continuous improvement.
 
@@ -39,6 +39,7 @@ Blueprint presence is never proof that a capability is enabled or verified in a 
 - clears inherited claims, leases, alerts, consent decisions, PM mappings and AI selections;
 - clears inherited durable-memory provenance entries;
 - regenerates child-valid CODEOWNERS ownership;
+- preserves the template-safe `.gitignore` hygiene baseline while allowing stack-specific child rules to be added after technology approval;
 - activates child-local security, runtime-budget, release, data, operations, migration, design and conformance policies without inventing external capability;
 - installs only universally safe child workflow blueprints immediately;
 - records capability-dependent GitHub security checks for later verified activation;
@@ -204,7 +205,7 @@ Worker completion handoff remains exactly:
 
 ## Requirements 1–74 coverage
 
-ANPOS `1.2.0` represents the complete current protocol set:
+ANPOS `1.2.1` represents the complete current protocol set:
 
 - **1–17 — Discovery, research, planning, engineering lifecycle, repository-backed project memory and decomposition**
 - **18–30 — PM sync, AI selection, multi-agent Worker/Supervisor orchestration, review/merge synchronization, optional design intake and README/status behavior**
@@ -215,6 +216,12 @@ ANPOS `1.2.0` represents the complete current protocol set:
 - **67–74 — Design revision lock, visual/accessibility evidence, WCAG 2.2 AA web baseline, data/privacy lifecycle, threat model, API/DB migration safety, SLO/incident/DR and budget/rate/retry/recursion guardrails**
 
 Protocol representation does **not** mean a child runtime has passed production certification. A production orchestrator must still pass the applicable integration/CI/adversarial scenarios in `config/testing/conformance-scenarios.json`.
+
+## Repository hygiene
+
+ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.
+
+Stale duplicate protocol documents should be removed once their unique responsibilities have been absorbed into canonical routed documents, schemas and machine policies. Reference audits and the repository validator must remain the deletion safety gate.
 
 ## Certification model
 
@@ -260,6 +267,7 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 
 ## Important source files
 
+- `.gitignore` — minimal protected repository/tooling hygiene baseline
 - `AGENTS.md` — universal router + source/child authority boundary
 - `.ai/manifest.json` — role-aware context router
 - `PROJECT-INITIALIZATION.md` — deterministic child setup
