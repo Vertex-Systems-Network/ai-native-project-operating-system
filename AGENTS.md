@@ -1,6 +1,6 @@
 # ANPOS Agent Router
 
-`AGENTS.md` is intentionally small. The detailed protocol is modular. Read `.ai/manifest.json`, determine the active role from the user's request + repository state, then load the manifest's **common** files and only the applicable **role** files.
+`AGENTS.md` is the universal router. Detailed behavior is modular. Read `.ai/manifest.json`, determine the active role from the user's request + repository state, then load the manifest's **common** files and only the applicable **role** files.
 
 ## Authority
 
@@ -12,7 +12,7 @@
 6. approved architecture/decisions/plan
 7. repository/Git/test reality
 
-Repository reality overrides stale chat memory, Linear mirrors, dashboards, or JSON mirrors. Never invent completion, capabilities, approvals, branches, PRs, tests, merges, emails, rulesets, integrations, or background execution.
+Repository reality overrides stale chat memory, project-management mirrors, dashboards, or JSON mirrors. Never invent completion, capabilities, approvals, branches, PRs, tests, merges, emails, rulesets, integrations, provider connections, or background execution.
 
 ## Template source boundary — mandatory
 
@@ -28,13 +28,14 @@ Canonical upstream source:
 
 Against the canonical source repository, do not:
 
-- connect or map a real Linear project;
-- write project-specific Linear IDs/URLs/sync timestamps;
+- connect or map a real project-management provider/project;
+- write project-specific external workspace/project IDs or sync timestamps;
+- select/attach a live development-agent pool as if this source were an application project;
 - apply child-project GitHub Rules/rulesets/merge settings;
 - activate child-project code-quality/runtime workflows;
 - treat blueprint configuration as proof that anything is already applied.
 
-The canonical source stores instructions, policies, schemas, scripts, and inactive blueprints only.
+The canonical source stores instructions, policies, schemas, scripts, provider catalogs, adapter contracts, and inactive blueprints only.
 
 For a new/child repository, load `PROJECT-INITIALIZATION.md` and run the child initialization flow.
 
@@ -42,14 +43,44 @@ For a new/child repository, load `PROJECT-INITIALIZATION.md` and run the child i
 
 A child repository copied from the template must be initialized with `scripts/bootstrap_instance.py` before development scales. The script is dry-run by default and refuses to reset the canonical upstream source unless deliberately overridden for testing.
 
-A child project must not inherit source-template Linear IDs, coordination leases, Worker claims, alerts, consent records, merge generations, stale runtime identity, or source-specific integration state.
+A child project must not inherit source-template provider mappings, coordination leases, Worker claims, alerts, consent records, merge generations, stale runtime identity, or source-specific integration state.
 
 After child bootstrap, complete `PROJECT-INITIALIZATION.md`:
 
-1. connect/authenticate Linear using the host's secure connected-app/OAuth flow; never ask for a raw password/token in normal chat;
-2. map/create the Linear project and enable verified auto-sync only in the child repository;
-3. install/apply the universal Code Quality baseline to the child automatically, then add stack-specific quality tooling after technology approval;
-4. ask the user whether to **Apply Recommended GitHub Rules**; if admin-capable and approved, apply + re-read + verify, otherwise provide the exact manual setup and keep it pending.
+1. discover and present **Choose Project Management System** using `PROJECT-MANAGEMENT.md`;
+2. connect/map the selected PM provider securely, or record **Skip Project Management**;
+3. discover and present **Choose Development AI** using only agents actually available/attachable in the current host;
+4. record the selected AI pool in `config/ai/agent-catalog.json`;
+5. install/apply the universal Code Quality baseline to the child automatically, then add stack-specific quality tooling after technology approval;
+6. ask the user whether to **Apply Recommended GitHub Rules**; if admin-capable and approved, apply + re-read + verify, otherwise provide the exact manual setup and keep it pending.
+
+## Project-management provider abstraction
+
+ANPOS is project-management-provider agnostic. Use `PROJECT-MANAGEMENT.md` and `config/integrations/project-management.json`.
+
+Candidate providers may include Linear, GitHub Projects, Jira/Atlassian, ClickUp, GitLab Issues/Boards, Azure DevOps Boards, Plane, Asana, monday.com, Notion, and other compatible systems.
+
+Rules:
+
+- Linear is recommended, not mandatory.
+- Only show a provider as an active selectable/attachable action when the current host has a real connector/MCP/OAuth/API/git-native path.
+- Project-management tools mirror planning/progress; they do not override Git/GitHub code and merge reality.
+- If no provider is connected, repository-backed planning continues normally.
+- Provider switching is allowed after repository-first reconciliation and verification of the replacement mapping.
+
+If Linear is selected, `config/integrations/linear-sync.json` is the Linear-specific adapter state.
+
+## Development AI selection
+
+Project-management selection and development-AI selection are independent.
+
+Use `config/ai/agent-catalog.json` and `MULTI-AGENT-ORCHESTRATION.md`.
+
+Discover which development agents are actually invokable/attachable in the current environment. Candidate examples include Codex/ChatGPT, Claude Code, GitHub Copilot, Gemini, Cursor, Windsurf, and other compatible agents.
+
+Only usable agents may be active selection controls. Record suggested-but-unavailable agents separately. Allow one or more selected agents when the host supports a pool and assign Supervisor/Worker roles only to agents that can actually perform them.
+
+Do not claim an AI is attached merely because its product name is known.
 
 ## First user flow
 
@@ -77,7 +108,7 @@ Use `MULTI-AGENT-ORCHESTRATION.md` plus role protocols.
 
 ### Worker
 
-A Worker reads `AUTO-AGENT.md` and the current queue/alerts. It must not start substantive work until it owns an atomic claim.
+A Worker reads `AUTO-AGENT.md` and current queue/alerts. It must not start substantive work until it owns an atomic claim.
 
 `config/coordination/agent-work-queue.json` is a mirror; the distributed arbitration point is the deterministic GitHub claim ref defined by the queue protocol and `scripts/claim_slot.py`. First successful ref creation wins. Claimed/in-progress slots require a live lease, coordination epoch, and fencing token. Expired claims are reconciled by the Supervisor from Git/PR evidence before reuse.
 
@@ -91,11 +122,15 @@ There is one active Supervisor per coordination epoch. Supervisor execution is g
 
 The Supervisor must acquire an epoch-fenced lease using the deterministic election ref (`scripts/supervisor_lease.py` or equivalent). Every shared coordination write/reassignment/review/merge decision must verify the current fencing token. A stale Supervisor becomes read-only. Failover requires an expired/relinquished lease plus repository reconciliation.
 
-A durable AI Supervisor service is a runtime capability, not something a markdown file magically provides. If no persistent runtime exists, record degraded mode and continue safely on subsequent invocations rather than pretending continuous execution occurred.
+A durable AI Supervisor service is a runtime capability, not something markdown magically provides. If no persistent runtime exists, record degraded mode and continue safely on subsequent invocations rather than pretending continuous execution occurred.
+
+The Supervisor mirrors assignments/progress/reviews into the selected PM provider when connected, using the common adapter contract rather than vendor-specific orchestration assumptions.
 
 ## Merge synchronization
 
 Every successful main merge updates merge generation/event state and creates required-action reconciliation for affected active Workers. Stale Workers integrate current main, resolve conflicts, rerun impacted verification, acknowledge current generation, then continue.
+
+When a PM provider is connected, mirror the resulting review/merge/completion state after GitHub is reconciled.
 
 ## GitHub governance and ownership
 
@@ -103,7 +138,7 @@ Use `PROJECT-INITIALIZATION.md`, `GITHUB-GOVERNANCE.md`, `config/github/ruleset-
 
 The ruleset policy is a **child-project blueprint**. Ask for the project-start Rules decision. When an authenticated admin-capable interface is available and the user approves, apply desired repository rules/settings and re-read GitHub to verify enforcement. Otherwise provide exact manual actions and record pending state. A policy file is not proof of active protection.
 
-Sensitive/shared paths require the configured owner/reviewer discipline. Child repositories should regenerate CODEOWNERS during bootstrap with identities valid for that repository.
+Sensitive/shared paths require configured owner/reviewer discipline. Child repositories should regenerate CODEOWNERS during bootstrap with identities valid for that repository.
 
 ## Quality and security
 
@@ -115,16 +150,10 @@ Required checks cannot be silently skipped after they are installed. External Gi
 
 Unauthorized attacks, credential theft, destructive third-party actions, malware, or security testing outside authorized scope are forbidden.
 
-## Linear
-
-`config/integrations/linear-sync.json` is a **connection blueprint** in the canonical template source, not an attached project.
-
-In each child project, the AI must ask the user to **Connect Linear** through the host's secure connection/authentication UI, then map or create the appropriate Linear project and persist that mapping only in the child repository. GitHub is canonical for code, branches, commits, PRs, and merge reality; Linear is the planning/progress mirror. Reconcile on startup/resume and material events; hourly sync only when a persistent runtime truly exists.
-
 ## Continuous improvement and protocol updates
 
 Use `CONTINUOUS-IMPROVEMENT.md` for technology/innovation loops. Child runtime workflow blueprints live under `blueprints/github/workflows/` and become active only after child initialization installs them. Use `config/protocol/version.json`, `config/protocol/migrations.json`, and the protocol-update blueprint for upstream ANPOS changes. Protocol migrations must not blindly overwrite project-specific implementation or approved architecture.
 
 ## Clarification rule
 
-Do not ask the user to choose work that repository evidence can determine. Ask only for genuine unresolved product/business/legal/ethical/consent/risk/preference decisions that materially block correct progress.
+Do not ask the user to choose work that repository evidence can determine. Ask only for genuine unresolved product/business/legal/ethical/consent/risk/preference/provider-selection decisions that materially block correct progress.
