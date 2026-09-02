@@ -126,6 +126,7 @@ Canonical coordination state:
 - `config/coordination/agent-work-queue.json`
 - `config/coordination/supervisor-state.json`
 - `config/coordination/merge-events.json`
+- `config/coordination/agent-alerts.json`
 
 ### Supervisor
 
@@ -139,29 +140,32 @@ The Supervisor:
 - reconciles GitHub with Linear
 - updates the README project dashboard
 - emits merge-generation alerts through repository state
+- tracks alert acknowledgements from active workers
 - also owns one bounded module/work unit when coordination load permits
+
+When the Supervisor authors a change, it must not treat its own implementation as independent approval. Use an independent reviewer/agent where available; otherwise use all applicable automated gates plus a clearly separate second-pass review context, and require independent human/separate authorized review for high-risk or security-critical self-authored changes.
 
 ### Worker zero-question entry
 
 A new Worker should need only the repository link plus a start/continue-development request.
 
-It must read `AUTO-AGENT.md`, reconcile current `main`, inspect the queue and Supervisor state, and claim the highest-priority valid dependency-satisfied free slot for which it is eligible using that slot's deterministic claim branch.
+It must read `AUTO-AGENT.md`, reconcile current `main`, inspect the queue, Supervisor state, merge generation, and required-action alerts, satisfy applicable reconcile alerts, then claim the highest-priority valid dependency-satisfied free slot for which it is eligible using that slot's deterministic claim branch.
 
 Do not ask the user which module to work on when repository evidence can determine the answer.
 
 ### Worker submission phrase
 
-After bounded scope, tests, docs, and required synchronization are complete, the Worker must open/update the PR/MR and send exactly:
+After bounded scope, tests, docs, required alert acknowledgements, and synchronization are complete, the Worker must open/update the PR/MR and send exactly:
 
 **ALL DONE SUBMITTED FOR REVIEW AND MERGE**
 
 The Supervisor then independently reviews and verifies the submission, fixes or requests fixes where needed, and merges only after acceptance gates pass.
 
-## Merge-generation synchronization
+## Merge-generation synchronization and alerts
 
-Every successful merge to `main` increments `merge_generation` and records a merge event.
+Every successful merge to `main` increments `merge_generation`, records a merge event, and creates a required-action alert in `config/coordination/agent-alerts.json` for active/affected workers.
 
-All active Workers must compare their acknowledged generation with current repository state before starting/resuming substantive development and before final submission. If main advanced, they must integrate current main, resolve conflicts, rerun impacted verification, acknowledge the new generation, and only then continue.
+All active Workers must compare their acknowledged generation with current repository state and inspect applicable open alerts before starting/resuming substantive development and before final submission. If main advanced, they must integrate current main, resolve conflicts, rerun impacted verification, acknowledge the relevant alert with integrated main SHA/verification status, and only then continue.
 
 Repository state is the mandatory cross-agent alert mechanism; direct push messages into arbitrary external AI chats are optional and cannot be assumed.
 
@@ -197,6 +201,7 @@ The main-branch `README.md` must include a generated development dashboard conta
 - target/end date
 - PR/MR review state
 - current merge generation
+- open required-action alert count
 - last repository-visible update
 - last Linear sync
 
@@ -223,7 +228,7 @@ Never delete/replace working behavior merely because a new approach is preferred
 
 Code existing is not equivalent to work being complete.
 
-A work unit is complete only when relevant implementation, tests, quality/security checks, documentation, acceptance criteria, project memory, coordination state, Linear mirror where available, and README status are synchronized.
+A work unit is complete only when relevant implementation, tests, quality/security checks, documentation, acceptance criteria, project memory, coordination/alert state, Linear mirror where available, and README status are synchronized.
 
 Critical unresolved QA/security defects block release readiness unless explicitly risk-accepted by an authorized human decision-maker.
 
