@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "selection_status": "not_selected",
+  "discovery_rule": "Only expose an AI/agent as selectable when the current host can actually invoke, attach, hand off to, or otherwise use it for this repository.",
+  "available_agents": [],
+  "selected_agents": [],
+  "suggested_but_unavailable": [],
+  "agent_schema": {
+    "id": "agent-id",
+    "name": "Agent Name",
+    "provider": "",
+    "capabilities": [],
+    "available": false,
+    "attachable": false,
+    "invokable": false,
+    "roles": ["worker"],
+    "selection_action": "Use Agent Name",
+    "notes": ""
+  }
+}
