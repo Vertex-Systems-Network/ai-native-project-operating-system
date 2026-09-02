@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,18 @@ def parse_time(value: str | None) -> datetime | None:
 
 def now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def runtime_principal() -> str | None:
+    # Host runtimes should set ANPOS_RUNTIME_PRINCIPAL from an authenticated
+    # identity. GitHub Actions may use GITHUB_ACTOR_ID/GITHUB_ACTOR as a weaker
+    # host-bound fallback. Callers must not treat a self-supplied env var as
+    # cryptographic identity proof outside a trusted orchestrator boundary.
+    return (
+        os.getenv("ANPOS_RUNTIME_PRINCIPAL")
+        or os.getenv("GITHUB_ACTOR_ID")
+        or os.getenv("GITHUB_ACTOR")
+    )
 
 
 def _agent_id(record: Any) -> str | None:
@@ -58,7 +71,16 @@ def require_verified_agent(agent_id: str, role: str) -> dict[str, Any]:
     roles = {str(v).lower() for v in (agent.get("roles") or [])}
     if role.lower() not in roles:
         raise PermissionError(f"Agent {agent_id} is not authorized for role {role}.")
-    expires = parse_time((agent.get("runtime_identity") or {}).get("expires_at"))
+    identity = agent.get("runtime_identity") or {}
+    expected_principal = identity.get("principal_id")
+    if not expected_principal or not identity.get("evidence_ref") or not identity.get("verified_at"):
+        raise PermissionError(f"Agent {agent_id} has incomplete runtime identity evidence.")
+    actual_principal = runtime_principal()
+    if actual_principal and str(actual_principal) != str(expected_principal):
+        raise PermissionError(
+            f"Runtime principal {actual_principal} does not match selected agent identity {expected_principal}."
+        )
+    expires = parse_time(identity.get("expires_at"))
     if expires and expires <= now():
         raise PermissionError(f"Agent {agent_id} runtime identity evidence is expired.")
     return agent
@@ -102,7 +124,9 @@ def authorize_slot_claim(slot: dict[str, Any], agent_id: str, role: str = "worke
 def path_allowed(agent: dict[str, Any], path: str) -> bool:
     permissions = agent.get("permissions") or {}
     denied = permissions.get("denied_paths") or []
-    allowed = permissions.get("allowed_paths") or ["**"]
+    allowed = permissions.get("allowed_paths") or []
+    if not allowed:
+        return False
     normalized = path.lstrip("/")
     if any(fnmatch.fnmatch(normalized, p.lstrip("/")) for p in denied):
         return False
