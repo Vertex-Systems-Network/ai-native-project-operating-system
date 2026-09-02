@@ -18,7 +18,7 @@ Canonical source repository:
 
 ### If this is the canonical source
 
-The source is an inert template/protocol repository. Do not attach Linear, apply child GitHub Rules, activate child code-quality/runtime workflows, or start application development against it.
+The source is an inert template/protocol repository. Do not attach a live PM provider, select a live project-specific AI pool, apply child GitHub Rules, activate child code-quality/runtime workflows, or start application development against it.
 
 The development target must be a **new child repository created/copied from this template**.
 
@@ -49,29 +49,75 @@ The bootstrap must:
 - create child instance identity;
 - clear inherited runtime claims/leases/alerts/consents/merge state;
 - regenerate valid child CODEOWNERS;
-- leave Linear unbound until the user connects it;
+- reset PM/provider selection to unresolved;
+- reset development-AI selection to unresolved;
 - install the universal child Code Quality/runtime workflow blueprints into active child `.github/` paths;
 - leave GitHub Rules unapplied until the user is asked.
 
-### B2. Connect Linear
+### B2. Choose Project Management System
 
-Immediately offer:
+Load `PROJECT-MANAGEMENT.md` and `config/integrations/project-management.json`.
 
-**Connect Linear**
+Discover project-management providers actually connectable/attachable in the current host and present:
 
-Use the host's secure connected-app/OAuth flow. Never ask for a normal Linear password, raw API token, session cookie, or other secret in ordinary chat.
+**Choose Project Management System**
+
+Candidate options may include:
+
+- **Linear — Recommended**
+- GitHub Projects
+- Jira / Atlassian
+- ClickUp
+- GitLab Issues / Boards
+- Azure DevOps Boards
+- Plane
+- Asana
+- monday.com
+- Notion
+- Other compatible provider
+- **Skip Project Management**
+
+Only make an option actively selectable when a real connector/MCP/OAuth/API/git-native setup path exists. Unavailable products may be shown separately as recommendations.
+
+If the user skips, continue with repository-backed planning and allow PM connection later.
+
+### B3. Connect/map the selected PM provider
+
+Use the provider's secure connected-app/OAuth/MCP/authentication path. Never ask for an ordinary password, raw private token, or session cookie in normal chat.
 
 After connection:
 
-1. discover available workspace/project choices;
-2. select/attach the intended existing project, or create one when needed and authorized;
-3. persist mapping only in the child repository;
+1. discover available workspace/organization/project choices;
+2. select/attach the intended project, or create one when needed and authorized;
+3. persist selected provider + mapping only in the child repository;
 4. enable sync only after mapping is verified;
-5. mirror planning/progress automatically according to `config/integrations/linear-sync.json`.
+5. mirror planning/progress automatically according to `PROJECT-MANAGEMENT.md`.
 
-If connection cannot currently be completed because the host lacks Linear access, state exactly what connection action is required and mark the child setup as pending rather than inventing a mapping.
+GitHub/repository state remains canonical for code, branches, PR/MR, merge, test, and release reality.
 
-### B3. Verify/apply the Code Quality baseline
+If Linear is selected, use `config/integrations/linear-sync.json` as the Linear-specific adapter state.
+
+### B4. Choose Development AI
+
+Discover development agents/tools actually usable in the current host and present:
+
+**Choose Development AI**
+
+Candidate examples may include:
+
+- Codex / ChatGPT
+- Claude Code
+- GitHub Copilot
+- Gemini
+- Cursor
+- Windsurf
+- Other verified compatible agent
+
+Only actually attachable/invokable agents are active selection choices. Allow one or more agents where supported and record the selection in `config/ai/agent-catalog.json`.
+
+When useful, let the selected pool define roles such as one Supervisor plus multiple Workers. Do not claim an agent is attached merely because it is known by name.
+
+### B5. Verify/apply the Code Quality baseline
 
 The child bootstrap installs the universal baseline from `blueprints/github/`.
 
@@ -79,7 +125,7 @@ Verify the child files/workflows exist and are valid. Do not say a GitHub check 
 
 After technology approval later in the lifecycle, automatically add mature stack-specific formatter/linter/static-or-type-analysis/test/build/dependency/security tooling appropriate to the actual stack.
 
-### B4. Ask about GitHub Rules
+### B6. Ask about GitHub Rules
 
 After the child baseline is installed enough to determine real check names, present:
 
@@ -92,7 +138,7 @@ If the AI cannot apply rules itself, provide the exact required manual settings,
 
 Do not apply this child-project Rules flow to the canonical template source.
 
-### B5. Collect project intake
+### B7. Collect project intake
 
 Present one large free-form intake field when supported, labeled:
 
@@ -231,6 +277,8 @@ At minimum distinguish:
 - unresolved decisions
 - phased implementation priorities
 
+After the plan is created or materially revised, sync it to the selected PM provider when one is connected.
+
 ## State D — Post-planning engineering lifecycle
 
 After Stage 7, continue using `DEVELOPMENT-LIFECYCLE.md`.
@@ -246,7 +294,7 @@ Required sequence:
 14. **SQA**
 15. **Security Engineering + Authorized Adversarial Assessment**
 
-After technology approval, the AI also completes the stack-specific Code Quality installation defined by `CODE-QUALITY.md` and verifies the resulting child-project check names before final GitHub Rules enforcement/adjustment.
+After technology approval, the AI also completes the stack-specific Code Quality installation defined by `CODE-QUALITY.md` and verifies resulting child-project check names before final GitHub Rules enforcement/adjustment.
 
 Security requirements influence every lifecycle stage; Stage 15 is the dedicated final hardening/adversarial verification pass.
 
