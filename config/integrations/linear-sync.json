@@ -20,8 +20,10 @@
     "sync_on_phase_completion": true,
     "catch_up_on_resume": true
   },
-  "last_successful_sync_at": null,
-  "last_attempt_at": null,
+  "last_successful_sync_at": "2026-09-02T16:36:41+05:00",
+  "last_attempt_at": "2026-09-02T16:36:41+05:00",
   "last_error": null,
+  "last_reconciled_main_sha": "806bf6ca608fef2eca7f4c9bdfed9496ec12db50",
+  "sync_result": "github_and_linear_reconciled",
   "degraded_mode": "use project document/status updates and repository state if issue creation or quota is unavailable"
 }
