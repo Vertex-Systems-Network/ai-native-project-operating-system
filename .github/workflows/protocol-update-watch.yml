@@ -73,9 +73,9 @@ jobs:
           cat > /tmp/body.md <<EOF
           A newer ANPOS control-plane version is available from **$UPSTREAM**.
 
-          - current project protocol: `$LOCAL_VERSION`
-          - upstream protocol: `$UPSTREAM_VERSION`
+          - current project protocol: $LOCAL_VERSION
+          - upstream protocol: $UPSTREAM_VERSION
 
-          This is **not permission to overwrite project code**. The Supervisor must compare protocol/control-plane changes, record an impact/migration entry in `config/protocol/migrations.json`, identify project-specific conflicts, obtain consent for material behavior changes, migrate incrementally, run protocol/application quality gates, and only then mark the migration applied.
+          This is **not permission to overwrite project code**. The Supervisor must compare protocol/control-plane changes, record an impact/migration entry in config/protocol/migrations.json, identify project-specific conflicts, obtain consent for material behavior changes, migrate incrementally, run protocol/application quality gates, and only then mark the migration applied.
           EOF
           gh issue create --title "$TITLE" --body-file /tmp/body.md
