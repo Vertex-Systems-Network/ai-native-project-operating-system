@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "template_blueprint",
   "activation_scope": "child_project_only",
   "protected_control_plane": true,
@@ -29,6 +29,7 @@
     "/CONTROL-PLANE-SECURITY.md",
     "/PRODUCTION-ASSURANCE.md",
     "/DESIGN-DATA-OPERATIONS.md",
+    "/COMMERCIAL-LICENSING.md",
     "/config/ai/agent-catalog.json",
     "/config/ai/memory-provenance.json",
     "/config/coordination/**",
@@ -46,6 +47,7 @@
     "/config/design/**",
     "/config/testing/**",
     "/config/traceability/**",
+    "/config/licensing/**",
     "/schemas/**",
     "/scripts/**",
     "/tests/**",
@@ -79,5 +81,11 @@
     "prefer_trusted_pinned_validator_for_critical_checks": true,
     "untrusted_pr_must_not_gain_privileged_secrets": true,
     "conformance_tests_required_for_control_plane_changes": true
+  },
+  "commercial_security_boundary": {
+    "billing_entitlement_state_external_to_repository": true,
+    "webhook_and_signing_secrets_forbidden_in_repository": true,
+    "commercial_policy_changes_require_protected_review": true,
+    "license_expiry_must_not_be_used_as_destructive_project_control": true
   }
 }
