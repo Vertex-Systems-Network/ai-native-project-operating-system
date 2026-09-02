@@ -1,6 +1,16 @@
 {
-  "schema_version": 1,
-  "status": "active",
+  "schema_version": 2,
+  "status": "template_blueprint",
+  "activation_scope": "child_project_only",
+  "apply_to_template_source": false,
+  "setup_flow": {
+    "install_automatically_in_child_project": true,
+    "install_universal_baseline_during_project_initialization": true,
+    "install_stack_specific_tools_after_stack_approval": true,
+    "do_not_require_separate_user_consent_for_normal_non_destructive_quality_tooling": true,
+    "if_permissions_or_platform_settings_block_installation": "tell_user_exactly_what_access_or_manual_action_is_required_and_mark_setup_pending",
+    "verify_after_installation": true
+  },
   "universal_required_checks": [
     "repository-integrity",
     "dependency-review",
@@ -42,5 +52,5 @@
     "new_dependencies_require_dependency_review": true,
     "github_actions_must_be_pinned_to_full_commit_sha": true
   },
-  "tool_selection_rule": "Prefer mature, actively maintained, ecosystem-standard tools. Record the selected tool and rationale in the project technology/quality decisions after the application stack is known."
+  "tool_selection_rule": "In the child project, prefer mature, actively maintained, ecosystem-standard tools. Record the selected tools and rationale after the application stack is known."
 }
