@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.0.0",
-  "applied_migrations": [],
+  "current_protocol_version": "1.0.1",
+  "applied_migrations": [
+    {
+      "id": "ANPOS-1.0.0-to-1.0.1",
+      "from_version": "1.0.0",
+      "to_version": "1.0.1",
+      "detected_at": "2026-09-02T16:00:30Z",
+      "impact": [
+        "Separate canonical template-source state from child-project runtime state",
+        "Remove source-template Linear mapping and runtime sync timestamps",
+        "Move child GitHub Actions and Dependabot configuration into inactive blueprints",
+        "Make GitHub Rules a child-project user-approved setup step",
+        "Make Code Quality a child-project auto-install/setup responsibility",
+        "Cancel the mistakenly-created source-template Linear project mirror",
+        "Close the source-template governance drift issue as not planned"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "status": "applied",
+      "applied_at": "2026-09-02T16:00:30Z",
+      "verification_evidence": [
+        "config/protocol/version.json reports 1.0.1",
+        "config/integrations/linear-sync.json is an unconnected template blueprint",
+        "config/github/ruleset-policy.json is template_blueprint/pending_child_setup",
+        "config/quality/quality-policy.json is child_project_only/template_blueprint",
+        "active child runtime workflows removed from canonical .github/workflows",
+        "inactive runtime workflows are stored under blueprints/github/workflows",
+        "README.md and PROJECT-INITIALIZATION.md define the source-vs-child boundary"
+      ]
+    }
+  ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.0.0-to-1.1.0",
-    "from_version": "1.0.0",
-    "to_version": "1.1.0",
+    "id": "ANPOS-1.0.1-to-NEXT",
+    "from_version": "1.0.1",
+    "to_version": null,
     "detected_at": null,
     "impact": [],
     "project_conflicts": [],
