@@ -2,9 +2,9 @@
 """Claim an ANPOS Worker slot with authorization + deterministic GitHub ref lock.
 
 A real claim requires a live Supervisor, a selected/identity-verified Worker,
-eligibility/capability/path authorization, a complete handoff envelope, remote
-ref acquisition and queue-mirror persistence. A durable orchestrator must add
-host-authenticated CAS persistence around this reference implementation.
+eligibility/capability/path/tool/budget authorization, a complete handoff envelope,
+remote ref acquisition and queue-mirror persistence. A durable orchestrator must
+add host-authenticated GitHub CAS persistence around this reference implementation.
 """
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 QUEUE = ROOT / "config/coordination/agent-work-queue.json"
-SUPERVISOR = ROOT / "config/coordination/supervisor-state.json"
 sys.path.insert(0, str(ROOT / "scripts"))
 from anpos_guard import (  # noqa: E402
+    authorize_runtime_scope,
     authorize_slot_claim,
     authorize_slot_paths,
     live_supervisor,
@@ -76,6 +76,20 @@ def dependency_ready(slot: dict[str, Any], slots: list[dict[str, Any]]) -> bool:
     return deps.issubset(completed)
 
 
+def enforce_budgets(queue: dict[str, Any], slot: dict[str, Any]) -> None:
+    budget = load(ROOT / "config/runtime/budgets.json")
+    limits = budget.get("limits") or {}
+    max_parallel = int(limits.get("max_parallel_agents") or 1)
+    max_depth = int(limits.get("max_delegation_depth") or 0)
+    active_states = {"claimed", "in_progress", "blocked", "submitted_for_review", "changes_requested", "approved"}
+    active = sum(1 for item in queue.get("slots", []) if isinstance(item, dict) and item.get("status") in active_states)
+    if active >= max_parallel:
+        raise PermissionError(f"Parallel-agent budget reached: {active}/{max_parallel} active slots.")
+    depth = int(slot.get("delegation_depth") or 0)
+    if depth > max_depth:
+        raise PermissionError(f"Delegation depth {depth} exceeds configured maximum {max_depth}.")
+
+
 def pick_slot(queue: dict[str, Any], requested: str | None) -> dict[str, Any]:
     slots = [s for s in queue.get("slots", []) if isinstance(s, dict)]
     candidates = [
@@ -127,16 +141,18 @@ def main() -> int:
 
     queue = load(QUEUE)
     slot = pick_slot(queue, args.slot_id)
+    enforce_budgets(queue, slot)
     supervisor_state, supervisor = live_supervisor()
     epoch = int(supervisor_state.get("coordination_epoch") or 0)
     base_sha = args.base_sha or infer_base_sha()
     repo = args.repository or infer_repo()
 
-    # Validate complete handoff against the exact base revision that will be claimed.
+    # Validate the exact typed handoff/base revision before lock creation.
     slot["base_sha"] = base_sha
     validate_handoff(slot)
     agent = authorize_slot_claim(slot, args.agent_id, role="worker")
     authorize_slot_paths(slot, agent)
+    authorize_runtime_scope(slot, agent)
 
     claim_ref = f"claims/epoch-{epoch:06d}/{slot['id']}"
     lease_id = str(uuid.uuid4())
@@ -146,39 +162,25 @@ def main() -> int:
     identity_ref = (agent.get("runtime_identity") or {}).get("evidence_ref")
 
     print(json.dumps({
-        "slot_id": slot["id"],
-        "claim_ref": claim_ref,
-        "base_sha": base_sha,
-        "agent_id": args.agent_id,
-        "agent_identity_ref": identity_ref,
-        "lease_id": lease_id,
-        "lease_expires_at": iso(expires),
-        "coordination_epoch": epoch,
-        "supervisor_fencing_token": supervisor.get("fencing_token"),
+        "slot_id": slot["id"], "claim_ref": claim_ref, "base_sha": base_sha,
+        "agent_id": args.agent_id, "agent_identity_ref": identity_ref,
+        "lease_id": lease_id, "lease_expires_at": iso(expires),
+        "coordination_epoch": epoch, "supervisor_fencing_token": supervisor.get("fencing_token"),
         "worker_fencing_token": worker_fencing,
     }, indent=2))
 
     if not args.remote_lock:
-        print("DRY RUN - authorization passed, but remote lock was not created; this is not a claim.")
+        print("DRY RUN - authorization/budget checks passed, but remote lock was not created; this is not a claim.")
         return 0
 
     gh_ref(repo, claim_ref, base_sha)
     try:
         slot.update({
-            "status": "claimed",
-            "claim_ref": claim_ref,
-            "claim_branch": claim_ref,
-            "claimant": args.agent_id,
-            "claimant_identity_ref": identity_ref,
-            "agent_type": args.agent_type,
-            "base_sha": base_sha,
-            "claim_id": lease_id,
-            "claim_nonce": lease_id,
-            "lease_status": "active",
-            "lease_expires_at": iso(expires),
-            "coordination_epoch": epoch,
-            "claimed_at": iso(claimed),
-            "heartbeat_at": iso(claimed),
+            "status": "claimed", "claim_ref": claim_ref, "claim_branch": claim_ref,
+            "claimant": args.agent_id, "claimant_identity_ref": identity_ref,
+            "agent_type": args.agent_type, "base_sha": base_sha, "claim_id": lease_id,
+            "claim_nonce": lease_id, "lease_status": "active", "lease_expires_at": iso(expires),
+            "coordination_epoch": epoch, "claimed_at": iso(claimed), "heartbeat_at": iso(claimed),
             "fencing_token": worker_fencing,
         })
         queue["updated_at"] = iso(claimed)
@@ -188,9 +190,7 @@ def main() -> int:
         status = "rolled back remote claim ref" if rolled_back else "ORPHAN REF REQUIRES SUPERVISOR RECOVERY"
         raise SystemExit(f"Queue mirror persistence failed: {exc}; {status}.") from exc
 
-    print(
-        "Remote lock won and authorized queue mirror updated. Commit/persist the mirror through the trusted coordination gateway before substantive work."
-    )
+    print("Remote lock won and authorized queue mirror updated. Persist through trusted coordination GitHub CAS before substantive work.")
     return 0
 
 
