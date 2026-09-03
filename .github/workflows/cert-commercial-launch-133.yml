@@ -68,6 +68,12 @@ jobs:
           python scripts/validate_vendor_repository_export.py
           python scripts/validate_commercial_launch_package.py
 
+      - name: Restore temporary workflow and verify tracked tree clean before export
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: |
+          git checkout -- .github/workflows/cert-commercial-launch-133.yml
+          test -z "$(git status --porcelain --untracked-files=no)"
+
       - name: Verify deterministic exports and customer boundary
         if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
         shell: bash
@@ -93,12 +99,6 @@ jobs:
               assert relative not in origins
               assert not any(origin.startswith(relative.rstrip('/') + '/') for origin in origins)
           PY
-
-      - name: Restore temporary workflow and verify tracked tree clean
-        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
-        run: |
-          git checkout -- .github/workflows/cert-commercial-launch-133.yml
-          test -z "$(git status --porcelain --untracked-files=no)"
 
       - name: Set up Node 22
         if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
