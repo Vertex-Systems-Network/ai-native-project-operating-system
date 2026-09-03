@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.8`
+**Current protocol:** `1.3.9`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -488,3 +488,9 @@ For a child repository created from this template, give its repository URL to a 
 > Read this repository's AI instructions and initialize the project.
 
 For commercial distribution work, ask a compatible AI to load the repository's `commercial_distribution` role and audit/configure the external Marketplace/licensing deployment without storing live secrets in this repository.
+
+## Operator artifact identity binding in 1.3.9
+
+The vendor-only operator launch bootstrap now derives the exact deployable commercial-service identity directly from `commercial-service/package.json` and cross-checks its embedded source protocol against `config/protocol/version.json`. The rendered handoff includes `artifact_identity` plus `production_verifier_arguments`, so expected service/protocol versions are no longer copied by hand into deployment instructions.
+
+The renderer fails closed on missing/malformed package identity, package/protocol mismatch, or an unexpected runtime contract. Operators must deploy the exact exported artifact, verify `/api/version` against the generated identity, and only then accept `/api/ready` plus real Marketplace E2E evidence. This tooling remains vendor-only and does not create repositories, credentials, GitHub Apps, Marketplace approvals, prices, plan IDs, installations, or launch authority.

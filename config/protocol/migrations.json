@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.8",
+  "current_protocol_version": "1.3.9",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -402,12 +402,40 @@
         "Deterministic vendor export retains service 0.3.1 identity while customer-template export strips vendor-only identity-verification tooling",
         "Full temporary certification workflow must pass before canonical main promotion"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.8-to-1.3.9",
+      "from_version": "1.3.8",
+      "to_version": "1.3.9",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Bind operator launch handoff artifact identity to committed commercial-service package metadata instead of copied release numbers",
+        "Cross-check the package embedded source protocol version against canonical protocol metadata and fail closed on drift",
+        "Emit exact production verifier service/protocol arguments from the same artifact identity used by /api/version",
+        "Remove hard-coded commercial release numbers from operator launch instructions and deployment examples",
+        "Make deployment identity tests/validator version-agnostic so future patch releases do not require stale literal maintenance",
+        "Bump commercial service from 0.3.1 to 0.3.2 so exported /api/version identity visibly attests the 1.3.9 vendor handoff contract",
+        "Preserve split-github-app-v1, all secret boundaries, paid catalog drafts, and fail-closed launch authorization"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Operator bootstrap, deployment verifier, and commercial runtime remain vendor-only. Customer child repositories do not receive these assets and gain no billing/runtime dependency from this metadata/tooling correction.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        "Operator renderer artifact_identity is derived from commercial-service/package.json and checked against config/protocol/version.json",
+        "Operator handoff production_verifier_arguments are generated from the same package-derived service/protocol identity",
+        "Operator bootstrap unit tests cover package/protocol mismatch fail-closed behavior and reject hard-coded prior service versions",
+        "Deployment identity tests and validator derive the current service version dynamically while preserving exact runtime-contract checks",
+        "Deterministic vendor export must retain service 0.3.2 / protocol 1.3.9 identity while customer-template export strips vendor-only operator/deployment tooling",
+        "Full temporary certification workflow must pass before canonical main promotion"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.8-to-NEXT",
-    "from_version": "1.3.8",
+    "id": "ANPOS-1.3.9-to-NEXT",
+    "from_version": "1.3.9",
     "to_version": null,
     "detected_at": null,
     "impact": [],
