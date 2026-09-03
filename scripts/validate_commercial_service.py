@@ -14,6 +14,7 @@ REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/entitlements.ts",
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts",
+    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/webhooks/github/marketplace/route.ts",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts",
@@ -47,9 +48,11 @@ def main() -> int:
     package = json.loads(text("package.json") or "{}")
     if package.get("private") is not True:
         fail("commercial-service/package.json must remain private:true")
-    for script in ("build", "typecheck"):
+    for script in ("build", "typecheck", "test:unit", "migrate", "certify"):
         if script not in (package.get("scripts") or {}):
             fail(f"commercial service missing npm script: {script}")
+    if package.get("devDependencies", {}).get("tsx") != "4.23.13":
+        fail("commercial service test/migration TypeScript runner must remain explicitly pinned")
 
     env_example = text(".env.example")
     for name in (
@@ -96,10 +99,23 @@ def main() -> int:
         ("marketplacePlanMap", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:", "subscription.type === \"Organization\" ? null", "revokeAllTemplateGrantsForSource"),
         "entitlement engine",
     )
+
+    database_runtime = text("lib/db.ts")
+    for marker in ("commercial_schema_migrations", "001_baseline.sql", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+        if marker not in database_runtime:
+            fail(f"commercial database runtime gate missing marker: {marker}")
+    if "CREATE TABLE" in database_runtime.upper():
+        fail("normal commercial request runtime must not execute CREATE TABLE migrations")
+
     require_markers(
-        "lib/db.ts",
-        ("rate_limit_windows", "organization_seat_assignments", "template_access_grants", "access_reconciliation_jobs", "processing_started_at", "query_timeout"),
-        "commercial database schema",
+        "migrations/001_baseline.sql",
+        ("marketplace_deliveries", "rate_limit_windows", "organization_seat_assignments", "template_access_grants", "access_reconciliation_jobs", "commercial_audit_log"),
+        "commercial baseline migration",
+    )
+    require_markers(
+        "scripts/migrate.ts",
+        ("pg_advisory_lock", "checksum_sha256", "CREATE TABLE IF NOT EXISTS commercial_schema_migrations", "BEGIN", "ROLLBACK", "Applied migration checksum changed"),
+        "commercial migration runner",
     )
     require_markers(
         "lib/rate-limit.ts",
@@ -128,8 +144,13 @@ def main() -> int:
     )
     require_markers(
         "app/api/ready/route.ts",
-        ("configurationProblems", "asymmetricKeyType", '"rsa"', '"ed25519"', "organizationSeatCapacity", "SELECT 1"),
+        ("configurationProblems", "asymmetricKeyType", '"rsa"', '"ed25519"', "organizationSeatCapacity", "ensureSchema"),
         "readiness gate",
+    )
+    require_markers(
+        "tests/security.test.ts",
+        ("plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large", "weak:GITHUB_WEBHOOK_SECRET"),
+        "commercial security unit tests",
     )
 
     entitlement_schema = json.loads((ROOT / "schemas/license-entitlement.schema.json").read_text(encoding="utf-8"))
