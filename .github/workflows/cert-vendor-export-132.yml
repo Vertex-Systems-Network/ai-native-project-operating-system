@@ -96,9 +96,14 @@ jobs:
         working-directory: commercial-service
         run: npm run certify
 
-      - name: Restore build-time config mutation and verify tracked tree clean
+      - name: Restore expected Next build mutations and verify tracked tree clean
         shell: bash
         run: |
           set -euo pipefail
-          git checkout -- commercial-service/tsconfig.json
+          echo "Tracked changes after Next build:"
+          git status --short --untracked-files=no
+          changed="$(git diff --name-only)"
+          unexpected="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(commercial-service/tsconfig.json|commercial-service/next-env.d.ts)$' || true)"
+          test -z "$unexpected"
+          git checkout -- commercial-service/tsconfig.json commercial-service/next-env.d.ts
           test -z "$(git status --porcelain --untracked-files=no)"
