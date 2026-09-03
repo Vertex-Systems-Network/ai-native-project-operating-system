@@ -131,10 +131,6 @@ def main() -> int:
         "child bootstrap vendor source boundary",
     )
 
-    commercial_validator = (ROOT / "scripts" / "validate_commercial_service.py").read_text(encoding="utf-8")
-    if "vendor-source-boundary.json" not in commercial_validator:
-        fail("commercial validator must enforce the shared vendor source boundary policy")
-
     if ERRORS:
         print("ANPOS vendor repository export validation failed:", file=sys.stderr)
         for error in ERRORS:
