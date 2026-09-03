@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Canonical ANPOS child bootstrap entrypoint.
 
-Runs the normal child initializer and then strips vendor-only commercial runtime,
-source-management, and operator launch assets from customer/child repositories.
-The strip list is machine-readable and shared with vendor repository export policy.
+Runs the normal child initializer and then strips vendor-only commercial runtime
+(including the `commercial-service` path), source-management, export-test, and
+operator launch/legal/App assets from customer/child repositories. The strip list
+is machine-readable and shared with vendor repository export policy.
 """
 from __future__ import annotations
 
