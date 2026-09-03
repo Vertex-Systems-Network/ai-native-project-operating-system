@@ -4,7 +4,8 @@
 The exporter reads committed Git blobs from HEAD rather than working-tree bytes.
 This makes exports independent of CRLF/smudge filters and prevents untracked local
 files such as credentials from entering vendor repositories. Outputs include
-deterministic provenance manifests.
+deterministic provenance manifests. The customer-facing commercial template also
+excludes every path classified as vendor-only by the committed source-boundary policy.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVICE_PREFIX = PurePosixPath("commercial-service")
 SERVICE_REPOSITORY_NAME = "anpos-commercial-service"
 TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"
+VENDOR_BOUNDARY_REPOSITORY_PATH = "config/licensing/vendor-source-boundary.json"
 MANIFEST_NAME = "EXPORT-MANIFEST.json"
 FORBIDDEN_PARTS = {".git", ".bundle", ".next", ".vercel", "node_modules", "__pycache__", ".pytest_cache"}
 FORBIDDEN_SECRET_NAMES = {".env", "id_rsa", "id_ed25519"}
@@ -82,6 +84,38 @@ def tracked_entries(source_root: Path) -> list[TrackedEntry]:
     return sorted(entries, key=lambda entry: entry.path.as_posix())
 
 
+def load_committed_vendor_only_paths(source_root: Path) -> tuple[str, ...]:
+    try:
+        raw = run_git_bytes(source_root, "show", f"HEAD:{VENDOR_BOUNDARY_REPOSITORY_PATH}")
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, ExportError) as exc:
+        raise ExportError(f"unable to read committed vendor source boundary: {exc}") from exc
+    if data.get("activation_scope") != "canonical_vendor_source_management_only":
+        raise ExportError("committed vendor source boundary activation_scope is invalid")
+    values = data.get("vendor_only_paths")
+    if not isinstance(values, list) or not values:
+        raise ExportError("committed vendor source boundary must contain non-empty vendor_only_paths")
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, str) or not value or value.startswith("/"):
+            raise ExportError("vendor-only path must be a non-empty repository-relative string")
+        path = PurePosixPath(value)
+        if path.is_absolute() or ".." in path.parts or path == PurePosixPath("."):
+            raise ExportError(f"unsafe vendor-only path: {value!r}")
+        normalized = path.as_posix().rstrip("/")
+        if normalized in seen:
+            raise ExportError(f"duplicate vendor-only path: {normalized}")
+        seen.add(normalized)
+        result.append(normalized)
+    return tuple(result)
+
+
+def path_matches_vendor_only(path: PurePosixPath, vendor_only_paths: tuple[str, ...]) -> bool:
+    text = path.as_posix()
+    return any(text == prefix or text.startswith(prefix + "/") for prefix in vendor_only_paths)
+
+
 def is_forbidden_secret(relative: PurePosixPath) -> bool:
     name = relative.name.lower()
     if name in FORBIDDEN_SECRET_NAMES:
@@ -129,7 +163,11 @@ def ensure_clean_tracked_tree(source_root: Path) -> None:
         raise ExportError("tracked working tree is dirty; commit or restore tracked changes before vendor export")
 
 
-def select_entries(entries: list[TrackedEntry], mode: str) -> list[tuple[TrackedEntry, PurePosixPath]]:
+def select_entries(
+    entries: list[TrackedEntry],
+    mode: str,
+    vendor_only_paths: tuple[str, ...],
+) -> list[tuple[TrackedEntry, PurePosixPath]]:
     selected: list[tuple[TrackedEntry, PurePosixPath]] = []
     service_prefix = SERVICE_PREFIX.as_posix() + "/"
     for entry in entries:
@@ -139,7 +177,7 @@ def select_entries(entries: list[TrackedEntry], mode: str) -> list[tuple[Tracked
                 continue
             target_relative = PurePosixPath(text[len(service_prefix):])
         elif mode == "template":
-            if text == SERVICE_PREFIX.as_posix() or text.startswith(service_prefix):
+            if path_matches_vendor_only(entry.path, vendor_only_paths):
                 continue
             target_relative = entry.path
         else:
@@ -214,7 +252,7 @@ def write_manifest(
         "export_mode": mode,
         "source_revision": revision,
         "source_tree": source_tree,
-        "source_scope": "commercial-service/" if mode == "service" else "canonical-minus-commercial-service",
+        "source_scope": "commercial-service/" if mode == "service" else "canonical-minus-vendor-only-paths",
         "source_material": "committed_git_blobs_at_head",
         "tracked_source_only": True,
         "contains_secrets": False,
@@ -245,6 +283,7 @@ def export_repositories(
 
     revision, tree = source_revision(source_root)
     entries = tracked_entries(source_root)
+    vendor_only_paths = load_committed_vendor_only_paths(source_root)
     target_names = {
         "service": SERVICE_REPOSITORY_NAME,
         "template": TEMPLATE_REPOSITORY_NAME,
@@ -263,7 +302,11 @@ def export_repositories(
         for mode in modes:
             destination = stage_root / target_names[mode]
             destination.mkdir(parents=True)
-            records = copy_selected(source_root, destination, select_entries(entries, mode))
+            records = copy_selected(
+                source_root,
+                destination,
+                select_entries(entries, mode, vendor_only_paths),
+            )
             if mode == "service":
                 write_generated_service_gitignore(destination, records)
             write_manifest(destination, mode=mode, revision=revision, source_tree=tree, records=records)
