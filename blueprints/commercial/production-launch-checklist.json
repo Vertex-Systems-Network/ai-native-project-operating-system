@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 2,
   "status": "inactive_blueprint",
   "purpose": "Fail-closed operator checklist for promoting the optional ANPOS commercial service from certified staging to production sales.",
   "launch_authorized": false,
@@ -10,28 +10,138 @@
     "rule": "The staged path is recommended while paid eligibility evidence is missing. An operator may choose another compliant path, but repository state cannot waive GitHub Marketplace requirements or authorize paid publication."
   },
   "required_gates": [
-    {"id":"vendor_service_repo","status":"pending_external","evidence":null,"rule":"Create vendor-private anpos-commercial-service repository and populate it only from certified exporter output."},
-    {"id":"vendor_template_repo","status":"pending_external","evidence":null,"rule":"Create vendor-private anpos-commercial-template repository and populate it only from certified exporter output."},
-    {"id":"github_app","status":"pending_external","evidence":null,"rule":"Create the GitHub App under the intended publisher organization and store credentials only in approved secret storage."},
-    {"id":"app_installation","status":"pending_external","evidence":null,"rule":"Install GitHub App on the private commercial template with least privileges for enabled delivery modes."},
-    {"id":"marketplace_publisher","status":"pending_external","evidence":null,"rule":"Verify the app is organization-owned; an organization owner controls/submits the listing; publisher verification prerequisites include verified organization domain, confirmed contact email and organization 2FA; complete financial onboarding for paid publication."},
-    {"id":"marketplace_installation_threshold","status":"pending_external","evidence":null,"rule":"Before paid listing submission, verify the GitHub App meets GitHub's current paid-listing installation threshold. The 2026-09-04 compliance baseline records a minimum of 100 installations; re-check official GitHub documentation before submission. A genuine free listing may be used first according to marketplace-staged-launch.json rather than fabricating threshold evidence."},
-    {"id":"marketplace_listing","status":"pending_external","evidence":null,"rule":"Verify valid publisher contact information, relevant description, pricing plan, privacy URL, support URL/email, working relevant links, integration value beyond authentication, public availability rather than preview/invite-only, and Marketplace plan-change/cancellation webhook configuration."},
-    {"id":"marketplace_listing_assets","status":"pending_external","evidence":null,"rule":"Provide Marketplace-compliant logo, feature card and screenshots and verify GitHub branding/usage requirements before submission."},
-    {"id":"marketplace_plans","status":"pending_external","evidence":null,"rule":"Configure actual Marketplace plan IDs/prices and map them to developer/pro/team/enterprise without repository-side invented billing values; for every paid plan verify monthly and annual USD pricing and an allowed Marketplace pricing model. A free-first route does not mutate these paid draft tiers automatically."},
-    {"id":"customer_billing_experience","status":"pending_external","evidence":null,"rule":"Verify the customer-facing product shows current plan/price, purchases and plan changes, cancellation/trial state, monthly-vs-annual billing cycle, and usage/remaining resources where applicable."},
-    {"id":"free_trial_privacy","status":"pending_external","evidence":null,"rule":"Verify either Marketplace free trials are disabled, or the current trial behavior is supported and private customer data from a cancelled trial is deleted within GitHub's required timeframe. The 2026-09-04 baseline records a 14-day trial and deletion within 30 days; re-check before publication."},
-    {"id":"legal_pack","status":"operator_legal_review_required","evidence":null,"rule":"Finalize Terms, Privacy, License/EULA, refund/cancellation, tax and support/SLA terms with appropriate legal/accounting review and ensure wording matches actual Marketplace billing/trial behavior."},
-    {"id":"vercel_production_env","status":"pending_external","evidence":null,"rule":"Configure production DATABASE_URL, GitHub App credentials, Marketplace mapping/webhook secret, Ed25519 signing key, operator token, vendor installation/repo identifiers and issuer URL."},
-    {"id":"webhook_public_reachability","status":"pending_external","evidence":null,"rule":"Allow the Marketplace webhook endpoint through deployment protection while keeping operator/admin surfaces protected."},
-    {"id":"ready_endpoint","status":"pending_external","evidence":null,"rule":"Verify /api/ready returns HTTP 200 against production configuration and migration checksum."},
-    {"id":"real_marketplace_events","status":"pending_external","evidence":null,"rule":"Verify real purchased/changed/cancelled events plus duplicate/retry/hash-conflict behavior against production, and free-trial events when free trials are enabled. A free-only listing still requires real purchase/cancellation event evidence before publication."},
-    {"id":"reconciliation","status":"pending_external","evidence":null,"rule":"Verify missed-event operator reconciliation and periodic Marketplace account/plan reconciliation against authenticated GitHub Marketplace state."},
-    {"id":"archive_delivery","status":"pending_external","evidence":null,"rule":"Verify entitled customer archive delivery from the vendor-private template."},
-    {"id":"seat_flows","status":"pending_external","evidence":null,"rule":"Verify organization seat assign/revoke/capacity/principal-bound token refresh with a real organization."},
-    {"id":"cancellation_safety","status":"pending_external","evidence":null,"rule":"Verify cancellation prevents future premium access without deleting, encrypting, remotely modifying or intentionally breaking generated customer repositories."},
-    {"id":"backup_restore","status":"pending_external","evidence":null,"rule":"Verify production entitlement-ledger restore procedure and record current RPO/RTO evidence."},
-    {"id":"production_source_boundary","status":"pending_external","evidence":null,"rule":"Deploy production from vendor-private source or a verified immutable artifact; do not rely on public canonical source access."}
+    {
+      "id": "vendor_service_repo",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Create vendor-private anpos-commercial-service repository and populate it only from certified exporter output."
+    },
+    {
+      "id": "vendor_template_repo",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Create vendor-private anpos-commercial-template repository and populate it only from certified exporter output."
+    },
+    {
+      "id": "github_app",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Create the GitHub App under the intended publisher organization and store credentials only in approved secret storage."
+    },
+    {
+      "id": "app_installation",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Install GitHub App on the private commercial template with least privileges for enabled delivery modes."
+    },
+    {
+      "id": "marketplace_publisher",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify the app is organization-owned; an organization owner controls/submits the listing; publisher verification prerequisites include verified organization domain, confirmed contact email and organization 2FA; complete financial onboarding for paid publication."
+    },
+    {
+      "id": "marketplace_installation_threshold",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Before paid listing submission, verify the GitHub App meets GitHub's current paid-listing installation threshold. The 2026-09-04 compliance baseline records a minimum of 100 installations; re-check official GitHub documentation before submission. A genuine free listing may be used first according to marketplace-staged-launch.json rather than fabricating threshold evidence."
+    },
+    {
+      "id": "marketplace_listing",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify valid publisher contact information, relevant description, pricing plan, privacy URL, support URL/email, working relevant links, integration value beyond authentication, public availability rather than preview/invite-only, and Marketplace plan-change/cancellation webhook configuration."
+    },
+    {
+      "id": "marketplace_listing_assets",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Provide Marketplace-compliant logo, feature card and screenshots and verify GitHub branding/usage requirements before submission."
+    },
+    {
+      "id": "marketplace_plans",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Configure actual Marketplace plan IDs/prices and map them to developer/pro/team/enterprise without repository-side invented billing values; for every paid plan verify monthly and annual USD pricing and an allowed Marketplace pricing model. A free-first route does not mutate these paid draft tiers automatically."
+    },
+    {
+      "id": "customer_billing_experience",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify the customer-facing product shows current plan/price, purchases and plan changes, cancellation/trial state, monthly-vs-annual billing cycle, and usage/remaining resources where applicable."
+    },
+    {
+      "id": "free_trial_privacy",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify either Marketplace free trials are disabled, or the current trial behavior is supported and private customer data from a cancelled trial is deleted within GitHub's required timeframe. The 2026-09-04 baseline records a 14-day trial and deletion within 30 days; re-check before publication."
+    },
+    {
+      "id": "legal_pack",
+      "status": "operator_legal_review_required",
+      "evidence": null,
+      "rule": "Finalize Terms, Privacy, License/EULA, refund/cancellation, tax and support/SLA terms with appropriate legal/accounting review and ensure wording matches actual Marketplace billing/trial behavior."
+    },
+    {
+      "id": "vercel_production_env",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Configure production DATABASE_URL, GitHub App credentials, Marketplace mapping/webhook secret, Ed25519 signing key, operator token, vendor installation/repo identifiers and issuer URL."
+    },
+    {
+      "id": "webhook_public_reachability",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Allow the Marketplace webhook endpoint through deployment protection while keeping operator/admin surfaces protected."
+    },
+    {
+      "id": "ready_endpoint",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration and migration checksum."
+    },
+    {
+      "id": "real_marketplace_events",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify real purchased/changed/cancelled events plus duplicate/retry/hash-conflict behavior against production, and free-trial events when free trials are enabled. A free-only listing still requires real purchase/cancellation event evidence before publication."
+    },
+    {
+      "id": "reconciliation",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify missed-event operator reconciliation and periodic Marketplace account/plan reconciliation against authenticated GitHub Marketplace state."
+    },
+    {
+      "id": "archive_delivery",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify entitled customer archive delivery from the vendor-private template."
+    },
+    {
+      "id": "seat_flows",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify organization seat assign/revoke/capacity/principal-bound token refresh with a real organization."
+    },
+    {
+      "id": "cancellation_safety",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify cancellation prevents future premium access without deleting, encrypting, remotely modifying or intentionally breaking generated customer repositories."
+    },
+    {
+      "id": "backup_restore",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify production entitlement-ledger restore procedure and record current RPO/RTO evidence."
+    },
+    {
+      "id": "production_source_boundary",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Deploy production from vendor-private source or a verified immutable artifact; do not rely on public canonical source access."
+    }
   ],
   "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion.",
   "non_destructive_expiry": true

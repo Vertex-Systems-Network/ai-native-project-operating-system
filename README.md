@@ -372,6 +372,14 @@ These values are **not launch evidence** and GitHub can change Marketplace requi
 
 Marketplace compliance assets remain inside the vendor/operator source boundary and are stripped from normal child repositories and customer-facing `anpos-commercial-template` exports. ANPOS core child development continues without a Marketplace or billing runtime dependency.
 
+## Marketplace staged publication in 1.3.5
+
+GitHub's current Marketplace documentation allows a free app/listing to be published after the general listing requirements are met, while the current 100-install minimum applies to publishing a paid GitHub App plan. ANPOS therefore includes an inactive vendor-only `marketplace-staged-launch.json` strategy that recommends **free-first → genuine installations/evidence → verified paid conversion** while paid eligibility is missing.
+
+The staged strategy is intentionally fail-closed. It does not invent a Community/free plan, Marketplace plan ID, or free entitlements; it does not alter the draft Developer/Pro/Team/Enterprise catalog; and it cannot authorize automatic paid conversion. A free offering must first have operator-approved real user value beyond authentication, complete general Marketplace listing/privacy/support/assets requirements, and pass real purchase/cancellation webhook tests. Once current paid requirements are genuinely met, GitHub's current documentation supports adding paid plans to an already-published free listing after verified-publisher and financial onboarding requirements are satisfied.
+
+Installation thresholds and Marketplace rules can change, so official GitHub documentation must be re-checked before free submission and paid conversion. Artificial, purchased, deceptive, or otherwise non-genuine installations are explicitly outside the strategy.
+
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.

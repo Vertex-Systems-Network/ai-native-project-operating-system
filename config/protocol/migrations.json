@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.4",
+  "current_protocol_version": "1.3.5",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -284,12 +284,42 @@
         "Customer-template deterministic export must exclude every vendor-only path including the Marketplace compliance baseline",
         "Full ANPOS/commercial/vendor certification must pass before this migration is promoted to canonical main"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.4-to-1.3.5",
+      "from_version": "1.3.4",
+      "to_version": "1.3.5",
+      "detected_at": "2026-09-04T00:30:00+05:00",
+      "impact": [
+        "Add a vendor-only fail-closed free-first-to-paid GitHub Marketplace staged publication strategy sourced from official GitHub documentation checked on 2026-09-04",
+        "Recommend a genuine free Marketplace listing as a compliant installation-acquisition path while paid-listing eligibility evidence is missing, without making the recommendation mandatory",
+        "Require real GitHub-integrated user value beyond authentication, general listing compliance, public availability and purchase/cancellation event handling before any free listing",
+        "Keep the free plan definition operator-controlled with no repository-invented catalog plan ID, Marketplace plan ID or entitlement set",
+        "Preserve the existing Developer/Pro/Team/Enterprise paid draft catalog unchanged and explicitly prohibit this strategy from silently creating a Community/free product tier",
+        "Record that current GitHub documentation allows paid plans to be added to an existing free listing after paid requirements, verified publisher and financial onboarding are satisfied",
+        "Keep the current 100-install paid GitHub App threshold as real external evidence and prohibit artificial/deceptive installation generation",
+        "Add dedicated staged-launch validation/tests and route them only through the vendor source-quality boundary",
+        "Keep staged Marketplace assets excluded from normal child repositories and customer-facing commercial-template exports"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing child projects do not need Marketplace staged-publication strategy, tests, or validators. New child initialization and customer-facing commercial-template export strip these vendor-only files through config/licensing/vendor-source-boundary.json. ANPOS 1.3.5 must not introduce a free plan, Marketplace acquisition logic, billing, listing, or paid-conversion dependency into normal child execution.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:30:00+05:00",
+      "verification_evidence": [
+        "marketplace-staged-launch.json records official docs.github.com sources and source_checked_at=2026-09-04",
+        "Free plan definition remains operator_decision_required with null catalog/Marketplace IDs and an empty entitlement list",
+        "Existing product-catalog plan IDs remain developer/pro/team/enterprise with no free/community tier introduced by this patch",
+        "Production launch checklist remains launch_authorized=false and references the staged route only as an operator-overridable recommendation",
+        "Dedicated staged-launch validator rejects automatic paid conversion, repository-authorized paid conversion and staged-plan mutation of the paid catalog",
+        "Full ANPOS/commercial/vendor certification must pass before this migration is promoted to canonical main"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.4-to-NEXT",
-    "from_version": "1.3.4",
+    "id": "ANPOS-1.3.5-to-NEXT",
+    "from_version": "1.3.5",
     "to_version": null,
     "detected_at": null,
     "impact": [],
