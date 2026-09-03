@@ -364,6 +364,14 @@ These assets do not create a GitHub App, approve Marketplace financial onboardin
 
 Vendor/operator launch and export assets are classified through `config/licensing/vendor-source-boundary.json`; child bootstrap and the customer-facing commercial-template export remove them. Their tests/validators run through the separate inactive `blueprints/commercial/vendor-launch-quality.yml`, while the child `repository-quality.yml` remains free of dependencies on stripped vendor-only tooling.
 
+## GitHub Marketplace compliance hardening in 1.3.4
+
+ANPOS now includes a vendor-only, machine-readable GitHub Marketplace compliance baseline checked against official GitHub documentation on **2026-09-04**. It records current paid GitHub App publication prerequisites such as organization ownership and organization-owner listing control, verified-publisher prerequisites, financial onboarding, the documented minimum of 100 installations for a paid listing, listing/support/privacy/assets requirements, monthly and annual USD paid-plan pricing, customer billing-state visibility, and the current Marketplace free-trial/private-data-retention baseline.
+
+These values are **not launch evidence** and GitHub can change Marketplace requirements. `blueprints/commercial/github-marketplace-compliance.json` must therefore be re-verified against official GitHub documentation immediately before listing submission. The production checklist remains fail-closed: it cannot infer installation count, publisher verification, financial approval, prices/plan IDs, listing approval, customer billing UX, trial-data deletion evidence, or production readiness from repository files.
+
+Marketplace compliance assets remain inside the vendor/operator source boundary and are stripped from normal child repositories and customer-facing `anpos-commercial-template` exports. ANPOS core child development continues without a Marketplace or billing runtime dependency.
+
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.
