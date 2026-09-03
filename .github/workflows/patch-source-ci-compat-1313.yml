@@ -8,10 +8,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: anpos-1313-source-ci-compat-patch
-  cancel-in-progress: true
-
 jobs:
   patch:
     runs-on: macos-15
@@ -81,7 +77,7 @@ jobs:
               '        workflow_dir = ROOT / ".github" / "workflows"\n'
               '        active = sorted(\n'
               '            [p.name for p in workflow_dir.glob("*.yml")] +\n'
-              '            [p.name for p in workflow_dir.glob("*.yaml") ]\n'
+              '            [p.name for p in workflow_dir.glob("*.yaml")]\n'
               '        ) if workflow_dir.exists() else []\n'
               '        self.assertIn(active, ([], ["source-continuous-certification.yml"]))\n'
               '        if active:\n'
