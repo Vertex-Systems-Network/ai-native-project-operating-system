@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.6",
+  "current_protocol_version": "1.3.7",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -345,12 +345,41 @@
         "Separate Marketplace and Vendor App blueprints are vendor-only and customer-template exports exclude them",
         "Full ANPOS/commercial/vendor certification must pass before this migration is promoted to canonical main"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.6-to-1.3.7",
+      "from_version": "1.3.6",
+      "to_version": "1.3.7",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Add a vendor-only secret-safe operator launch bootstrap renderer for the external commercial setup handoff",
+        "Generate prefilled organization-owned GitHub App registration URLs for the public Marketplace App and private Vendor Distribution App",
+        "Keep Vendor Administration: write absent by default and add it only through an explicit collaborator-provisioning switch",
+        "Emit the commercial service 0.3.0 split Marketplace/Vendor environment-key contract without accepting or printing credential values",
+        "Add behavioral unit tests and a dedicated validator that reject secret-bearing CLI flags, legacy single-App configuration and trust-boundary collapse",
+        "Route commercial-distribution agents through the operator bootstrap assets and classify all bootstrap files as vendor-only",
+        "Correct stale README current-protocol metadata and document the 1.3.7 operator launch flow",
+        "Do not create GitHub repositories, GitHub Apps, Marketplace listings, credentials, plan IDs, pricing, installation evidence or launch authority"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Operator launch bootstrap assets are vendor-only and must remain stripped from customer child repositories and customer-facing commercial-template exports. Existing child projects do not need this helper and must not gain a commercial runtime dependency merely by adopting protocol metadata.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        "scripts/render_operator_launch_bootstrap.py accepts only non-secret registration inputs and emits fail-closed JSON handoff data",
+        "tests/test_operator_launch_bootstrap.py covers Marketplace/Vendor visibility, permissions, explicit collaborator escalation, URL validation, split environment keys and secret-safety invariants",
+        "scripts/validate_operator_launch_bootstrap.py behaviorally verifies generated registration URLs and vendor/customer boundary enforcement",
+        "blueprints/commercial/vendor-launch-quality.yml runs the operator bootstrap tests and validator",
+        "config/licensing/vendor-source-boundary.json strips operator bootstrap assets from customer-template exports",
+        "Full temporary certification workflow must pass before canonical main promotion"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.6-to-NEXT",
-    "from_version": "1.3.6",
+    "id": "ANPOS-1.3.7-to-NEXT",
+    "from_version": "1.3.7",
     "to_version": null,
     "detected_at": null,
     "impact": [],

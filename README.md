@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.3`
+**Current protocol:** `1.3.7`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -388,6 +388,14 @@ Commercial service `0.3.0` requires distinct `GITHUB_MARKETPLACE_APP_*` and `GIT
 
 The legacy single-App manifest remains only as a deprecated migration marker. Separate vendor-only manifests define the public Marketplace App and private Vendor Distribution App, and deterministic customer-template export strips all of these vendor launch assets. This change does not create either App, grant Marketplace approval, configure production credentials, define a free plan, or authorize sales.
 
+## Operator launch bootstrap in 1.3.7
+
+ANPOS 1.3.7 adds `scripts/render_operator_launch_bootstrap.py` plus `blueprints/commercial/operator-launch-bootstrap.md` to reduce external commercial setup errors without moving credentials or account authority into the repository. Given only a GitHub organization slug, HTTPS commercial-service base URL and HTTPS product homepage URL, the renderer produces a fail-closed JSON handoff containing prefilled GitHub App registration URLs and the commercial service 0.3.0 environment-key contract.
+
+The generated Marketplace App registration is public, webhook-enabled and subscribed to `marketplace_purchase`, with no vendor private-template repository permissions. The generated Vendor Distribution App registration is private, webhook-disabled and archive-first with `Contents: read`; `Administration: write` is added only when the operator explicitly enables collaborator provisioning. The renderer never accepts private keys, webhook secrets, database credentials, operator tokens, Marketplace plan IDs, prices or customer data.
+
+The output does not create GitHub Apps or repositories and cannot prove Marketplace approval, installation counts, publisher verification, pricing, plan IDs or production readiness. GitHub remains authoritative for the final App registrations, and current GitHub/Marketplace requirements must be re-checked before registration and listing submission.
+
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.
@@ -462,6 +470,8 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 - `config/testing/conformance-scenarios.json` — runtime and commercial certification scenarios
 - `scripts/validate_ai_native_repo.py` — core repository certification validator
 - `scripts/validate_commercial_licensing.py` — commercial distribution/licensing validator
+- `scripts/render_operator_launch_bootstrap.py` — secret-safe vendor/operator GitHub App registration + environment-key handoff renderer
+- `scripts/validate_operator_launch_bootstrap.py` — operator launch bootstrap safety/behavior validator
 - `blueprints/github/` — inactive child workflow/Dependabot blueprints
 
 ## Start prompt
