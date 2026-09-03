@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.12`
+**Current protocol:** `1.3.13`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -13,13 +13,23 @@ The source must remain inert:
 - no live Project Management provider/project is selected or mapped;
 - no project-specific Supervisor/Worker AI pool is attached;
 - no child-project GitHub Rules are treated as applied to this source;
-- no child-project runtime/quality workflows or Dependabot config are active under source `.github/`;
+- no child-project runtime/quality workflows or Dependabot config are active under source `.github/`; the only active source workflow is the repository-guarded, read-only continuous certification guard, and it is stripped from customer/vendor-template outputs;
 - no production credentials, environments, releases, claims, leases, runtime consent decisions, project progress, or PM sync timestamps are stored as live project state;
 - no Marketplace customer records, live paid plan IDs, payment data, webhook secrets, GitHub App private keys, entitlement-signing private keys, or active customer entitlements are stored here.
 
 > **Canonical source = protocol + schemas + scripts + provider catalogs + policies + inactive blueprints. Child project = selected integrations + verified AI identities + approved/applied governance + active quality/runtime automation + project-specific implementation/state. Commercial runtime = separately deployed billing/entitlement/provisioning service.**
 
 Blueprint presence is never proof that a capability is enabled, purchased, connected, deployed, or verified.
+
+## Persistent source continuous certification in 1.3.13
+
+The canonical source now retains exactly one active GitHub Actions workflow: `.github/workflows/source-continuous-certification.yml`.
+
+- It runs on pull requests targeting `main` and on pushes to `main`.
+- It is hard-bound to `Vertex-Systems-Network/ai-native-project-operating-system`, uses read-only repository permissions, does not consume repository secrets, disables checkout credential persistence, and pins GitHub Actions to immutable commit SHAs.
+- It runs the complete Python conformance/validator suite, deterministic vendor export + exact handoff verification, locked npm audit, commercial TypeScript tests, and the Next.js production build.
+- Its workflow, validator, and regression test are canonical-vendor-source-only assets and are removed from customer child repositories and `anpos-commercial-template` exports through the committed vendor source boundary.
+- Workflow success is CI evidence only. GitHub branch protection/rulesets, required-check enforcement, bypass policy, and review requirements remain repository-administration controls that must be independently configured and re-read before they can be called enforced.
 
 ## New child-project startup
 

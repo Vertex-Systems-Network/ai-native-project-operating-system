@@ -258,10 +258,18 @@ class TemplatePolicyTests(unittest.TestCase):
         self.assertEqual(catalog.get("selected_agents"), [])
         self.assertEqual(catalog.get("available_agents"), [])
 
-    def test_source_has_no_active_child_workflows(self):
+    def test_source_has_only_guarded_source_certification_workflow(self):
         workflow_dir = ROOT / ".github" / "workflows"
-        active = list(workflow_dir.glob("*.yml")) + list(workflow_dir.glob("*.yaml")) if workflow_dir.exists() else []
-        self.assertEqual(active, [])
+        active = sorted(
+            [p.name for p in workflow_dir.glob("*.yml")] +
+            [p.name for p in workflow_dir.glob("*.yaml")]
+        ) if workflow_dir.exists() else []
+        self.assertEqual(active, ["source-continuous-certification.yml"])
+        source = (workflow_dir / "source-continuous-certification.yml").read_text()
+        self.assertIn(
+            "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'",
+            source,
+        )
 
     def test_worker_handoff_template_has_network_and_pm_scope(self):
         queue = json.loads((ROOT / "config/coordination/agent-work-queue.json").read_text())
