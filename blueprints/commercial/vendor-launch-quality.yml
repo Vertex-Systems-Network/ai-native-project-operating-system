@@ -33,10 +33,11 @@ jobs:
       - name: Run vendor source-management tests
         run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package -v
 
-      - name: Validate vendor export and commercial launch packages
+      - name: Validate vendor export, commercial launch and staged Marketplace strategy
         run: |
           python scripts/validate_vendor_repository_export.py
           python scripts/validate_commercial_launch_package.py
+          python scripts/validate_marketplace_staged_launch.py
 
       - name: Run protected-base vendor validators when available
         if: github.event_name == 'pull_request'
@@ -59,4 +60,12 @@ jobs:
             rm -f scripts/.trusted-base-commercial-launch-validator.py
           else
             echo 'Base predates commercial launch package validator; current validator plus protected review remain required.'
+          fi
+
+          if git cat-file -e "${BASE_SHA}:scripts/validate_marketplace_staged_launch.py" 2>/dev/null; then
+            git show "${BASE_SHA}:scripts/validate_marketplace_staged_launch.py" > scripts/.trusted-base-marketplace-staged-validator.py
+            python scripts/.trusted-base-marketplace-staged-validator.py
+            rm -f scripts/.trusted-base-marketplace-staged-validator.py
+          else
+            echo 'Base predates Marketplace staged launch validator; current validator plus protected review remain required.'
           fi
