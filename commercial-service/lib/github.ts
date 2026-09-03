@@ -5,13 +5,19 @@ function b64url(value: string | Buffer): string {
   return Buffer.from(value).toString("base64url");
 }
 
-function githubAppJwt(): string {
+type GitHubAppRole = "marketplace" | "vendor";
+
+function githubAppJwt(role: GitHubAppRole): string {
   const cfg = serviceConfig();
   const now = Math.floor(Date.now() / 1000);
+  const appId = role === "marketplace" ? cfg.githubMarketplaceAppId : cfg.githubVendorAppId;
+  const privateKeyPem = role === "marketplace"
+    ? cfg.githubMarketplaceAppPrivateKeyPem
+    : cfg.githubVendorAppPrivateKeyPem;
   const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const payload = b64url(JSON.stringify({ iat: now - 60, exp: now + 8 * 60, iss: cfg.githubAppId }));
+  const payload = b64url(JSON.stringify({ iat: now - 60, exp: now + 8 * 60, iss: appId }));
   const signingInput = `${header}.${payload}`;
-  const signature = sign("RSA-SHA256", Buffer.from(signingInput), createPrivateKey(cfg.githubAppPrivateKeyPem)).toString("base64url");
+  const signature = sign("RSA-SHA256", Buffer.from(signingInput), createPrivateKey(privateKeyPem)).toString("base64url");
   return `${signingInput}.${signature}`;
 }
 
@@ -48,7 +54,7 @@ export type MarketplaceSubscription = {
 
 export async function getMarketplaceSubscription(accountId: number): Promise<MarketplaceSubscription | null> {
   const response = await fetch(`https://api.github.com/marketplace_listing/accounts/${accountId}`, {
-    headers: githubHeaders(githubAppJwt()),
+    headers: githubHeaders(githubAppJwt("marketplace")),
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   });
@@ -66,7 +72,7 @@ async function vendorInstallationToken(operation: "archive" | "collaborator"): P
     : { contents: "read" };
   const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
     method: "POST",
-    headers: { ...githubHeaders(githubAppJwt()), "Content-Type": "application/json" },
+    headers: { ...githubHeaders(githubAppJwt("vendor")), "Content-Type": "application/json" },
     body: JSON.stringify({ repositories: [repository.repo], permissions }),
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
