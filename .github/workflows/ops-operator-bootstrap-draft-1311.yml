@@ -67,15 +67,15 @@ jobs:
           for forbidden in ('-----begin private key-----', 'ghp_', 'github_pat_'):
               assert forbidden not in serialized
           PY
-          cat > "$RUNNER_TEMP/OPERATOR-NOTE.txt" <<'TXT'
-This is a secret-safe DRAFT handoff generated from canonical ANPOS 1.3.11 / commercial service 0.3.4.
-Organization: Vertex-Systems-Network
-Service base URL: https://anpos-commercial-service.vercel.app
-Homepage candidate: https://github.com/Vertex-Systems-Network/ai-native-project-operating-system
-
-The homepage value is a current public candidate, not a recorded product-owner approval.
-This packet does NOT create either GitHub App, does NOT create repositories, does NOT contain private keys/webhook secrets, and does NOT authorize launch.
-TXT
+          printf '%s\n' \
+            'This is a secret-safe DRAFT handoff generated from canonical ANPOS 1.3.11 / commercial service 0.3.4.' \
+            'Organization: Vertex-Systems-Network' \
+            'Service base URL: https://anpos-commercial-service.vercel.app' \
+            'Homepage candidate: https://github.com/Vertex-Systems-Network/ai-native-project-operating-system' \
+            '' \
+            'The homepage value is a current public candidate, not a recorded product-owner approval.' \
+            'This packet does NOT create either GitHub App, does NOT create repositories, does NOT contain private keys/webhook secrets, and does NOT authorize launch.' \
+            > "$RUNNER_TEMP/OPERATOR-NOTE.txt"
           sha256sum "$out" > "$RUNNER_TEMP/anpos-operator-bootstrap-draft-1.3.11.json.sha256"
 
       - name: Upload operator bootstrap draft
