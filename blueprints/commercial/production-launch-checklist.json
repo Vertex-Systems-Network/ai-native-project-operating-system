@@ -107,10 +107,16 @@
       "rule": "Allow the Marketplace webhook endpoint through deployment protection while keeping operator/admin surfaces protected."
     },
     {
+      "id": "deployment_identity",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify /api/version returns the exact certified commercial service version, source ANPOS protocol version and split-github-app-v1 runtime contract. Production verification with --require-ready must include exact --expected-service-version and --expected-protocol-version values so a stale healthy artifact cannot pass."
+    },
+    {
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including split GitHub App credential checks and migration checksum."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including split GitHub App credential checks and migration checksum, only after exact deployment identity has been confirmed."
     },
     {
       "id": "real_marketplace_events",
@@ -155,6 +161,6 @@
       "rule": "Deploy production from vendor-private source or a verified immutable artifact; do not rely on public canonical source access."
     }
   ],
-  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion. Marketplace/Vendor GitHub App role separation is mandatory for this reference architecture.",
+  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion. Marketplace/Vendor GitHub App role separation and exact deployed artifact identity are mandatory for this reference architecture.",
   "non_destructive_expiry": true
 }
