@@ -144,7 +144,7 @@ def main() -> int:
             '"--require-ready"',
             '"--github-token-env"',
             '"--operator-token-env"',
-            "Production launch is not certified",
+            "--require-ready passes and real Marketplace E2E evidence is recorded.",
         ),
     )
     if verifier:
