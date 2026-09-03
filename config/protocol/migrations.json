@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.11",
+  "current_protocol_version": "1.3.12",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -485,12 +485,39 @@
         "Deterministic service/template export verification and receipt generation remain unchanged after the cleanliness preflight",
         "Full ANPOS/commercial/vendor certification must pass before canonical main promotion"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.11-to-1.3.12",
+      "from_version": "1.3.11",
+      "to_version": "1.3.12",
+      "detected_at": "2026-09-04T02:49:00+05:00",
+      "impact": [
+        "Bind optional customer entitlement smoke verification to the canonical x-anpos-account-id request contract instead of sending only a bearer token",
+        "Require generic or route-missing 404 responses to fail while preserving the canonical structured entitlement_not_found outcome for accounts without an entitlement",
+        "Replace the stale operator reconciliation dry_run/github_account_id payload with a non-mutating authenticated contract probe that sends an empty JSON object and requires the canonical valid_account_id_required response",
+        "Reject operator 404 and generic 400 responses so explicitly requested authenticated smoke checks cannot pass when the route is missing or behavior has drifted",
+        "Validate GitHub account IDs locally as positive JavaScript-safe integers before any network request when a customer token smoke check is requested",
+        "Add behavioral regression tests and static deployment-identity validation for authenticated smoke request headers, bodies and error contracts",
+        "Bump commercial service from 0.3.4 to 0.3.5 because exported package source_protocol_version changes to 1.3.12 and /api/version must attest the exact certified source identity"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "This is vendor/operator production-verification hardening. Existing child projects do not receive the vendor-only verifier or commercial service. Preserve project behavior and do not introduce billing/runtime dependencies merely by adopting ANPOS 1.3.12.",
+      "status": "applied",
+      "applied_at": "2026-09-04T02:49:00+05:00",
+      "verification_evidence": [
+        "scripts/verify_commercial_production.py binds authenticated customer requests to X-Anpos-Account-Id and validates structured entitlement_not_found responses",
+        "scripts/verify_commercial_production.py uses a non-mutating authenticated empty-body operator probe and requires valid_account_id_required",
+        "tests/test_commercial_launch_package.py behaviorally verifies request headers/body, structured errors, route-missing rejection and pre-network account-ID validation",
+        "tests/test_deployment_identity.py plus scripts/validate_deployment_identity.py prevent authenticated smoke contract drift",
+        "commercial-service/package.json embeds source_protocol_version 1.3.12 and service version 0.3.5 for exact /api/version attestation"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.11-to-NEXT",
-    "from_version": "1.3.11",
+    "id": "ANPOS-1.3.12-to-NEXT",
+    "from_version": "1.3.12",
     "to_version": null,
     "detected_at": null,
     "impact": [],

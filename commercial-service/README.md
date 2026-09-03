@@ -149,3 +149,7 @@ Cancellation, expiry, or seat revocation may stop future entitlement refresh, pr
 ## Commercial boundary
 
 This backend implements technical entitlement enforcement. Product prices, Marketplace plan IDs, taxes, refunds, legal license terms, privacy terms, SLA/support commitments, free-plan product value, and Marketplace publication remain operator-controlled business configuration.
+
+### Authenticated production smoke contract
+
+When `scripts/verify_commercial_production.py` is run with `--github-token-env`, `--github-account-id` is required and is sent as `X-Anpos-Account-Id` to the canonical entitlement route. A 404 only counts as a valid route response when its JSON error is exactly `entitlement_not_found`; generic/missing-route 404 responses fail. When `--operator-token-env` is supplied, the verifier does not perform a real reconciliation: it sends an authenticated empty JSON body to `/api/v1/reconcile` and requires the canonical `400 valid_account_id_required` validation response. This proves route/auth contract reachability without intentionally mutating entitlement state.

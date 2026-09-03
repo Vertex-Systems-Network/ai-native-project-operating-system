@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.11`
+**Current protocol:** `1.3.12`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -506,3 +506,9 @@ For Git checkouts, verification reads committed `HEAD` blobs and requires a clea
 Private vendor-repository acceptance now treats ignored untracked files as checkout contamination. `scripts/verify_vendor_handoff.py` runs Git status with explicit all-untracked plus ignored matching-path visibility before reading committed `HEAD` blobs, so `.gitignore` or `.git/info/exclude` cannot hide extra target bytes from the cleanliness gate.
 
 This strengthens the 1.3.10 exact handoff contract without changing export content, Marketplace state, credentials, pricing, plan IDs or launch authority. Vendor repositories should be verified from a truly clean checkout before they are accepted as source of record or used for deployment.
+
+## Authenticated production smoke contract binding in 1.3.12
+
+ANPOS 1.3.12 hardens the vendor-only production verifier so explicitly requested authenticated smoke checks cannot pass on route drift. Customer entitlement probes now require a positive GitHub account ID, send the canonical `X-Anpos-Account-Id` header, and accept HTTP 404 only when the JSON error is exactly `entitlement_not_found`. Operator verification is intentionally non-mutating: it authenticates `POST /api/v1/reconcile` with an empty JSON body and requires the route's exact `400 valid_account_id_required` contract, so a missing route, generic 400, unauthorized token, or stale API shape fails verification.
+
+The commercial service package is 0.3.5 solely so exported `/api/version` attests ANPOS 1.3.12 exactly. No Marketplace purchase, reconciliation mutation, pricing decision, App registration, private-repository creation, production secret, or launch authority is created by this verifier hardening.
