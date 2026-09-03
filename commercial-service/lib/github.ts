@@ -22,6 +22,15 @@ const githubHeaders = (token: string) => ({
   "User-Agent": "ANPOS-Commercial-Service/1.0",
 });
 
+function privateTemplateRepository(): { full: string; owner: string; repo: string } {
+  const repository = process.env.ANPOS_PRIVATE_TEMPLATE_REPO;
+  if (!repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    throw new Error("ANPOS_PRIVATE_TEMPLATE_REPO is not configured");
+  }
+  const [owner, repo] = repository.split("/", 2);
+  return { full: repository, owner, repo };
+}
+
 export type MarketplaceSubscription = {
   id: number;
   login: string;
@@ -48,12 +57,17 @@ export async function getMarketplaceSubscription(accountId: number): Promise<Mar
   return response.json() as Promise<MarketplaceSubscription>;
 }
 
-async function vendorInstallationToken(): Promise<string> {
+async function vendorInstallationToken(operation: "archive" | "collaborator"): Promise<string> {
   const installationId = process.env.GITHUB_VENDOR_INSTALLATION_ID;
   if (!installationId || !/^\d+$/.test(installationId)) throw new Error("GITHUB_VENDOR_INSTALLATION_ID is not configured");
+  const repository = privateTemplateRepository();
+  const permissions = operation === "collaborator"
+    ? { administration: "write" }
+    : { contents: "read" };
   const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
     method: "POST",
-    headers: githubHeaders(githubAppJwt()),
+    headers: { ...githubHeaders(githubAppJwt()), "Content-Type": "application/json" },
+    body: JSON.stringify({ repositories: [repository.repo], permissions }),
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   });
@@ -63,11 +77,34 @@ async function vendorInstallationToken(): Promise<string> {
   return body.token;
 }
 
+export async function templateArchiveRedirect(ref: string): Promise<{ repository: string; location: string }> {
+  const repository = privateTemplateRepository();
+  const safeRef = ref.trim();
+  if (!safeRef || safeRef.length > 200 || /[\r\n]/.test(safeRef)) throw new Error("Invalid template ref");
+  const token = await vendorInstallationToken("archive");
+  const response = await fetch(
+    `https://api.github.com/repos/${repository.owner}/${repository.repo}/zipball/${encodeURIComponent(safeRef)}`,
+    {
+      headers: githubHeaders(token),
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (response.status !== 302) throw new Error(`Template archive redirect failed: ${response.status}`);
+  const location = response.headers.get("location");
+  if (!location) throw new Error("Template archive redirect missing");
+  const destination = new URL(location);
+  if (destination.protocol !== "https:" || destination.hostname !== "codeload.github.com") {
+    throw new Error("Unexpected template archive redirect host");
+  }
+  return { repository: repository.full, location };
+}
+
 export async function inviteTemplateCollaborator(username: string): Promise<{ repository: string; status: number }> {
-  const repository = process.env.ANPOS_PRIVATE_TEMPLATE_REPO;
-  if (!repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error("ANPOS_PRIVATE_TEMPLATE_REPO is not configured");
-  const token = await vendorInstallationToken();
-  const response = await fetch(`https://api.github.com/repos/${repository}/collaborators/${encodeURIComponent(username)}`, {
+  const repository = privateTemplateRepository();
+  const token = await vendorInstallationToken("collaborator");
+  const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.repo}/collaborators/${encodeURIComponent(username)}`, {
     method: "PUT",
     headers: { ...githubHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ permission: "pull" }),
@@ -75,5 +112,18 @@ export async function inviteTemplateCollaborator(username: string): Promise<{ re
     signal: AbortSignal.timeout(10_000),
   });
   if (![201, 204].includes(response.status)) throw new Error(`Template collaborator provisioning failed: ${response.status}`);
-  return { repository, status: response.status };
+  return { repository: repository.full, status: response.status };
+}
+
+export async function removeTemplateCollaborator(username: string): Promise<{ repository: string; status: number }> {
+  const repository = privateTemplateRepository();
+  const token = await vendorInstallationToken("collaborator");
+  const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.repo}/collaborators/${encodeURIComponent(username)}`, {
+    method: "DELETE",
+    headers: githubHeaders(token),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (![204, 404].includes(response.status)) throw new Error(`Template collaborator revocation failed: ${response.status}`);
+  return { repository: repository.full, status: response.status };
 }
