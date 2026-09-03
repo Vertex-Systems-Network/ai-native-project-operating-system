@@ -62,7 +62,7 @@ def main() -> int:
             "Preserve core/child non-destructive license expiry and source-template inertness; no production credentials, prices, customer records or live launch evidence are added"
         ],
         "project_conflicts": [],
-        "requires_owner_consent": false,
+        "requires_owner_consent": False,
         "child_migration_rule": "Existing child projects do not require this vendor/operator launch package. Do not introduce billing, legal, Marketplace or production-launch dependencies into normal child execution merely by adopting ANPOS 1.3.3.",
         "status": "applied",
         "applied_at": TIMESTAMP,
