@@ -2,30 +2,23 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getMarketplaceSubscription } from "./github";
 import { signEntitlement } from "./crypto";
-import { transaction } from "./db";
+import { db, ensureSchema, transaction } from "./db";
 import { serviceConfig } from "./env";
+import { marketplacePlanMap, PLAN_FEATURES } from "./plans";
+import { requireActiveSeat } from "./seats";
+import { processPendingTemplateAccessJobs, revokeAllTemplateGrantsForSource } from "./template-access";
 
-const FEATURES: Record<string, string[]> = {
-  developer: ["private_template_access", "protocol_update_channel", "standard_provider_adapters"],
-  pro: ["private_template_access", "protocol_update_channel", "standard_provider_adapters", "premium_blueprints", "premium_provider_adapters", "hosted_orchestrator_when_offered"],
-  team: ["private_template_access", "protocol_update_channel", "standard_provider_adapters", "premium_blueprints", "premium_provider_adapters", "hosted_orchestrator_when_offered", "organization_team_features", "commercial_support"],
-  enterprise: ["private_template_access", "protocol_update_channel", "standard_provider_adapters", "premium_blueprints", "premium_provider_adapters", "hosted_or_self_hosted_orchestrator_when_offered", "organization_team_features", "enterprise_policy_controls", "priority_support_or_sla_when_contracted"],
-};
-
-function planMap(): Record<string, string> {
-  const raw = process.env.ANPOS_MARKETPLACE_PLAN_MAP;
-  if (!raw) throw new Error("ANPOS_MARKETPLACE_PLAN_MAP is not configured");
-  const parsed = JSON.parse(raw) as Record<string, string>;
-  for (const [marketplaceId, planId] of Object.entries(parsed)) {
-    if (!/^\d+$/.test(marketplaceId) || !FEATURES[planId]) throw new Error("Invalid ANPOS_MARKETPLACE_PLAN_MAP");
-  }
-  return parsed;
-}
+const ACTIVE_STATES = new Set(["active", "trial", "grace"]);
 
 function tokenExpiry(now: Date): string {
   const configured = Number(process.env.ANPOS_ENTITLEMENT_TTL_SECONDS ?? "86400");
   const seconds = Number.isFinite(configured) ? Math.min(Math.max(configured, 900), 604800) : 86400;
   return new Date(now.getTime() + seconds * 1000).toISOString();
+}
+
+function iso(value: unknown): string {
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
 }
 
 async function audit(client: PoolClient, requestId: string, eventType: string, accountId: number, metadata: object = {}) {
@@ -37,28 +30,38 @@ async function audit(client: PoolClient, requestId: string, eventType: string, a
 
 export async function reconcileEntitlement(accountId: number, requestId: string) {
   const subscription = await getMarketplaceSubscription(accountId);
-  return transaction(async (client) => {
+  const result = await transaction(async (client) => {
     const existing = await client.query("SELECT * FROM entitlements WHERE github_account_id=$1 FOR UPDATE", [accountId]);
     if (!subscription?.marketplace_purchase?.plan?.id) {
       if (existing.rowCount) {
-        await client.query("UPDATE entitlements SET state='cancelled', signed_envelope=NULL, expires_at=NOW(), updated_at=NOW() WHERE github_account_id=$1", [accountId]);
+        await client.query(
+          "UPDATE entitlements SET state='cancelled',signed_envelope=NULL,expires_at=NOW(),updated_at=NOW() WHERE github_account_id=$1",
+          [accountId],
+        );
       }
       await audit(client, requestId, "entitlement_cancelled_or_absent", accountId);
-      return { state: "cancelled", github_account_id: accountId, signed_entitlement: null };
+      return { state: "cancelled", github_account_id: accountId, signed_entitlement: null, entitlements: [] as string[] };
+    }
+
+    if (!Number.isSafeInteger(subscription.id) || subscription.id <= 0 || subscription.id !== accountId) {
+      throw new Error("Marketplace account identity mismatch");
+    }
+    if (!new Set(["User", "Organization"]).has(subscription.type) || !subscription.login) {
+      throw new Error("Unsupported Marketplace account type");
     }
 
     const marketplacePlanId = subscription.marketplace_purchase.plan.id;
-    const planId = planMap()[String(marketplacePlanId)];
+    const planId = marketplacePlanMap()[String(marketplacePlanId)];
     if (!planId) throw new Error(`Marketplace plan ${marketplacePlanId} is not mapped`);
 
     const now = new Date();
     const licenseId = existing.rows[0]?.license_id ?? randomUUID();
     const seats = subscription.marketplace_purchase.unit_count ?? null;
     const state = subscription.marketplace_purchase.on_free_trial ? "trial" : "active";
-    const features = FEATURES[planId];
+    const features = PLAN_FEATURES[planId];
     const issuedAt = now.toISOString();
     const envelopeExpiresAt = tokenExpiry(now);
-    const envelope = signEntitlement({
+    const envelope = subscription.type === "Organization" ? null : signEntitlement({
       issuer: serviceConfig().entitlementIssuer,
       subject: { github_account_id: subscription.id, github_account_type: subscription.type, github_login: subscription.login },
       license_id: licenseId,
@@ -76,27 +79,113 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
         issued_at,not_before,expires_at,billing_updated_at,signed_envelope,updated_at
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$11,$12,$13,$14::jsonb,NOW())
       ON CONFLICT (github_account_id) DO UPDATE SET
-        github_login=EXCLUDED.github_login, github_account_type=EXCLUDED.github_account_type, plan_id=EXCLUDED.plan_id,
-        marketplace_plan_id=EXCLUDED.marketplace_plan_id, seats=EXCLUDED.seats, state=EXCLUDED.state, features=EXCLUDED.features,
-        billing_cycle=EXCLUDED.billing_cycle, issued_at=EXCLUDED.issued_at, not_before=EXCLUDED.not_before,
-        expires_at=EXCLUDED.expires_at, billing_updated_at=EXCLUDED.billing_updated_at,
-        signed_envelope=EXCLUDED.signed_envelope, updated_at=NOW()
+        github_login=EXCLUDED.github_login,github_account_type=EXCLUDED.github_account_type,plan_id=EXCLUDED.plan_id,
+        marketplace_plan_id=EXCLUDED.marketplace_plan_id,seats=EXCLUDED.seats,state=EXCLUDED.state,features=EXCLUDED.features,
+        billing_cycle=EXCLUDED.billing_cycle,issued_at=EXCLUDED.issued_at,not_before=EXCLUDED.not_before,
+        expires_at=EXCLUDED.expires_at,billing_updated_at=EXCLUDED.billing_updated_at,
+        signed_envelope=EXCLUDED.signed_envelope,updated_at=NOW()
     `, [
       subscription.id, subscription.login, subscription.type, licenseId, planId, marketplacePlanId, seats, state,
       JSON.stringify(features), subscription.marketplace_purchase.billing_cycle ?? null, issuedAt, envelopeExpiresAt,
       subscription.marketplace_purchase.updated_at ?? null, JSON.stringify(envelope),
     ]);
-    await audit(client, requestId, "entitlement_reconciled", accountId, { plan_id: planId, marketplace_plan_id: marketplacePlanId, state });
-    return { state, github_account_id: accountId, plan_id: planId, seats, entitlements: features, signed_entitlement: envelope };
+    await audit(client, requestId, "entitlement_reconciled", accountId, {
+      plan_id: planId,
+      marketplace_plan_id: marketplacePlanId,
+      state,
+      account_type: subscription.type,
+    });
+    return {
+      state,
+      github_account_id: accountId,
+      github_account_type: subscription.type,
+      github_login: subscription.login,
+      plan_id: planId,
+      seats,
+      entitlements: features,
+      signed_entitlement: envelope,
+      seat_assignment_required: subscription.type === "Organization",
+    };
   });
+
+  if (result.state === "cancelled" || !result.entitlements.includes("private_template_access")) {
+    await revokeAllTemplateGrantsForSource(accountId, requestId);
+    await processPendingTemplateAccessJobs(10, requestId).catch(() => []);
+  }
+  return result;
 }
 
 export async function getEntitlement(accountId: number) {
-  const { db, ensureSchema } = await import("./db");
   await ensureSchema();
   const result = await db().query(
-    "SELECT github_account_id,github_login,github_account_type,license_id,plan_id,seats,state,features,issued_at,not_before,expires_at,signed_envelope,updated_at FROM entitlements WHERE github_account_id=$1",
+    "SELECT github_account_id,github_login,github_account_type,license_id,plan_id,marketplace_plan_id,seats,state,features,issued_at,not_before,expires_at,signed_envelope,updated_at FROM entitlements WHERE github_account_id=$1",
     [accountId],
   );
   return result.rows[0] ?? null;
+}
+
+export async function issueEntitlementForPrincipal(accountId: number, user: { id: number; login: string }, requestId: string) {
+  const entitlement = await getEntitlement(accountId);
+  if (!entitlement) throw new Error("ENTITLEMENT_NOT_FOUND");
+  if (!ACTIVE_STATES.has(String(entitlement.state))) throw new Error("ENTITLEMENT_NOT_ACTIVE");
+  const features = Array.isArray(entitlement.features) ? entitlement.features.map(String) : [];
+  if (!features.length) throw new Error("ENTITLEMENT_FEATURES_MISSING");
+
+  const subject = {
+    github_account_id: Number(entitlement.github_account_id),
+    github_account_type: String(entitlement.github_account_type),
+    github_login: String(entitlement.github_login),
+  };
+  const now = new Date();
+  const issuedAt = now.toISOString();
+  const expiresAt = tokenExpiry(now);
+
+  let envelope;
+  if (subject.github_account_type === "Organization") {
+    await requireActiveSeat(accountId, user.id);
+    envelope = signEntitlement({
+      issuer: serviceConfig().entitlementIssuer,
+      subject,
+      principal: { github_user_id: user.id, github_login: user.login },
+      license_id: String(entitlement.license_id),
+      plan_id: String(entitlement.plan_id),
+      seats: entitlement.seats == null ? null : Number(entitlement.seats),
+      entitlements: features,
+      issued_at: issuedAt,
+      not_before: issuedAt,
+      expires_at: expiresAt,
+    });
+  } else {
+    if (user.id !== accountId) throw new Error("FORBIDDEN_GITHUB_ACCOUNT");
+    envelope = signEntitlement({
+      issuer: serviceConfig().entitlementIssuer,
+      subject,
+      license_id: String(entitlement.license_id),
+      plan_id: String(entitlement.plan_id),
+      seats: entitlement.seats == null ? null : Number(entitlement.seats),
+      entitlements: features,
+      issued_at: issuedAt,
+      not_before: issuedAt,
+      expires_at: expiresAt,
+    });
+  }
+
+  await db().query(
+    "INSERT INTO commercial_audit_log(request_id,event_type,github_account_id,metadata) VALUES ($1,'entitlement_token_issued',$2,$3::jsonb)",
+    [requestId, accountId, JSON.stringify({ github_user_id: user.id, github_login: user.login, format_version: envelope.format_version })],
+  );
+  return {
+    state: String(entitlement.state),
+    github_account_id: accountId,
+    github_account_type: subject.github_account_type,
+    github_login: subject.github_login,
+    plan_id: String(entitlement.plan_id),
+    seats: entitlement.seats == null ? null : Number(entitlement.seats),
+    entitlements: features,
+    issued_at: issuedAt,
+    not_before: issuedAt,
+    expires_at: expiresAt,
+    billing_record_updated_at: iso(entitlement.updated_at),
+    signed_entitlement: envelope,
+  };
 }
