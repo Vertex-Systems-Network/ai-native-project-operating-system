@@ -233,11 +233,15 @@
         "Add a legal document template pack for Terms, EULA/license, Privacy, Refund/Cancellation and Support/SLA while explicitly requiring operator/legal/accounting review",
         "Add a production smoke verifier for health/readiness/public keys plus optional customer/operator checks using environment-variable secret references rather than raw secret CLI values",
         "Add launch-package unit/static validation and integrate the launch validator into the inactive repository-quality blueprint including protected-base validation",
-        "Preserve core/child non-destructive license expiry and source-template inertness; no production credentials, prices, customer records or live launch evidence are added"
+        "Preserve core/child non-destructive license expiry and source-template inertness; no production credentials, prices, customer records or live launch evidence are added",
+        "Add config/licensing/vendor-source-boundary.json as the shared machine-readable classification for vendor-only service, export, launch/legal/App/operator and vendor-quality assets",
+        "Drive scripts/bootstrap_child.py vendor stripping from the shared source-boundary policy instead of a one-path hardcoded tuple",
+        "Exclude every vendor-only source-boundary path from anpos-commercial-template while continuing to source the vendor service only from committed commercial-service/ Git blobs",
+        "Move vendor repository export and commercial launch validation out of the child repository-quality blueprint into a separate vendor-only quality blueprint so customer children never depend on stripped vendor tooling"
       ],
       "project_conflicts": [],
       "requires_owner_consent": false,
-      "child_migration_rule": "Existing child projects do not require this vendor/operator launch package. Do not introduce billing, legal, Marketplace or production-launch dependencies into normal child execution merely by adopting ANPOS 1.3.3.",
+      "child_migration_rule": "Existing child projects do not require vendor commercial runtime, export tooling, launch/legal/App/operator assets, or vendor-only tests/validators. New child initialization strips all paths classified by config/licensing/vendor-source-boundary.json. Do not introduce billing, legal, Marketplace, vendor source-management, or production-launch dependencies into normal child execution merely by adopting ANPOS 1.3.3.",
       "status": "applied",
       "applied_at": "2026-09-03T23:41:00+05:00",
       "verification_evidence": [
@@ -245,7 +249,10 @@
         "Source launch checklist remains launch_authorized=false and carries no live external evidence",
         "GitHub App blueprint contains no credentials or final runtime identifiers",
         "Marketplace listing/legal files remain explicit drafts/templates rather than billing/legal authority",
-        "Production verifier does not synthesize or claim real Marketplace purchase evidence"
+        "Production verifier does not synthesize or claim real Marketplace purchase evidence",
+        "Customer-template export tests verify all configured vendor-only paths are excluded using the committed source-boundary policy",
+        "Vendor-only source-management and launch validators are routed through blueprints/commercial/vendor-launch-quality.yml rather than the child repository-quality blueprint",
+        "Child bootstrap and vendor exporter consume the same vendor-source-boundary classification"
       ]
     }
   ],
