@@ -1,0 +1,96 @@
+name: ANPOS Vendor Repository Export Certification
+
+on:
+  push:
+    branches:
+      - cert/vendor-repository-export-132
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout certification branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python validation dependency
+        run: python -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+
+      - name: Compile Python sources
+        run: python -m compileall -q scripts tests
+
+      - name: Run Python unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Run ANPOS validators
+        run: |
+          set -euo pipefail
+          python scripts/validate_ai_native_repo.py
+          python scripts/validate_commercial_licensing.py
+          python scripts/validate_commercial_service.py
+          python scripts/validate_vendor_repository_export.py
+
+      - name: Verify deterministic vendor exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/vendor-export-a" "$RUNNER_TEMP/vendor-export-b"
+          python scripts/export_vendor_repositories.py --output "$RUNNER_TEMP/vendor-export-a"
+          python scripts/export_vendor_repositories.py --output "$RUNNER_TEMP/vendor-export-b"
+          diff -qr "$RUNNER_TEMP/vendor-export-a/anpos-commercial-service" "$RUNNER_TEMP/vendor-export-b/anpos-commercial-service"
+          diff -qr "$RUNNER_TEMP/vendor-export-a/anpos-commercial-template" "$RUNNER_TEMP/vendor-export-b/anpos-commercial-template"
+          test ! -e "$RUNNER_TEMP/vendor-export-a/anpos-commercial-service/commercial-service"
+          test ! -e "$RUNNER_TEMP/vendor-export-a/anpos-commercial-template/commercial-service"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          base = Path(os.environ['RUNNER_TEMP']) / 'vendor-export-a'
+          sha = os.environ['GITHUB_SHA']
+          service = json.loads((base / 'anpos-commercial-service' / 'EXPORT-MANIFEST.json').read_text())
+          template = json.loads((base / 'anpos-commercial-template' / 'EXPORT-MANIFEST.json').read_text())
+          assert service['source_revision'] == sha
+          assert template['source_revision'] == sha
+          assert service['source_material'] == 'committed_git_blobs_at_head'
+          assert template['source_material'] == 'committed_git_blobs_at_head'
+          assert service['contains_secrets'] is False
+          assert template['contains_secrets'] is False
+          assert all(not item['origin'].startswith('commercial-service/') for item in template['files'])
+          assert any(item['origin'].startswith('commercial-service/') for item in service['files'] if not str(item['origin']).startswith('generated:'))
+          PY
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: commercial-service/package-lock.json
+
+      - name: Pin npm 11.19.1 and install locked dependencies
+        working-directory: commercial-service
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1 --ignore-scripts
+          test "$(npm --version)" = "11.19.1"
+          node -e "if (!process.version.startsWith('v22.')) process.exit(1)"
+          npm ci
+          npm audit --audit-level=low
+
+      - name: Certify commercial service
+        working-directory: commercial-service
+        run: npm run certify
+
+      - name: Restore build-time config mutation and verify tracked tree clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- commercial-service/tsconfig.json
+          test -z "$(git status --porcelain --untracked-files=no)"
