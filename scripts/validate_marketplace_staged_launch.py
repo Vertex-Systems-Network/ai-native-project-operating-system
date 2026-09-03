@@ -12,6 +12,8 @@ CHECKLIST = ROOT / "blueprints/commercial/production-launch-checklist.json"
 LISTING = ROOT / "blueprints/commercial/marketplace-listing-draft.md"
 CATALOG = ROOT / "config/licensing/product-catalog.json"
 BOUNDARY = ROOT / "config/licensing/vendor-source-boundary.json"
+MARKETPLACE_APP = ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json"
+VENDOR_APP = ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json"
 VENDOR_QUALITY = ROOT / "blueprints/commercial/vendor-launch-quality.yml"
 CHILD_QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
 ERRORS: list[str] = []
@@ -34,7 +36,7 @@ def load_json(path: Path) -> dict:
 
 
 def main() -> int:
-    for path in (STRATEGY, CHECKLIST, LISTING, CATALOG, BOUNDARY, VENDOR_QUALITY):
+    for path in (STRATEGY, CHECKLIST, LISTING, CATALOG, BOUNDARY, MARKETPLACE_APP, VENDOR_APP, VENDOR_QUALITY):
         if not path.is_file():
             fail(f"missing {path.relative_to(ROOT)}")
 
@@ -50,13 +52,34 @@ def main() -> int:
     if strategy.get("strategy") != "free_first_then_paid":
         fail("staged launch strategy must remain free_first_then_paid")
     sources = strategy.get("official_sources") or []
-    if len(sources) < 4 or not all(isinstance(url, str) and url.startswith("https://docs.github.com/") for url in sources):
+    if len(sources) < 5 or not all(isinstance(url, str) and url.startswith("https://docs.github.com/") for url in sources):
         fail("staged launch strategy must cite official docs.github.com sources")
+
+    app_architecture = strategy.get("github_app_architecture") or {}
+    if app_architecture.get("marketplace_app_reference") != "blueprints/commercial/github-marketplace-app-manifest.example.json":
+        fail("staged launch must reference the public Marketplace App blueprint")
+    if app_architecture.get("vendor_app_reference") != "blueprints/commercial/github-vendor-app-manifest.example.json":
+        fail("staged launch must reference the private Vendor App blueprint")
+    for key in (
+        "marketplace_app_must_be_public",
+        "apps_must_remain_distinct",
+        "vendor_administration_must_not_be_requested_from_customer_installations",
+    ):
+        if app_architecture.get(key) is not True:
+            fail(f"staged launch App architecture missing required true flag: {key}")
+
+    marketplace_app = load_json(MARKETPLACE_APP) if MARKETPLACE_APP.is_file() else {}
+    if (marketplace_app.get("required_defaults") or {}).get("public") is not True:
+        fail("free-first Marketplace App must be public/installable")
+    vendor_app = load_json(VENDOR_APP) if VENDOR_APP.is_file() else {}
+    if (vendor_app.get("required_defaults") or {}).get("public") is not False:
+        fail("vendor distribution App must remain private during staged launch")
 
     free = strategy.get("phase_1_free_listing") or {}
     for key in (
         "supported_by_source_checked_docs",
         "requires_general_marketplace_listing_compliance",
+        "requires_public_marketplace_app_installability",
         "requires_public_availability",
         "requires_value_beyond_authentication",
     ):
@@ -117,12 +140,20 @@ def main() -> int:
         fail("production checklist staged strategy reference is missing")
     if publication.get("operator_override_allowed") is not True:
         fail("staged path must remain a recommendation rather than a forced commercial decision")
+    gate_ids = {item.get("id") for item in checklist.get("required_gates", []) if isinstance(item, dict)}
+    for required in ("github_marketplace_app", "github_vendor_app", "github_app_role_separation", "vendor_app_installation"):
+        if required not in gate_ids:
+            fail(f"staged launch checklist missing split GitHub App gate: {required}")
+    if "github_app" in gate_ids or "app_installation" in gate_ids:
+        fail("staged launch checklist must not retain legacy single-App gates")
 
     listing = LISTING.read_text(encoding="utf-8") if LISTING.is_file() else ""
     for marker in (
         "Recommended staged publication path",
         "free-first then paid",
         "real free offering",
+        "two distinct GitHub Apps",
+        "Marketplace App — public/customer-facing",
         "never manufacture or buy installations",
         "does **not** alter the draft Developer, Pro, Team, or Enterprise product catalog",
     ):
@@ -133,6 +164,8 @@ def main() -> int:
     vendor_only = set(boundary.get("vendor_only_paths") or [])
     for path in (
         "blueprints/commercial/marketplace-staged-launch.json",
+        "blueprints/commercial/github-marketplace-app-manifest.example.json",
+        "blueprints/commercial/github-vendor-app-manifest.example.json",
         "scripts/validate_marketplace_staged_launch.py",
     ):
         if path not in vendor_only:
