@@ -175,6 +175,74 @@ class CommercialLaunchPackageTests(unittest.TestCase):
             else:
                 os.environ[key] = old
 
+    def test_github_account_id_is_positive_and_safe(self) -> None:
+        verifier = load_verifier()
+        self.assertEqual(verifier.normalize_github_account_id("123"), 123)
+        self.assertIsNone(verifier.normalize_github_account_id(None))
+        for invalid in ("", "0", "-1", "1.5", "abc", str(9_007_199_254_740_992)):
+            with self.assertRaises(verifier.VerificationError):
+                verifier.normalize_github_account_id(invalid)
+
+    def test_current_entitlement_binds_account_header_and_structured_404(self) -> None:
+        verifier = load_verifier()
+        calls: list[dict] = []
+
+        def entitlement_not_found(base_url, path, **kwargs):
+            calls.append({"base_url": base_url, "path": path, **kwargs})
+            return verifier.Response(404, {}, b'{"ok":false,"error":"entitlement_not_found"}')
+
+        verifier.request = entitlement_not_found
+        verifier.check_current_entitlement("https://service.example", 3, "github-secret", 456)
+        self.assertEqual(calls[0]["path"], "/api/v1/entitlements/current")
+        self.assertEqual(calls[0]["headers"]["Authorization"], "Bearer github-secret")
+        self.assertEqual(calls[0]["headers"]["X-Anpos-Account-Id"], "456")
+
+        verifier.request = lambda *args, **kwargs: verifier.Response(404, {}, b'{"error":"not_found"}')
+        with self.assertRaisesRegex(verifier.VerificationError, "canonical entitlement_not_found"):
+            verifier.check_current_entitlement("https://service.example", 3, "github-secret", 456)
+
+    def test_operator_reconcile_probe_is_authenticated_non_mutating_and_rejects_missing_route(self) -> None:
+        verifier = load_verifier()
+        calls: list[dict] = []
+
+        def canonical_probe(base_url, path, **kwargs):
+            calls.append({"base_url": base_url, "path": path, **kwargs})
+            return verifier.Response(400, {}, b'{"ok":false,"error":"valid_account_id_required"}')
+
+        verifier.request = canonical_probe
+        verifier.check_operator_reconcile("https://service.example", 3, "operator-secret")
+        self.assertEqual(calls[0]["path"], "/api/v1/reconcile")
+        self.assertEqual(calls[0]["method"], "POST")
+        self.assertEqual(json.loads(calls[0]["body"].decode("utf-8")), {})
+        self.assertEqual(calls[0]["headers"]["Authorization"], "Bearer operator-secret")
+
+        verifier.request = lambda *args, **kwargs: verifier.Response(404, {}, b'{"error":"not_found"}')
+        with self.assertRaisesRegex(verifier.VerificationError, "expected HTTP 400"):
+            verifier.check_operator_reconcile("https://service.example", 3, "operator-secret")
+
+    def test_github_token_requires_account_id_before_network(self) -> None:
+        verifier = load_verifier()
+        key = "ANPOS_TEST_GITHUB_TOKEN"
+        old = os.environ.get(key)
+        try:
+            os.environ[key] = "github-secret"
+            verifier.request = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("network must not run"))
+            self.assertEqual(
+                verifier.main(["--base-url", "https://service.example", "--github-token-env", key]),
+                1,
+            )
+            self.assertEqual(
+                verifier.main(
+                    ["--base-url", "https://service.example", "--github-token-env", key, "--github-account-id", "0"]
+                ),
+                1,
+            )
+        finally:
+            if old is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = old
+
 
 if __name__ == "__main__":
     unittest.main()
