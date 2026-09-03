@@ -40,61 +40,30 @@ def committed_workflow() -> str:
 
 def main() -> int:
     source = committed_workflow()
-
     for marker in (
-        "name: ANPOS Source Continuous Certification",
-        "pull_request:",
-        "push:",
-        "- main",
-        "permissions:",
-        "contents: read",
-        "concurrency:",
-        "cancel-in-progress: true",
-        f"github.repository == '{SOURCE_REPOSITORY}'",
-        "runs-on: ubuntu-24.04",
-        "timeout-minutes: 35",
-        "persist-credentials: false",
-        "fetch-depth: 0",
-        "python-version: '3.12'",
-        "jsonschema==4.25.1",
-        "python -m compileall -q scripts tests",
-        "Hide source-only workflow during inert-template tests",
-        "Restore source-only workflow after inert-template tests",
-        "python -m unittest discover -s tests -p 'test_*.py' -v",
-        "python scripts/validate_ai_native_repo.py",
-        "python scripts/validate_commercial_licensing.py",
-        "python scripts/validate_commercial_service.py",
-        "python scripts/validate_vendor_repository_export.py",
-        "python scripts/validate_commercial_launch_package.py",
-        "python scripts/validate_marketplace_staged_launch.py",
-        "python scripts/validate_operator_launch_bootstrap.py",
-        "python scripts/validate_deployment_identity.py",
-        "python scripts/validate_source_continuous_certification.py",
-        "scripts/export_vendor_repositories.py",
-        "scripts/verify_vendor_handoff.py",
-        "diff -qr",
-        "node-version: '22.x'",
-        "npm install --global npm@11.19.1 --ignore-scripts",
-        "npm ci",
-        "npm audit --audit-level=low",
-        "npm run certify",
-        "commercial-service/tsconfig.json|commercial-service/next-env.d.ts",
+        "name: ANPOS Source Continuous Certification", "pull_request:", "push:", "- main",
+        "permissions:", "contents: read", "concurrency:", "cancel-in-progress: true",
+        f"github.repository == '{SOURCE_REPOSITORY}'", "runs-on: ubuntu-24.04", "timeout-minutes: 35",
+        "persist-credentials: false", "fetch-depth: 0", "python-version: '3.12'", "jsonschema==4.25.1",
+        "python -m compileall -q scripts tests", "python -m unittest discover -s tests -p 'test_*.py' -v",
+        "python scripts/validate_ai_native_repo.py", "python scripts/validate_commercial_licensing.py",
+        "python scripts/validate_commercial_service.py", "python scripts/validate_vendor_repository_export.py",
+        "python scripts/validate_commercial_launch_package.py", "python scripts/validate_marketplace_staged_launch.py",
+        "python scripts/validate_operator_launch_bootstrap.py", "python scripts/validate_deployment_identity.py",
+        "python scripts/validate_source_continuous_certification.py", "scripts/export_vendor_repositories.py",
+        "scripts/verify_vendor_handoff.py", "diff -qr", "node-version: '22.x'",
+        "npm install --global npm@11.19.1 --ignore-scripts", "npm ci", "npm audit --audit-level=low",
+        "npm run certify", "commercial-service/tsconfig.json|commercial-service/next-env.d.ts",
         "git status --porcelain --untracked-files=no",
     ):
         require(source, marker)
 
     for forbidden in (
-        "pull_request_target:",
-        "secrets.",
-        "contents: write",
-        "actions: write",
-        "checks: write",
-        "id-token: write",
-        "persist-credentials: true",
+        "pull_request_target:", "secrets.", "contents: write", "actions: write", "checks: write",
+        "id-token: write", "persist-credentials: true",
     ):
         if forbidden in source:
             fail(f"source continuous certification workflow contains forbidden authority marker: {forbidden}")
-
     if re.search(r"^\s*[A-Za-z0-9_-]+:\s*write\s*$", source, flags=re.MULTILINE):
         fail("source continuous certification workflow must remain read-only")
 
@@ -113,8 +82,7 @@ def main() -> int:
         boundary = {}
     vendor_only = set(boundary.get("vendor_only_paths") or [])
     for path in (
-        WORKFLOW_PATH,
-        "scripts/validate_source_continuous_certification.py",
+        WORKFLOW_PATH, "scripts/validate_source_continuous_certification.py",
         "tests/test_source_continuous_certification.py",
     ):
         if path not in vendor_only:
