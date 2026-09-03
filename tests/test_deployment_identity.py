@@ -21,24 +21,32 @@ def load_verifier():
 
 
 class DeploymentIdentityTests(unittest.TestCase):
+    def current_identity(self) -> tuple[dict, dict]:
+        package = json.loads((ROOT / "commercial-service/package.json").read_text(encoding="utf-8"))
+        protocol = json.loads((ROOT / "config/protocol/version.json").read_text(encoding="utf-8"))
+        return package, protocol
+
     def test_version_payload_requires_exact_service_protocol_and_runtime_contract(self) -> None:
         verifier = load_verifier()
+        package, protocol = self.current_identity()
+        service_version = package["version"]
+        protocol_version = protocol["version"]
         payload = {
             "ok": True,
-            "service": "anpos-commercial-service",
-            "service_version": "0.3.1",
-            "source_protocol_version": "1.3.8",
-            "runtime_contract": "split-github-app-v1",
+            "service": package["name"],
+            "service_version": service_version,
+            "source_protocol_version": protocol_version,
+            "runtime_contract": package["anpos"]["runtime_contract"],
         }
-        identity = verifier.validate_version_payload(payload, "0.3.1", "1.3.8")
-        self.assertEqual(identity["service_version"], "0.3.1")
-        self.assertEqual(identity["source_protocol_version"], "1.3.8")
+        identity = verifier.validate_version_payload(payload, service_version, protocol_version)
+        self.assertEqual(identity["service_version"], service_version)
+        self.assertEqual(identity["source_protocol_version"], protocol_version)
         with self.assertRaisesRegex(verifier.VerificationError, "service version mismatch"):
-            verifier.validate_version_payload(payload, "0.3.0", "1.3.8")
+            verifier.validate_version_payload(payload, "0.0.0", protocol_version)
         with self.assertRaisesRegex(verifier.VerificationError, "source protocol version mismatch"):
-            verifier.validate_version_payload(payload, "0.3.1", "1.3.7")
+            verifier.validate_version_payload(payload, service_version, "0.0.0")
         with self.assertRaisesRegex(verifier.VerificationError, "runtime_contract"):
-            verifier.validate_version_payload({**payload, "runtime_contract": "legacy"}, "0.3.1", "1.3.8")
+            verifier.validate_version_payload({**payload, "runtime_contract": "legacy"}, service_version, protocol_version)
 
     def test_require_ready_refuses_missing_expected_identity_before_network(self) -> None:
         verifier = load_verifier()
@@ -64,9 +72,8 @@ class DeploymentIdentityTests(unittest.TestCase):
             self.assertNotIn(stale, source)
 
     def test_service_package_embeds_certified_source_identity(self) -> None:
-        package = json.loads((ROOT / "commercial-service/package.json").read_text(encoding="utf-8"))
-        protocol = json.loads((ROOT / "config/protocol/version.json").read_text(encoding="utf-8"))
-        self.assertEqual(package["version"], "0.3.1")
+        package, protocol = self.current_identity()
+        self.assertRegex(package["version"], r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
         self.assertEqual(package["anpos"]["source_protocol_version"], protocol["version"])
         self.assertEqual(package["anpos"]["runtime_contract"], "split-github-app-v1")
 

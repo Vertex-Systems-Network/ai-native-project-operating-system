@@ -19,6 +19,8 @@ CHILD_QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
 MARKETPLACE_BLUEPRINT = ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json"
 VENDOR_BLUEPRINT = ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json"
 ENV_EXAMPLE = ROOT / "commercial-service/.env.example"
+PACKAGE = ROOT / "commercial-service/package.json"
+PROTOCOL = ROOT / "config/protocol/version.json"
 ERRORS: list[str] = []
 
 
@@ -81,6 +83,8 @@ def main() -> int:
     vendor_quality = read(VENDOR_QUALITY)
     child_quality = read(CHILD_QUALITY)
     env_example = read(ENV_EXAMPLE)
+    package = load_json(PACKAGE)
+    protocol = load_json(PROTOCOL)
 
     for source, path in ((renderer_source, RENDERER), (tests_source, TESTS)):
         if source:
@@ -108,6 +112,11 @@ def main() -> int:
         "GITHUB_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO",
         "legacy_single_app_environment_keys_forbidden",
+        "artifact_identity",
+        "production_verifier_arguments",
+        "load_artifact_identity",
+        "PACKAGE_PATH",
+        "PROTOCOL_PATH",
         "launch_authorized",
         "marketplace_purchase",
         "administration",
@@ -116,10 +125,39 @@ def main() -> int:
         if marker not in renderer_source:
             fail(f"operator launch renderer missing marker: {marker}")
 
+    for stale_literal in ('"0.3.0"', '"0.3.1"'):
+        if stale_literal in renderer_source:
+            fail(f"operator launch renderer must not hard-code release version {stale_literal}")
+
+    expected_identity = {
+        "service": package.get("name"),
+        "service_version": package.get("version"),
+        "source_protocol_version": (package.get("anpos") or {}).get("source_protocol_version"),
+        "runtime_contract": (package.get("anpos") or {}).get("runtime_contract"),
+    }
+    if expected_identity["source_protocol_version"] != protocol.get("version"):
+        fail("commercial package/protocol identity must match before rendering an operator handoff")
+    if expected_identity["runtime_contract"] != "split-github-app-v1":
+        fail("operator bootstrap requires split-github-app-v1 artifact identity")
+
     data = render()
     if data:
+        if data.get("schema_version") != 2:
+            fail("operator launch renderer output must be schema_version 2")
         if data.get("status") != "operator_actions_required" or data.get("launch_authorized") is not False:
             fail("operator launch renderer must remain fail-closed and non-authoritative")
+        if data.get("artifact_identity") != expected_identity:
+            fail("operator handoff artifact_identity must be derived from deployable package metadata")
+        expected_args = [
+            "--require-ready",
+            "--expected-service-version",
+            str(expected_identity["service_version"]),
+            "--expected-protocol-version",
+            str(expected_identity["source_protocol_version"]),
+        ]
+        if data.get("production_verifier_arguments") != expected_args:
+            fail("operator handoff must emit exact package-derived production verifier arguments")
+
         apps = data.get("github_apps") or {}
         marketplace = apps.get("marketplace") or {}
         vendor = apps.get("vendor_distribution") or {}
@@ -171,23 +209,37 @@ def main() -> int:
         "ANPOS_PRIVATE_TEMPLATE_REPO",
     ):
         if env_name not in env_example:
-            fail(f"commercial service 0.3.0 environment example missing operator handoff key: {env_name}")
+            fail(f"commercial service environment example missing operator handoff key: {env_name}")
     for legacy in ("\nGITHUB_APP_ID=", "\nGITHUB_APP_PRIVATE_KEY="):
         if legacy in env_example:
             fail("commercial service environment example must not restore legacy single-App credentials")
 
     for marker in (
         "secret-safe renderer",
+        "package-derived artifact identity",
+        "`artifact_identity`",
+        "`production_verifier_arguments`",
         "public Marketplace App",
         "private Vendor Distribution App",
         "GITHUB_MARKETPLACE_APP_ID",
         "GITHUB_VENDOR_APP_ID",
         "Legacy `GITHUB_APP_ID`",
+        "/api/version",
         "/api/ready",
         "Re-check current GitHub App and GitHub Marketplace requirements",
     ):
         if marker not in doc:
             fail(f"operator launch bootstrap documentation missing marker: {marker}")
+    for stale_doc in ("commercial service 0.3.0", "commercial service 0.3.1", "Deploy 0.3.0", "Deploy 0.3.1"):
+        if stale_doc in doc:
+            fail(f"operator launch bootstrap documentation contains stale hand-maintained version: {stale_doc}")
+
+    for marker in (
+        "test_artifact_identity_and_verifier_args_are_package_derived",
+        "test_artifact_identity_fails_closed_on_package_protocol_mismatch",
+    ):
+        if marker not in tests_source:
+            fail(f"operator bootstrap tests missing artifact-identity marker: {marker}")
 
     boundary = load_json(BOUNDARY)
     vendor_only = set(boundary.get("vendor_only_paths") or [])

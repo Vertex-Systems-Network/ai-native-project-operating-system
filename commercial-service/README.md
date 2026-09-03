@@ -59,17 +59,16 @@ This split prevents a customer-facing Marketplace installation from inheriting v
 
 Production verification must not treat `/api/health` alone as proof that the intended artifact is deployed. `scripts/verify_commercial_production.py --require-ready` requires both `--expected-service-version` and `--expected-protocol-version`; it checks `/api/version` before readiness so a healthy but stale/wrong artifact fails certification.
 
-Example after deploying a certified artifact:
+Generate exact expected values from the canonical vendor/operator handoff instead of copying release numbers manually:
 
 ```bash
-python scripts/verify_commercial_production.py \
-  --base-url https://YOUR-SERVICE.example.com \
-  --require-ready \
-  --expected-service-version 0.3.1 \
-  --expected-protocol-version 1.3.8
+python scripts/render_operator_launch_bootstrap.py \
+  --organization YOUR_GITHUB_ORG \
+  --service-base-url https://YOUR-SERVICE.example.com \
+  --homepage-url https://YOUR-PRODUCT.example.com
 ```
 
-The production verifier uses the actual Next.js API route prefixes (`/api/v1/...`). There is no implicit `/v1/*` rewrite.
+Use the emitted `artifact_identity` to verify `/api/version` and the emitted `production_verifier_arguments` when invoking `scripts/verify_commercial_production.py`. The production verifier uses the actual Next.js API route prefixes (`/api/v1/...`). There is no implicit `/v1/*` rewrite.
 
 ## Recommended distribution architecture
 
@@ -117,8 +116,8 @@ Never edit an applied migration in place. Add a new numbered migration.
 7. Set real organization capacity policy in `ANPOS_ORG_SEAT_LIMITS`; Marketplace `unit_count` wins when GitHub supplies one.
 8. Install only the Vendor App on the vendor private-template repository with **Contents: read**. Add **Administration: write** only if collaborator provisioning is deliberately enabled.
 9. Set the Marketplace App webhook URL to `/api/webhooks/github/marketplace` and use the same secret as `GITHUB_WEBHOOK_SECRET`.
-10. Verify `/api/health` returns 200, `/api/version` matches the exact certified artifact, and `/api/ready` returns 200 before enabling sales.
-11. Run the production verifier with `--require-ready`, `--expected-service-version`, and `--expected-protocol-version`.
+10. Verify `/api/health` returns 200, `/api/version` matches the exact package-derived artifact identity, and `/api/ready` returns 200 before enabling sales.
+11. Run the production verifier with the package-derived `production_verifier_arguments` emitted by the operator launch bootstrap.
 12. Exercise purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation tests before go-live.
 
 ## API

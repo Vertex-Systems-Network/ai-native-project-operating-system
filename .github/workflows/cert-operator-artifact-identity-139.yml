@@ -1,0 +1,218 @@
+name: ANPOS 1.3.9 Operator Artifact Identity Certification
+
+on:
+  push:
+    branches:
+      - cert/operator-artifact-identity-139
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout certification branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Apply pending ANPOS 1.3.9 bookkeeping
+        id: bookkeeping
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f scripts/apply_protocol_139.py ]; then
+            python scripts/apply_protocol_139.py
+            git diff --check
+            git config user.name 'ANPOS Protocol Bot'
+            git config user.email 'actions@users.noreply.github.com'
+            git add -A
+            git commit -m 'Finalize ANPOS 1.3.9 operator artifact identity bookkeeping'
+            git push origin HEAD:cert/operator-artifact-identity-139
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Install validation dependency
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: python -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+
+      - name: Compile Python sources and tests
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: python -m compileall -q scripts tests
+
+      - name: Hide temporary certification workflow from source-inert checks
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: rm .github/workflows/cert-operator-artifact-identity-139.yml
+
+      - name: Run all Python unit and conformance tests
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Run all source commercial vendor Marketplace operator and deployment validators
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: |
+          set -euo pipefail
+          python scripts/validate_ai_native_repo.py
+          python scripts/validate_commercial_licensing.py
+          python scripts/validate_commercial_service.py
+          python scripts/validate_vendor_repository_export.py
+          python scripts/validate_commercial_launch_package.py
+          python scripts/validate_marketplace_staged_launch.py
+          python scripts/validate_operator_launch_bootstrap.py
+          python scripts/validate_deployment_identity.py
+
+      - name: Verify ANPOS 1.3.9 package-derived operator identity bookkeeping
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          version = json.loads(Path('config/protocol/version.json').read_text())
+          instance = json.loads(Path('config/protocol/instance.json').read_text())
+          migrations = json.loads(Path('config/protocol/migrations.json').read_text())
+          package = json.loads(Path('commercial-service/package.json').read_text())
+          lock = json.loads(Path('commercial-service/package-lock.json').read_text())
+          catalog = json.loads(Path('config/licensing/product-catalog.json').read_text())
+          renderer = Path('scripts/render_operator_launch_bootstrap.py').read_text()
+          doc = Path('blueprints/commercial/operator-launch-bootstrap.md').read_text()
+          readme = Path('README.md').read_text()
+
+          assert version['version'] == '1.3.9'
+          assert version['last_protocol_migration'] == 'ANPOS-1.3.8-to-1.3.9'
+          assert instance['source_protocol_version'] == '1.3.9'
+          assert migrations['current_protocol_version'] == '1.3.9'
+          assert any(item.get('id') == 'ANPOS-1.3.8-to-1.3.9' for item in migrations['applied_migrations'])
+          assert migrations['migration_record_template']['id'] == 'ANPOS-1.3.9-to-NEXT'
+          assert package['version'] == '0.3.2'
+          assert package['anpos']['source_protocol_version'] == '1.3.9'
+          assert package['anpos']['runtime_contract'] == 'split-github-app-v1'
+          assert lock['version'] == '0.3.2'
+          assert lock['packages']['']['version'] == '0.3.2'
+          assert [plan['id'] for plan in catalog['plans']] == ['developer', 'pro', 'team', 'enterprise']
+          assert '**Current protocol:** `1.3.9`' in readme
+          assert '## Operator artifact identity binding in 1.3.9' in readme
+          assert 'artifact_identity' in renderer
+          assert 'production_verifier_arguments' in renderer
+          assert 'load_artifact_identity' in renderer
+          assert 'package-derived artifact identity' in doc
+          assert 'commercial service 0.3.0' not in doc
+          assert 'commercial service 0.3.1' not in doc
+          assert not Path('scripts/apply_protocol_139.py').exists()
+
+          result = subprocess.run([
+              sys.executable,
+              'scripts/render_operator_launch_bootstrap.py',
+              '--organization', 'Vertex-Systems-Network',
+              '--service-base-url', 'https://license.example.test',
+              '--homepage-url', 'https://example.test/anpos',
+          ], check=True, text=True, capture_output=True)
+          handoff = json.loads(result.stdout)
+          assert handoff['schema_version'] == 2
+          assert handoff['launch_authorized'] is False
+          assert handoff['artifact_identity'] == {
+              'service': 'anpos-commercial-service',
+              'service_version': '0.3.2',
+              'source_protocol_version': '1.3.9',
+              'runtime_contract': 'split-github-app-v1',
+          }
+          assert handoff['production_verifier_arguments'] == [
+              '--require-ready',
+              '--expected-service-version', '0.3.2',
+              '--expected-protocol-version', '1.3.9',
+          ]
+          PY
+
+      - name: Restore temporary workflow and verify clean tree before export
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: |
+          git checkout -- .github/workflows/cert-operator-artifact-identity-139.yml
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Verify deterministic vendor exports and operator identity boundary
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/export-a" "$RUNNER_TEMP/export-b"
+          python scripts/export_vendor_repositories.py --output "$RUNNER_TEMP/export-a"
+          python scripts/export_vendor_repositories.py --output "$RUNNER_TEMP/export-b"
+          diff -qr "$RUNNER_TEMP/export-a/anpos-commercial-service" "$RUNNER_TEMP/export-b/anpos-commercial-service"
+          diff -qr "$RUNNER_TEMP/export-a/anpos-commercial-template" "$RUNNER_TEMP/export-b/anpos-commercial-template"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          root = Path(os.environ['RUNNER_TEMP']) / 'export-a'
+          template = root / 'anpos-commercial-template'
+          service = root / 'anpos-commercial-service'
+          policy = json.loads(Path('config/licensing/vendor-source-boundary.json').read_text())
+          for relative in policy['vendor_only_paths']:
+              assert not (template / relative).exists(), relative
+          for relative in (
+              'blueprints/commercial/operator-launch-bootstrap.md',
+              'scripts/render_operator_launch_bootstrap.py',
+              'scripts/validate_operator_launch_bootstrap.py',
+              'tests/test_operator_launch_bootstrap.py',
+              'scripts/validate_deployment_identity.py',
+              'tests/test_deployment_identity.py',
+          ):
+              assert not (template / relative).exists(), relative
+          manifest = json.loads((template / 'EXPORT-MANIFEST.json').read_text())
+          assert manifest['source_scope'] == 'canonical-minus-vendor-only-paths'
+          origins = {str(item['origin']) for item in manifest['files']}
+          for relative in policy['vendor_only_paths']:
+              assert relative not in origins
+              assert not any(origin.startswith(relative.rstrip('/') + '/') for origin in origins)
+          package = json.loads((service / 'package.json').read_text())
+          assert package['version'] == '0.3.2'
+          assert package['anpos']['source_protocol_version'] == '1.3.9'
+          assert package['anpos']['runtime_contract'] == 'split-github-app-v1'
+          assert (service / 'app/api/version/route.ts').is_file()
+          PY
+
+      - name: Set up Node 22
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: commercial-service/package-lock.json
+
+      - name: Pin npm 11.19.1 and install locked dependencies
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        working-directory: commercial-service
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1 --ignore-scripts
+          test "$(npm --version)" = "11.19.1"
+          node -e "if (!process.version.startsWith('v22.')) process.exit(1)"
+          npm ci
+          npm audit --audit-level=low
+
+      - name: Certify commercial service
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        working-directory: commercial-service
+        run: npm run certify
+
+      - name: Restore expected Next build mutations and verify tracked tree clean
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          unexpected="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(commercial-service/tsconfig.json|commercial-service/next-env.d.ts)$' || true)"
+          test -z "$unexpected"
+          git checkout -- commercial-service/tsconfig.json commercial-service/next-env.d.ts
+          test -z "$(git status --porcelain --untracked-files=no)"

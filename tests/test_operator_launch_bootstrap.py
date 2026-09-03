@@ -85,6 +85,47 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         )
         self.assertFalse(data["launch_authorized"])
 
+    def test_artifact_identity_and_verifier_args_are_package_derived(self) -> None:
+        data = self.renderer.render(self.inputs)
+        package = json.loads((ROOT / "commercial-service/package.json").read_text(encoding="utf-8"))
+        protocol = json.loads((ROOT / "config/protocol/version.json").read_text(encoding="utf-8"))
+        expected = {
+            "service": package["name"],
+            "service_version": package["version"],
+            "source_protocol_version": package["anpos"]["source_protocol_version"],
+            "runtime_contract": package["anpos"]["runtime_contract"],
+        }
+        self.assertEqual(data["schema_version"], 2)
+        self.assertEqual(data["artifact_identity"], expected)
+        self.assertEqual(expected["source_protocol_version"], protocol["version"])
+        self.assertEqual(
+            data["production_verifier_arguments"],
+            [
+                "--require-ready",
+                "--expected-service-version",
+                package["version"],
+                "--expected-protocol-version",
+                protocol["version"],
+            ],
+        )
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn('"0.3.0"', source)
+        self.assertNotIn('"0.3.1"', source)
+
+    def test_artifact_identity_fails_closed_on_package_protocol_mismatch(self) -> None:
+        import tempfile
+
+        package = json.loads((ROOT / "commercial-service/package.json").read_text(encoding="utf-8"))
+        protocol = json.loads((ROOT / "config/protocol/version.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            package_path = Path(tmp) / "package.json"
+            protocol_path = Path(tmp) / "version.json"
+            package["anpos"]["source_protocol_version"] = "9.9.9"
+            package_path.write_text(json.dumps(package), encoding="utf-8")
+            protocol_path.write_text(json.dumps(protocol), encoding="utf-8")
+            with self.assertRaisesRegex(self.renderer.BootstrapError, "does not match canonical protocol"):
+                self.renderer.load_artifact_identity(package_path, protocol_path)
+
     def test_renderer_rejects_non_https_and_credential_bearing_urls(self) -> None:
         with self.assertRaises(self.renderer.BootstrapError):
             self.renderer.normalize_https_url("http://example.test", "service base URL")

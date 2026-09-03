@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ BOUNDARY = ROOT / "config/licensing/vendor-source-boundary.json"
 VENDOR_QUALITY = ROOT / "blueprints/commercial/vendor-launch-quality.yml"
 CHILD_QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
 PROTOCOL = ROOT / "config/protocol/version.json"
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 ERRORS: list[str] = []
 
 
@@ -62,8 +64,9 @@ def main() -> int:
     package = load_json(PACKAGE)
     protocol = load_json(PROTOCOL)
     anpos = package.get("anpos") or {}
-    if package.get("version") != "0.3.1":
-        fail("commercial deployment identity milestone must certify service version 0.3.1")
+    service_version = str(package.get("version") or "")
+    if not VERSION_RE.fullmatch(service_version):
+        fail("commercial deployment identity must contain a valid semantic service version")
     if anpos.get("source_protocol_version") != protocol.get("version"):
         fail("commercial package source_protocol_version must equal canonical protocol version")
     if anpos.get("runtime_contract") != "split-github-app-v1":

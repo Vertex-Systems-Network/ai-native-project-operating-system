@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Render a secret-safe ANPOS commercial launch handoff.
 
-The renderer preconfigures GitHub App registration URLs and the production
-environment-variable contract, but it never accepts private keys, webhook
-secrets, database credentials, operator tokens, Marketplace plan IDs, prices,
-or other live secret/business values.
+The renderer preconfigures GitHub App registration URLs, exact deployable
+artifact identity, production-verifier arguments, and the production
+environment-variable contract. It never accepts private keys, webhook secrets,
+database credentials, operator tokens, Marketplace plan IDs, prices, or other
+live secret/business-authority values.
 """
 from __future__ import annotations
 
@@ -14,10 +15,17 @@ import re
 import sys
 import urllib.parse
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_PATH = ROOT / "commercial-service/package.json"
+PROTOCOL_PATH = ROOT / "config/protocol/version.json"
 ORG_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 APP_NAME_RE = re.compile(r"^[^\r\n]{3,100}$")
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+EXPECTED_SERVICE_NAME = "anpos-commercial-service"
+EXPECTED_RUNTIME_CONTRACT = "split-github-app-v1"
 
 MARKETPLACE_APP_ENV = [
     "GITHUB_MARKETPLACE_APP_ID",
@@ -54,6 +62,61 @@ class Inputs:
     marketplace_app_name: str
     vendor_app_name: str
     collaborator_provisioning: bool
+
+
+def load_json_object(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise BootstrapError(f"{label} is unavailable or invalid JSON: {exc}") from exc
+    if not isinstance(value, dict):
+        raise BootstrapError(f"{label} must contain a JSON object")
+    return value
+
+
+def load_artifact_identity(
+    package_path: Path = PACKAGE_PATH,
+    protocol_path: Path = PROTOCOL_PATH,
+) -> dict[str, str]:
+    """Load deployable identity from committed package/protocol metadata.
+
+    The package is the deployable artifact identity source. Canonical protocol
+    metadata is checked as an invariant so a stale package cannot generate a
+    misleading operator handoff.
+    """
+    package = load_json_object(package_path, "commercial service package metadata")
+    protocol = load_json_object(protocol_path, "canonical protocol metadata")
+
+    service = str(package.get("name") or "")
+    service_version = str(package.get("version") or "")
+    anpos = package.get("anpos") or {}
+    if not isinstance(anpos, dict):
+        raise BootstrapError("commercial service package anpos metadata must be an object")
+    source_protocol_version = str(anpos.get("source_protocol_version") or "")
+    runtime_contract = str(anpos.get("runtime_contract") or "")
+    canonical_protocol_version = str(protocol.get("version") or "")
+
+    if service != EXPECTED_SERVICE_NAME:
+        raise BootstrapError(f"unexpected commercial service package name: {service or '<missing>'}")
+    if not VERSION_RE.fullmatch(service_version):
+        raise BootstrapError("commercial service package version is missing or invalid")
+    if not VERSION_RE.fullmatch(source_protocol_version):
+        raise BootstrapError("commercial service source protocol version is missing or invalid")
+    if source_protocol_version != canonical_protocol_version:
+        raise BootstrapError(
+            "commercial service source protocol version does not match canonical protocol metadata"
+        )
+    if runtime_contract != EXPECTED_RUNTIME_CONTRACT:
+        raise BootstrapError(
+            f"commercial service runtime contract must be {EXPECTED_RUNTIME_CONTRACT}"
+        )
+
+    return {
+        "service": service,
+        "service_version": service_version,
+        "source_protocol_version": source_protocol_version,
+        "runtime_contract": runtime_contract,
+    }
 
 
 def normalize_https_url(value: str, label: str) -> str:
@@ -117,18 +180,36 @@ def vendor_registration_url(inputs: Inputs) -> str:
     return registration_url(inputs.organization, params)
 
 
-def render(inputs: Inputs) -> dict[str, Any]:
+def render(
+    inputs: Inputs,
+    artifact_identity: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    identity = dict(artifact_identity or load_artifact_identity())
+    required_identity = {"service", "service_version", "source_protocol_version", "runtime_contract"}
+    if set(identity) != required_identity or any(not str(identity[key]) for key in required_identity):
+        raise BootstrapError("artifact identity is incomplete")
+
     vendor_permissions = {"contents": "read", "metadata": "read"}
     if inputs.collaborator_provisioning:
         vendor_permissions["administration"] = "write"
 
+    verifier_arguments = [
+        "--require-ready",
+        "--expected-service-version",
+        identity["service_version"],
+        "--expected-protocol-version",
+        identity["source_protocol_version"],
+    ]
+
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "operator_actions_required",
         "launch_authorized": False,
         "organization": inputs.organization,
         "service_base_url": inputs.service_base_url,
         "homepage_url": inputs.homepage_url,
+        "artifact_identity": identity,
+        "production_verifier_arguments": verifier_arguments,
         "github_apps": {
             "marketplace": {
                 "role": "customer_marketplace_app",
@@ -157,15 +238,17 @@ def render(inputs: Inputs) -> dict[str, Any]:
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",
             "Install only the Vendor Distribution App on the private commercial-template repository.",
-            "Populate the 0.3.0 production environment contract with real external values.",
-            "Deploy commercial service 0.3.0 from vendor-private source or a verified immutable artifact.",
+            f"Populate the {identity['service']} {identity['service_version']} production environment contract with real external values.",
+            f"Deploy the exact {identity['service']} {identity['service_version']} artifact and require /api/version to report source protocol {identity['source_protocol_version']} and runtime contract {identity['runtime_contract']}.",
+            "Run scripts/verify_commercial_production.py with the generated production_verifier_arguments; exact artifact identity must pass before /api/ready can count as evidence.",
             "Require /api/ready HTTP 200 and real Marketplace E2E evidence before launch authorization.",
         ],
         "safety": [
             "This output contains no credentials and is not proof that either GitHub App exists.",
             "Registration URLs are prefilled operator aids; GitHub remains the authority for the final App configuration.",
+            "Artifact identity is read from committed deployable package metadata and checked against canonical protocol metadata; do not replace it with hand-maintained expected versions.",
             "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
-            "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with commercial service 0.3.0.",
+            "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
             "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, or production readiness from this output.",
         ],
     }
@@ -197,11 +280,12 @@ def main(argv: list[str] | None = None) -> int:
             vendor_app_name=validate_app_name(args.vendor_app_name, "Vendor App name"),
             collaborator_provisioning=bool(args.enable_collaborator_provisioning),
         )
+        output = render(inputs)
     except BootstrapError as exc:
         print(f"ANPOS operator launch bootstrap FAILED: {exc}", file=sys.stderr)
         return 2
 
-    print(json.dumps(render(inputs), indent=2, sort_keys=True))
+    print(json.dumps(output, indent=2, sort_keys=True))
     return 0
 
 
