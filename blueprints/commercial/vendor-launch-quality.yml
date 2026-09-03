@@ -31,7 +31,7 @@ jobs:
         run: python -m compileall -q scripts tests
 
       - name: Run vendor source-management tests
-        run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package -v
+        run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package tests.test_marketplace_staged_launch -v
 
       - name: Validate vendor export, commercial launch and staged Marketplace strategy
         run: |
