@@ -31,14 +31,15 @@ jobs:
         run: python -m compileall -q scripts tests
 
       - name: Run vendor source-management tests
-        run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package tests.test_marketplace_staged_launch tests.test_operator_launch_bootstrap -v
+        run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package tests.test_marketplace_staged_launch tests.test_operator_launch_bootstrap tests.test_deployment_identity -v
 
-      - name: Validate vendor export, commercial launch, staged Marketplace strategy and operator bootstrap
+      - name: Validate vendor export, commercial launch, staged Marketplace strategy, operator bootstrap and deployment identity
         run: |
           python scripts/validate_vendor_repository_export.py
           python scripts/validate_commercial_launch_package.py
           python scripts/validate_marketplace_staged_launch.py
           python scripts/validate_operator_launch_bootstrap.py
+          python scripts/validate_deployment_identity.py
 
       - name: Run protected-base vendor validators when available
         if: github.event_name == 'pull_request'
@@ -77,4 +78,12 @@ jobs:
             rm -f scripts/.trusted-base-operator-bootstrap-validator.py
           else
             echo 'Base predates operator launch bootstrap validator; current validator plus protected review remain required.'
+          fi
+
+          if git cat-file -e "${BASE_SHA}:scripts/validate_deployment_identity.py" 2>/dev/null; then
+            git show "${BASE_SHA}:scripts/validate_deployment_identity.py" > scripts/.trusted-base-deployment-identity-validator.py
+            python scripts/.trusted-base-deployment-identity-validator.py
+            rm -f scripts/.trusted-base-deployment-identity-validator.py
+          else
+            echo 'Base predates deployment identity validator; current validator plus protected review remain required.'
           fi
