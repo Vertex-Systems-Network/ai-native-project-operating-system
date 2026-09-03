@@ -27,11 +27,22 @@ export async function ensureSchema(): Promise<void> {
       action TEXT,
       github_account_id BIGINT,
       payload_sha256 TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'received',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      processing_started_at TIMESTAMPTZ,
       received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       processed_at TIMESTAMPTZ,
       result TEXT,
       error TEXT
     );
+    ALTER TABLE marketplace_deliveries ADD COLUMN IF NOT EXISTS status TEXT;
+    ALTER TABLE marketplace_deliveries ADD COLUMN IF NOT EXISTS attempts INTEGER;
+    ALTER TABLE marketplace_deliveries ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
+    UPDATE marketplace_deliveries SET status=CASE WHEN result='error' THEN 'error' WHEN processed_at IS NOT NULL THEN 'completed' ELSE 'received' END WHERE status IS NULL;
+    UPDATE marketplace_deliveries SET attempts=1 WHERE attempts IS NULL;
+    ALTER TABLE marketplace_deliveries ALTER COLUMN status SET DEFAULT 'received';
+    ALTER TABLE marketplace_deliveries ALTER COLUMN attempts SET DEFAULT 0;
+
     CREATE TABLE IF NOT EXISTS entitlements (
       github_account_id BIGINT PRIMARY KEY,
       github_login TEXT NOT NULL,
