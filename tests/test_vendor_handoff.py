@@ -162,6 +162,19 @@ class VendorHandoffVerificationTests(unittest.TestCase):
         with self.assertRaisesRegex(verifier.VerificationError, "must be clean"):
             self.verify_service(service)
 
+    def test_ignored_untracked_file_is_rejected_in_git_checkout(self) -> None:
+        service = self.export("service")
+        self.git(service, "init", "-b", "main")
+        self.git(service, "config", "user.email", "tests@example.invalid")
+        self.git(service, "config", "user.name", "Vendor Tests")
+        self.git(service, "add", ".")
+        self.git(service, "commit", "-m", "import certified export")
+        (service / ".git/info/exclude").write_text("IGNORED.txt\n", encoding="utf-8", newline="\n")
+        (service / "IGNORED.txt").write_text("hidden dirty file\n", encoding="utf-8", newline="\n")
+        self.assertEqual(self.git(service, "status", "--porcelain").stdout.strip(), "")
+        with self.assertRaisesRegex(verifier.VerificationError, "ignored files"):
+            self.verify_service(service)
+
     def test_service_identity_arguments_are_required_and_exact(self) -> None:
         service = self.export("service")
         with self.assertRaisesRegex(verifier.VerificationError, "requires expected service"):
