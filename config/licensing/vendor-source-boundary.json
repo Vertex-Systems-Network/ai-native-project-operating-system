@@ -17,12 +17,14 @@
     "blueprints/commercial/vendor-launch-quality.yml",
     "scripts/export_vendor_repositories.py",
     "scripts/render_operator_launch_bootstrap.py",
+    "scripts/validate_deployment_identity.py",
     "scripts/validate_vendor_repository_export.py",
     "scripts/validate_commercial_service.py",
     "scripts/validate_commercial_launch_package.py",
     "scripts/validate_marketplace_staged_launch.py",
     "scripts/validate_operator_launch_bootstrap.py",
     "scripts/verify_commercial_production.py",
+    "tests/test_deployment_identity.py",
     "tests/test_vendor_repository_export.py",
     "tests/test_commercial_launch_package.py",
     "tests/test_marketplace_staged_launch.py",
@@ -36,6 +38,7 @@
     "No untracked/local secrets may be copied by either bootstrap/export flow.",
     "GitHub Marketplace App and Vendor Distribution App blueprints are vendor-only launch architecture and must not leak into customer templates.",
     "Operator launch bootstrap tooling may accept only non-secret setup inputs and must never accept, print, or persist live credentials.",
+    "Deployment identity verification is vendor-only launch assurance and must reject stale/wrong service artifacts before production readiness can be certified.",
     "Removing vendor-only paths must not remove core ANPOS child development, security, quality, PM, AI selection, or non-secret entitlement-reference functionality."
   ]
 }
