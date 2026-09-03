@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.0`
+**Current protocol:** `1.3.1`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -26,7 +26,7 @@ Blueprint presence is never proof that a capability is enabled, purchased, conne
 1. Create/copy a new Git repository from ANPOS.
 2. Give the **child repository URL** to a compatible AI and ask it to initialize the project.
 3. The AI reads `AGENTS.md`, `.ai/manifest.json`, repository identity, and `config/protocol/instance.json`.
-4. If the repository is not the canonical source but inherited `instance_status: template_source`, run `scripts/bootstrap_instance.py` before project development.
+4. If the repository is not the canonical source but inherited `instance_status: template_source`, run `scripts/bootstrap_child.py` before project development.
 5. Offer **Start Development**.
 6. Continue the deterministic initialization flow below.
 
@@ -34,7 +34,7 @@ Blueprint presence is never proof that a capability is enabled, purchased, conne
 
 ### 1. Bootstrap child identity and safe defaults
 
-`scripts/bootstrap_instance.py`:
+`scripts/bootstrap_child.py`:
 
 - creates child instance identity;
 - clears inherited claims, leases, alerts, consent decisions, PM mappings and AI selections;
@@ -242,6 +242,14 @@ ANPOS `1.3.0` represents the complete current protocol set:
 
 Protocol representation does **not** mean a child runtime or commercial service has passed production certification. A production orchestrator must pass applicable project runtime scenarios; a commercial entitlement service must additionally pass `commercial_runtime_integration` scenarios in `config/testing/conformance-scenarios.json`.
 
+## Commercial runtime hardening in 1.3.1
+
+The optional vendor-side `commercial-service/` reference implementation now includes durable PostgreSQL rate limiting, bounded request parsing, retry-safe/idempotent Marketplace delivery processing, explicit organization seat assignment, principal-bound v2 organization entitlements, archive-first private template delivery, reference-counted collaborator revocation, least-privilege GitHub App tokens, checksum-locked database migrations, strict readiness gates, and a committed npm lockfile. Collaborator provisioning remains an optional fallback and is disabled by default.
+
+The commercial service was certified with locked `npm ci`, TypeScript typecheck, commercial security unit tests, Next.js production build, ANPOS validators/tests, and source-boundary checks. This certification proves the repository implementation/build contract; it does **not** claim that a GitHub Marketplace listing, GitHub App, production database, Vercel deployment, secrets, pricing, or customer billing runtime is live.
+
+`scripts/bootstrap_child.py` remains the canonical child bootstrap entrypoint and removes the vendor-only `commercial-service/` implementation from initialized customer/child repositories.
+
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.
@@ -307,6 +315,7 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 - `PRODUCTION-ASSURANCE.md` — requirements 57–66
 - `DESIGN-DATA-OPERATIONS.md` — requirements 67–74
 - `COMMERCIAL-LICENSING.md` — requirements 75–82
+- `commercial-service/` — vendor-only deployable Marketplace entitlement/distribution reference backend; stripped by canonical child bootstrap
 - `config/licensing/` — commercial policy, product catalog, Marketplace adapter and entitlement reference
 - `blueprints/commercial/` — inactive webhook and entitlement-envelope contracts
 - `CODE-QUALITY.md` — quality bootstrap and gates

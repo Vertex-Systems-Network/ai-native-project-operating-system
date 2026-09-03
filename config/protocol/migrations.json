@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.0",
+  "current_protocol_version": "1.3.1",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -162,12 +162,42 @@
         ".ai/manifest.json exposes commercial_distribution as an isolated role",
         "AGENTS.md, control-plane policy, path ownership and CODEOWNERS protect commercial licensing assets"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.0-to-1.3.1",
+      "from_version": "1.3.0",
+      "to_version": "1.3.1",
+      "detected_at": "2026-09-03T19:43:19+05:00",
+      "impact": [
+        "Production-harden the vendor-only GitHub Marketplace commercial service without changing core child-project execution into a billing dependency",
+        "Add durable database-backed rate limits, bounded request/webhook bodies, sanitized request IDs and race-safe idempotency controls",
+        "Make Marketplace webhook deliveries retry-safe with processing/completed/error state, stale-claim recovery, attempt tracking and delivery-id payload-hash conflict detection",
+        "Add explicit organization seat assignment/capacity enforcement and principal-bound format-v2 signed entitlements so organization membership alone never grants paid access",
+        "Prefer short-lived private GitHub archive delivery for scalable template distribution while keeping collaborator provisioning optional and disabled by default",
+        "Add reference-counted template-access grants, revocation reconciliation jobs and least-privilege GitHub App installation-token scopes",
+        "Replace request-path DDL with explicit checksum-locked PostgreSQL migrations and fail readiness when required migrations are absent or modified",
+        "Strengthen readiness validation for secrets, identifiers, Marketplace plan maps, organization seat limits, RSA/Ed25519 key types and database state",
+        "Commit a deterministic npm package-lock and certify installation with npm ci, TypeScript typecheck, commercial security unit tests and Next.js production build",
+        "Keep scripts/bootstrap_child.py as the canonical vendor-safe child entrypoint that strips commercial-service from initialized customer/child repositories"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "This patch hardens the optional vendor-side commercial distribution service. Existing child projects do not need or receive commercial-service. Adopt only protocol/reference changes that are relevant to a child, preserve project-specific behavior, and never introduce billing checks into normal child build/test/runtime merely by upgrading ANPOS.",
+      "status": "applied",
+      "applied_at": "2026-09-03T19:43:19+05:00",
+      "verification_evidence": [
+        "GitHub Actions run 33767978427 completed successfully with Python compile/tests, core validator, commercial licensing validator, commercial service validator, npm ci, TypeScript typecheck, commercial security unit tests, Next.js production build and source-boundary verification",
+        "ANPOS Python suite passed 28 tests on the certified source snapshot",
+        "commercial-service/package-lock.json is committed as lockfileVersion 3 and npm ci succeeded against the locked dependency graph",
+        "scripts/validate_commercial_service.py verifies rate limiting, webhook retry/idempotency, organization seats, archive-first distribution, access revocation, migration gating, readiness and vendor-safe child bootstrap invariants",
+        "Canonical source retained no active .github/workflows runtime files or active .github/dependabot.yml after certification"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.0-to-NEXT",
-    "from_version": "1.3.0",
+    "id": "ANPOS-1.3.1-to-NEXT",
+    "from_version": "1.3.1",
     "to_version": null,
     "detected_at": null,
     "impact": [],
