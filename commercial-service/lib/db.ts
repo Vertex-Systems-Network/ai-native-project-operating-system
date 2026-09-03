@@ -6,7 +6,14 @@ let schemaReady = false;
 
 export function db(): Pool {
   if (!pool) {
-    pool = new Pool({ connectionString: serviceConfig().databaseUrl, max: 5, idleTimeoutMillis: 10_000 });
+    pool = new Pool({
+      connectionString: serviceConfig().databaseUrl,
+      max: 5,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 5_000,
+      query_timeout: 10_000,
+      application_name: "anpos-commercial-service",
+    });
   }
   return pool;
 }
@@ -46,12 +53,64 @@ export async function ensureSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS provisioning_requests (
       idempotency_key TEXT PRIMARY KEY,
       github_account_id BIGINT NOT NULL,
+      target_github_user_id BIGINT,
       action TEXT NOT NULL,
       status TEXT NOT NULL,
       result JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       completed_at TIMESTAMPTZ
     );
+    ALTER TABLE provisioning_requests ADD COLUMN IF NOT EXISTS target_github_user_id BIGINT;
+
+    CREATE TABLE IF NOT EXISTS organization_seat_assignments (
+      github_account_id BIGINT NOT NULL,
+      github_user_id BIGINT NOT NULL,
+      github_login TEXT NOT NULL,
+      status TEXT NOT NULL,
+      assigned_by_user_id BIGINT NOT NULL,
+      assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      revoked_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (github_account_id, github_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS organization_seats_active_idx
+      ON organization_seat_assignments(github_account_id, status, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS template_access_grants (
+      source_account_id BIGINT NOT NULL,
+      github_user_id BIGINT NOT NULL,
+      github_login TEXT NOT NULL,
+      status TEXT NOT NULL,
+      granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      revoked_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (source_account_id, github_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS template_access_grants_user_idx
+      ON template_access_grants(github_user_id, status, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS access_reconciliation_jobs (
+      github_user_id BIGINT PRIMARY KEY,
+      github_login TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_error TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS access_reconciliation_pending_idx
+      ON access_reconciliation_jobs(status, available_at);
+
+    CREATE TABLE IF NOT EXISTS rate_limit_windows (
+      scope TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      window_start TIMESTAMPTZ NOT NULL,
+      request_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (scope, subject, window_start)
+    );
+    CREATE INDEX IF NOT EXISTS rate_limit_windows_cleanup_idx ON rate_limit_windows(updated_at);
+
     CREATE TABLE IF NOT EXISTS commercial_audit_log (
       id BIGSERIAL PRIMARY KEY,
       request_id TEXT NOT NULL,
