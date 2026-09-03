@@ -1,21 +1,21 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "inactive_blueprint",
-  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/provisioning service.",
+  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service.",
   "endpoints": [
     {
       "method": "POST",
       "path": "/webhooks/github/marketplace",
       "authentication": "github_webhook_hmac_sha256",
-      "idempotency": "X-GitHub-Delivery",
+      "idempotency": "X-GitHub-Delivery with payload-hash binding and retryable delivery state",
       "purpose": "Process verified marketplace_purchase events",
       "must_not_return_secrets": true
     },
     {
       "method": "GET",
       "path": "/v1/entitlements/current",
-      "authentication": "verified_github_account_session_or_app_identity",
-      "purpose": "Return current signed entitlement for the authenticated canonical GitHub account",
+      "authentication": "verified_github_user_access_token",
+      "purpose": "Return a current signed entitlement. Organization entitlements must be bound to an explicitly assigned GitHub user principal.",
       "response_contains_private_signing_material": false
     },
     {
@@ -26,11 +26,27 @@
       "response_contains_private_signing_material": false
     },
     {
+      "method": "GET",
+      "path": "/v1/template/archive",
+      "authentication": "verified_github_user_access_token_plus_active_entitlement_and_org_seat_when_applicable",
+      "purpose": "Issue a short-lived private GitHub archive redirect without permanently granting repository access",
+      "recommended_distribution_path": true,
+      "requires_active_entitlement": true
+    },
+    {
+      "method": "GET_POST_DELETE",
+      "path": "/v1/seats",
+      "authentication": "verified_active_github_organization_admin",
+      "purpose": "List, assign, or revoke organization seats with capacity enforcement and active-member verification",
+      "requires_members_organization_permission": "read"
+    },
+    {
       "method": "POST",
       "path": "/v1/provision",
-      "authentication": "verified_github_account_session_or_app_identity",
+      "authentication": "verified_github_user_access_token_plus_active_entitlement_and_org_seat_when_applicable",
       "idempotency_header": "Idempotency-Key",
-      "purpose": "Provision an entitled private template/update/service capability after server-side entitlement verification",
+      "purpose": "Optional collaborator-based private-template provisioning after server-side entitlement verification",
+      "default_enabled": false,
       "requires_active_entitlement": true,
       "must_not_modify_existing_generated_project_on_expiry": true
     },
@@ -38,21 +54,31 @@
       "method": "POST",
       "path": "/v1/reconcile",
       "authentication": "operator_or_trusted_runtime_only",
-      "idempotency_header": "Idempotency-Key",
       "purpose": "Reconcile commercial ledger against authenticated billing-provider reality after missed/ambiguous events",
+      "customer_callable": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/access/reconcile",
+      "authentication": "operator_or_trusted_runtime_only",
+      "purpose": "Retry revocation of vendor-template collaborator access after entitlement/seat revocation while preserving access backed by other active grants",
       "customer_callable": false
     }
   ],
   "cross_cutting_rules": {
     "canonical_subject_is_github_numeric_account_id": true,
+    "organization_consumption_requires_explicit_seat_principal": true,
     "authorization_is_server_side": true,
     "repository_reference_is_not_authorization": true,
     "rate_limiting_required": true,
+    "bounded_request_bodies_required": true,
     "structured_audit_logging_required": true,
     "sensitive_fields_redacted_from_logs": true,
     "request_ids_required": true,
     "timeouts_and_bounded_retries_required": true,
+    "least_privilege_github_app_tokens_required": true,
     "no_payment_card_storage_when_processor_handles_payment": true,
-    "no_remote_kill_switch_for_generated_customer_projects": true
+    "no_remote_kill_switch_for_generated_customer_projects": true,
+    "vendor_template_access_may_be_revoked_without_modifying_generated_customer_projects": true
   }
 }
