@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.2",
+  "current_protocol_version": "1.3.3",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -220,12 +220,39 @@
         "Node 22/npm 11.19.1 locked npm ci and npm audit completed with 0 reported vulnerabilities",
         "Commercial TypeScript typecheck, four security unit tests, Next.js 16.3.4 production build and final tracked clean-tree gate passed"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.2-to-1.3.3",
+      "from_version": "1.3.2",
+      "to_version": "1.3.3",
+      "detected_at": "2026-09-03T23:41:00+05:00",
+      "impact": [
+        "Add an inactive GitHub App configuration blueprint with archive-first least-privilege permissions and explicit operator-supplied identifiers",
+        "Add a GitHub Marketplace listing draft with plan positioning but no repository-defined prices, plan IDs, tax/refund/SLA promises or legal commitments",
+        "Add a fail-closed machine-readable production launch checklist whose source state can never authorize sales or pre-verify external launch gates",
+        "Add a legal document template pack for Terms, EULA/license, Privacy, Refund/Cancellation and Support/SLA while explicitly requiring operator/legal/accounting review",
+        "Add a production smoke verifier for health/readiness/public keys plus optional customer/operator checks using environment-variable secret references rather than raw secret CLI values",
+        "Add launch-package unit/static validation and integrate the launch validator into the inactive repository-quality blueprint including protected-base validation",
+        "Preserve core/child non-destructive license expiry and source-template inertness; no production credentials, prices, customer records or live launch evidence are added"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing child projects do not require this vendor/operator launch package. Do not introduce billing, legal, Marketplace or production-launch dependencies into normal child execution merely by adopting ANPOS 1.3.3.",
+      "status": "applied",
+      "applied_at": "2026-09-03T23:41:00+05:00",
+      "verification_evidence": [
+        "Commercial launch package certification must pass before publishing this migration to canonical main",
+        "Source launch checklist remains launch_authorized=false and carries no live external evidence",
+        "GitHub App blueprint contains no credentials or final runtime identifiers",
+        "Marketplace listing/legal files remain explicit drafts/templates rather than billing/legal authority",
+        "Production verifier does not synthesize or claim real Marketplace purchase evidence"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.2-to-NEXT",
-    "from_version": "1.3.2",
+    "id": "ANPOS-1.3.3-to-NEXT",
+    "from_version": "1.3.3",
     "to_version": null,
     "detected_at": null,
     "impact": [],

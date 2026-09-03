@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.2`
+**Current protocol:** `1.3.3`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -354,6 +354,15 @@ python scripts/export_vendor_repositories.py --output <outside-directory>
 The default export produces `anpos-commercial-service` from committed `commercial-service/` Git blobs with the prefix stripped, and `anpos-commercial-template` from the canonical source with `commercial-service/` excluded. Exported bytes come from committed Git objects at `HEAD`, not untracked or modified working-tree files. Each output includes `EXPORT-MANIFEST.json` with source revision/tree and per-file Git object/mode/SHA-256 provenance.
 
 The exporter refuses tracked secret-like files, committed symlinks, generated/runtime paths, unsupported Git modes, dirty tracked trees by default, output paths inside the canonical repository, and pre-existing targets. It does **not** create GitHub repositories, configure a GitHub App/Marketplace listing, transfer credentials, deploy a runtime, or make commercial licensing a child-project dependency.
+
+
+## Commercial launch package in 1.3.3
+
+ANPOS includes an **inactive vendor/operator launch package** under `blueprints/commercial/` plus `scripts/verify_commercial_production.py`. It provides a GitHub App configuration blueprint, Marketplace listing draft, fail-closed production launch checklist, legal-document template pack, and production smoke verifier.
+
+These assets do not create a GitHub App, approve Marketplace financial onboarding, set prices/plan IDs, accept legal terms, store production credentials, or authorize sales. The source checklist remains `launch_authorized: false`; production promotion requires real external evidence for every required gate. The verifier may check health/readiness/public keys and optional authenticated customer/operator routes, but synthetic smoke checks are never evidence of a real Marketplace purchase/change/cancel event.
+
+The inactive repository-quality blueprint runs the commercial launch-package validator and protected-base validation so this fail-closed boundary cannot silently disappear when a child/vendor quality workflow is instantiated.
 
 ## Repository hygiene
 
