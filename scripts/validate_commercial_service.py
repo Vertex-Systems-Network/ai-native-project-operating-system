@@ -96,7 +96,10 @@ def main() -> int:
     )
     require_markers(
         "lib/entitlements.ts",
-        ("marketplacePlanMap", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:", "subscription.type === \"Organization\" ? null", "revokeAllTemplateGrantsForSource"),
+        (
+            "marketplacePlanMap", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:",
+            'subscription.type === "Organization"', "signed_entitlement: envelope", "revokeAllTemplateGrantsForSource",
+        ),
         "entitlement engine",
     )
 
