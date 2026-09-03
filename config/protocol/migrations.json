@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.12",
+  "current_protocol_version": "1.3.13",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -512,13 +512,41 @@
         "tests/test_deployment_identity.py plus scripts/validate_deployment_identity.py prevent authenticated smoke contract drift",
         "commercial-service/package.json embeds source_protocol_version 1.3.12 and service version 0.3.5 for exact /api/version attestation"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.12-to-1.3.13",
+      "from_version": "1.3.12",
+      "to_version": "1.3.13",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Add a permanent canonical-source GitHub Actions certification workflow for pull requests targeting main and pushes to main instead of relying only on temporary release workflows",
+        "Keep the source certification workflow read-only, repository-guarded, concurrency-bounded and pinned to immutable GitHub Action commit SHAs",
+        "Run the complete Python test/validator suite, deterministic vendor export and exact handoff verification, locked npm audit, TypeScript tests and Next.js build on every source certification run",
+        "Add a dedicated validator and regression tests so the persistent source CI contract cannot silently lose core gates, gain write/secrets authority, or use floating Action refs",
+        "Classify the persistent source CI workflow/validator/tests as canonical-vendor-source-only so customer child repositories and anpos-commercial-template exports do not inherit source maintenance automation",
+        "Replace the previous source test that required zero workflows with an exact allowlist for the single guarded source certification workflow",
+        "Bump deployable commercial service identity because /api/version must attest the canonical ANPOS 1.3.13 source protocol identity",
+        "Do not claim or fabricate GitHub branch protection/ruleset enforcement; authenticated repository settings currently remain an external governance control"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "The persistent certification workflow is canonical-source-only and is stripped from customer/template exports. Existing child repositories keep their normal child workflow model and should not copy this source-maintenance workflow merely by adopting protocol 1.3.13.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        ".github/workflows/source-continuous-certification.yml is committed only on the canonical source and triggers on pull_request/main plus push/main",
+        "scripts/validate_source_continuous_certification.py fails on write permissions, secret references, floating Action refs, missing certification gates, or missing vendor-boundary exclusions",
+        "tests/test_source_continuous_certification.py covers read-only repository guard, immutable Action refs, full certification markers, and source-only stripping",
+        "config/licensing/vendor-source-boundary.json strips all three source continuous-certification assets from customer/template exports",
+        "GitHub branch protection/ruleset enforcement remains external evidence and is not marked verified by this migration"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.12-to-NEXT",
-    "from_version": "1.3.12",
-    "to_version": null,
+    "id": "ANPOS-1.3.13-to-NEXT",
+    "from_version": "1.3.13",
+    "to_version": "NEXT",
     "detected_at": null,
     "impact": [],
     "project_conflicts": [],
