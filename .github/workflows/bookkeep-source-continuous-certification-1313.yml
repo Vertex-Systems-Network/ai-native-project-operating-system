@@ -1,0 +1,39 @@
+name: ANPOS 1.3.13 Source CI Bookkeeping
+
+on:
+  push:
+    branches:
+      - cert/source-continuous-certification-1313
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anpos-1313-source-ci-bookkeeping
+  cancel-in-progress: false
+
+jobs:
+  bookkeep:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout bookkeeping branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Apply pending ANPOS 1.3.13 bookkeeping
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f scripts/apply_protocol_1313.py ]; then
+            python scripts/apply_protocol_1313.py
+            git diff --check
+            git config user.name 'ANPOS Protocol Bot'
+            git config user.email 'actions@users.noreply.github.com'
+            git add -A
+            git commit -m 'Finalize ANPOS 1.3.13 persistent source certification bookkeeping'
+            git push origin HEAD:cert/source-continuous-certification-1313
+          else
+            echo 'ANPOS 1.3.13 bookkeeping already applied; no mutation required.'
+          fi
