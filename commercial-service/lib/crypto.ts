@@ -24,6 +24,7 @@ function canonicalize(value: unknown): string {
 export type EntitlementClaims = {
   issuer: string;
   subject: { github_account_id: number; github_account_type: string; github_login: string };
+  principal?: { github_user_id: number; github_login: string };
   license_id: string;
   plan_id: string;
   seats: number | null;
@@ -36,7 +37,7 @@ export type EntitlementClaims = {
 export function signEntitlement(claims: EntitlementClaims) {
   const cfg = serviceConfig();
   const unsigned = {
-    format_version: 1,
+    format_version: claims.principal ? 2 : 1,
     ...claims,
     jti: randomUUID(),
     key_id: cfg.entitlementKeyId,
