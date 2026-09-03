@@ -16,7 +16,9 @@ LISTING = ROOT / "blueprints/commercial/marketplace-listing-draft.md"
 LEGAL = ROOT / "blueprints/commercial/legal-pack.template.md"
 VERIFIER = ROOT / "scripts/verify_commercial_production.py"
 TESTS = ROOT / "tests/test_commercial_launch_package.py"
-QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
+VENDOR_QUALITY = ROOT / "blueprints/commercial/vendor-launch-quality.yml"
+CHILD_QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
+BOUNDARY = ROOT / "config/licensing/vendor-source-boundary.json"
 
 
 def fail(message: str) -> None:
@@ -47,7 +49,7 @@ def require_text(path: Path, markers: tuple[str, ...]) -> str:
 
 
 def main() -> int:
-    for path in (APP_BLUEPRINT, CHECKLIST, LISTING, LEGAL, VERIFIER, TESTS):
+    for path in (APP_BLUEPRINT, CHECKLIST, LISTING, LEGAL, VERIFIER, TESTS, VENDOR_QUALITY, BOUNDARY):
         if not path.is_file():
             fail(f"missing {path.relative_to(ROOT)}")
 
@@ -172,9 +174,40 @@ def main() -> int:
         except SyntaxError as exc:
             fail(f"launch package tests are not valid Python: {exc}")
 
-    quality = QUALITY.read_text(encoding="utf-8") if QUALITY.is_file() else ""
-    if "python scripts/validate_commercial_launch_package.py" not in quality:
-        fail("inactive repository-quality blueprint must run commercial launch package validator")
+    vendor_quality = require_text(
+        VENDOR_QUALITY,
+        (
+            "python scripts/validate_commercial_launch_package.py",
+            "scripts/.trusted-base-commercial-launch-validator.py",
+            "tests.test_commercial_launch_package",
+        ),
+    )
+    child_quality = CHILD_QUALITY.read_text(encoding="utf-8") if CHILD_QUALITY.is_file() else ""
+    if "validate_commercial_launch_package.py" in child_quality or "test_commercial_launch_package" in child_quality:
+        fail("child repository-quality blueprint must not depend on vendor-only launch package files")
+
+    boundary = load_json(BOUNDARY) if BOUNDARY.is_file() else {}
+    if boundary.get("activation_scope") != "canonical_vendor_source_management_only":
+        fail("vendor source boundary must remain canonical_vendor_source_management_only")
+    vendor_only = set(boundary.get("vendor_only_paths") or [])
+    required_vendor_only = {
+        "commercial-service",
+        "blueprints/commercial/github-app-manifest.example.json",
+        "blueprints/commercial/legal-pack.template.md",
+        "blueprints/commercial/marketplace-listing-draft.md",
+        "blueprints/commercial/production-launch-checklist.json",
+        "blueprints/commercial/vendor-launch-quality.yml",
+        "scripts/export_vendor_repositories.py",
+        "scripts/validate_vendor_repository_export.py",
+        "scripts/validate_commercial_service.py",
+        "scripts/validate_commercial_launch_package.py",
+        "scripts/verify_commercial_production.py",
+        "tests/test_vendor_repository_export.py",
+        "tests/test_commercial_launch_package.py",
+    }
+    missing_vendor = sorted(required_vendor_only - vendor_only)
+    if missing_vendor:
+        fail(f"vendor source boundary missing paths: {', '.join(missing_vendor)}")
 
     if ERRORS:
         print("ANPOS commercial launch package validation failed:", file=sys.stderr)
