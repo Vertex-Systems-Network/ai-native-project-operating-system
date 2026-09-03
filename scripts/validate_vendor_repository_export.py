@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPORTER = ROOT / "scripts" / "export_vendor_repositories.py"
 TESTS = ROOT / "tests" / "test_vendor_repository_export.py"
 QUALITY_BLUEPRINT = ROOT / "blueprints" / "github" / "workflows" / "repository-quality.yml"
+BOUNDARY = ROOT / "config" / "licensing" / "vendor-source-boundary.json"
 ERRORS: list[str] = []
 
 
@@ -44,20 +46,46 @@ def main() -> int:
         except SyntaxError as exc:
             fail(f"vendor exporter tests are not valid Python: {exc}")
 
+    if not BOUNDARY.is_file():
+        fail("missing config/licensing/vendor-source-boundary.json")
+        boundary = {}
+    else:
+        try:
+            boundary = json.loads(BOUNDARY.read_text(encoding="utf-8"))
+        except Exception as exc:
+            fail(f"vendor source boundary is not valid JSON: {exc}")
+            boundary = {}
+    if boundary.get("activation_scope") != "canonical_vendor_source_management_only":
+        fail("vendor source boundary activation scope must remain canonical_vendor_source_management_only")
+    vendor_only = set(boundary.get("vendor_only_paths") or [])
+    for required in (
+        "commercial-service",
+        "scripts/export_vendor_repositories.py",
+        "scripts/validate_vendor_repository_export.py",
+        "tests/test_vendor_repository_export.py",
+        "scripts/verify_commercial_production.py",
+        "blueprints/commercial/production-launch-checklist.json",
+    ):
+        if required not in vendor_only:
+            fail(f"vendor source boundary missing required path: {required}")
+
     require_markers(
         source,
         (
             'SERVICE_REPOSITORY_NAME = "anpos-commercial-service"',
             'TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"',
+            'VENDOR_BOUNDARY_REPOSITORY_PATH = "config/licensing/vendor-source-boundary.json"',
             'source_material": "committed_git_blobs_at_head"',
             '"cat-file", "blob"',
             '"ls-tree", "-r", "-z", "HEAD"',
+            '"show", f"HEAD:{VENDOR_BOUNDARY_REPOSITORY_PATH}"',
             'tracked working tree is dirty',
             'secret-like tracked file must not be exported',
             'symlink export is refused',
             'output directory must be outside the canonical source repository',
             'export target already exists',
-            'canonical-minus-commercial-service',
+            'canonical-minus-vendor-only-paths',
+            'path_matches_vendor_only(entry.path, vendor_only_paths)',
             'contains_secrets": False',
         ),
         "vendor exporter",
@@ -66,12 +94,13 @@ def main() -> int:
         tests,
         (
             "test_service_export_strips_prefix_and_uses_committed_blob_provenance",
-            "test_template_export_excludes_vendor_commercial_service",
+            "test_template_export_excludes_all_vendor_only_paths",
             "test_untracked_secret_is_never_exported",
             "test_tracked_secret_like_file_fails_closed",
             "test_dirty_tracked_tree_rejected_but_override_still_exports_head_blob",
             "test_existing_target_is_non_destructive",
             "test_output_inside_canonical_repository_is_refused",
+            "test_invalid_committed_vendor_boundary_fails_closed",
             "test_committed_symlink_is_refused",
         ),
         "vendor exporter tests",
@@ -91,12 +120,20 @@ def main() -> int:
         )
 
     bootstrap = (ROOT / "scripts" / "bootstrap_child.py").read_text(encoding="utf-8")
-    if 'VENDOR_ONLY_PATHS = ("commercial-service",)' not in bootstrap:
-        fail("child bootstrap must continue stripping commercial-service from customer repositories")
+    require_markers(
+        bootstrap,
+        (
+            "VENDOR_BOUNDARY_PATH",
+            "load_vendor_only_paths",
+            'activation_scope") != "canonical_vendor_source_management_only"',
+            "for relative in vendor_only_paths",
+        ),
+        "child bootstrap vendor source boundary",
+    )
 
     commercial_validator = (ROOT / "scripts" / "validate_commercial_service.py").read_text(encoding="utf-8")
-    if '"commercial-service" not in bootstrap' not in commercial_validator:
-        fail("commercial validator must continue enforcing child bootstrap vendor stripping")
+    if "vendor-source-boundary.json" not in commercial_validator:
+        fail("commercial validator must enforce the shared vendor source boundary policy")
 
     if ERRORS:
         print("ANPOS vendor repository export validation failed:", file=sys.stderr)
