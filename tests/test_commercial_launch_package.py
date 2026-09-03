@@ -31,6 +31,57 @@ class CommercialLaunchPackageTests(unittest.TestCase):
             self.assertNotEqual(gate["status"], "verified")
             self.assertIsNone(gate["evidence"])
 
+    def test_marketplace_compliance_baseline(self) -> None:
+        data = json.loads((ROOT / "blueprints/commercial/github-marketplace-compliance.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["status"], "operator_verification_required")
+        self.assertEqual(data["activation_scope"], "vendor_marketplace_launch_only")
+        self.assertEqual(data["source_checked_at"], "2026-09-04")
+        self.assertGreaterEqual(len(data["official_sources"]), 5)
+        self.assertTrue(all(url.startswith("https://docs.github.com/") for url in data["official_sources"]))
+
+        paid = data["paid_github_app"]
+        self.assertTrue(paid["must_be_organization_owned"])
+        self.assertTrue(paid["listing_submitter_must_be_organization_owner"])
+        self.assertTrue(paid["verified_publisher_required"])
+        self.assertTrue(paid["financial_onboarding_required"])
+        self.assertEqual(paid["minimum_installations_before_paid_listing"], 100)
+        self.assertTrue(
+            {
+                "verified_organization_domain",
+                "confirmed_contact_email",
+                "organization_two_factor_authentication_required",
+            }.issubset(set(paid["verified_publisher_prerequisites"]))
+        )
+
+        pricing = data["pricing"]
+        self.assertEqual(pricing["maximum_plans"], 10)
+        self.assertEqual(pricing["paid_plan_currency"], "USD")
+        self.assertTrue(pricing["paid_plan_monthly_price_required"])
+        self.assertTrue(pricing["paid_plan_annual_price_required"])
+        self.assertTrue(pricing["repository_must_not_define_live_prices"])
+
+        trial = data["free_trial_privacy"]
+        self.assertEqual(trial["github_marketplace_trial_days_when_enabled_at_source_check"], 14)
+        self.assertEqual(trial["cancelled_trial_private_customer_data_delete_within_days"], 30)
+        self.assertTrue(trial["must_reverify_before_publication"])
+
+    def test_marketplace_compliance_gates_are_required(self) -> None:
+        data = json.loads((ROOT / "blueprints/commercial/production-launch-checklist.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["schema_version"], 2)
+        gate_ids = {gate["id"] for gate in data["required_gates"]}
+        expected = {
+            "marketplace_publisher",
+            "marketplace_installation_threshold",
+            "marketplace_listing",
+            "marketplace_listing_assets",
+            "marketplace_plans",
+            "customer_billing_experience",
+            "free_trial_privacy",
+            "real_marketplace_events",
+            "reconciliation",
+        }
+        self.assertTrue(expected.issubset(gate_ids))
+
     def test_app_blueprint_has_least_privilege_archive_mode(self) -> None:
         data = json.loads((ROOT / "blueprints/commercial/github-app-manifest.example.json").read_text(encoding="utf-8"))
         self.assertEqual(data["status"], "operator_configuration_required")
@@ -47,6 +98,7 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         for expected in (
             "commercial-service",
             "blueprints/commercial/github-app-manifest.example.json",
+            "blueprints/commercial/github-marketplace-compliance.json",
             "blueprints/commercial/legal-pack.template.md",
             "blueprints/commercial/marketplace-listing-draft.md",
             "blueprints/commercial/production-launch-checklist.json",
