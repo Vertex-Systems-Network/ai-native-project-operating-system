@@ -1,12 +1,14 @@
 {
   "name": "anpos-commercial-service",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "tsx --test tests/*.test.ts",
+    "certify": "npm run typecheck && npm run test:unit && npm run build"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -22,6 +24,7 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.2.11",
     "@types/react-dom": "19.2.3",
+    "tsx": "4.23.13",
     "typescript": "7.0.2"
   }
 }
