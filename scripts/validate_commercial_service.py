@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -14,9 +13,11 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/entitlements.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/webhooks/github/marketplace/route.ts",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
-    "app/api/v1/provision/route.ts",
+    "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts",
+    "app/api/v1/access/reconcile/route.ts",
 ]
 
 
@@ -32,6 +33,13 @@ def text(relative: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def require_markers(relative: str, markers: tuple[str, ...], label: str) -> None:
+    source = text(relative)
+    for marker in markers:
+        if marker not in source:
+            fail(f"{label} missing marker: {marker}")
+
+
 def main() -> int:
     for relative in REQUIRED:
         text(relative)
@@ -44,36 +52,109 @@ def main() -> int:
             fail(f"commercial service missing npm script: {script}")
 
     env_example = text(".env.example")
-    for secret_name in (
-        "GITHUB_WEBHOOK_SECRET", "GITHUB_APP_PRIVATE_KEY", "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_OPERATOR_TOKEN"
+    for name in (
+        "DATABASE_URL", "GITHUB_WEBHOOK_SECRET", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
+        "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
+        "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
+        "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
     ):
-        if secret_name not in env_example:
-            fail(f"commercial service environment contract missing {secret_name}")
+        if name not in env_example:
+            fail(f"commercial service environment contract missing {name}")
+    if "ANPOS_COLLABORATOR_PROVISIONING_ENABLED=false" not in env_example:
+        fail("collaborator provisioning must be off by default in the environment example")
 
     all_source = "\n".join(path.read_text(encoding="utf-8") for path in SERVICE.rglob("*.ts") if path.is_file())
     for forbidden in ("BEGIN PRIVATE KEY-----\\nMII", "ghp_", "github_pat_", "postgresql://postgres:"):
         if forbidden in all_source:
             fail(f"commercial service source appears to contain a committed secret marker: {forbidden}")
 
-    webhook = text("app/api/webhooks/github/marketplace/route.ts")
-    for marker in ("x-hub-signature-256", "x-github-delivery", "marketplace_purchase", "reconcileEntitlement"):
-        if marker not in webhook:
-            fail(f"Marketplace webhook missing security/reconciliation marker: {marker}")
+    require_markers(
+        "app/api/webhooks/github/marketplace/route.ts",
+        (
+            "x-hub-signature-256", "x-github-delivery", "marketplace_purchase", "readRawBody",
+            "delivery_id_payload_mismatch", "already_processing", "processing_started_at", "status='error'",
+            "payload?.marketplace_purchase?.account?.id",
+        ),
+        "Marketplace webhook",
+    )
+    require_markers(
+        "lib/github.ts",
+        (
+            "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
+            'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
+            "removeTemplateCollaborator", "codeload.github.com",
+        ),
+        "GitHub client",
+    )
+    require_markers(
+        "lib/crypto.ts",
+        ("timingSafeEqual", "Ed25519", "base64url", "principal?", "claims.principal ? 2 : 1"),
+        "entitlement cryptography",
+    )
+    require_markers(
+        "lib/entitlements.ts",
+        ("marketplacePlanMap", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:", "subscription.type === \"Organization\" ? null", "revokeAllTemplateGrantsForSource"),
+        "entitlement engine",
+    )
+    require_markers(
+        "lib/db.ts",
+        ("rate_limit_windows", "organization_seat_assignments", "template_access_grants", "access_reconciliation_jobs", "processing_started_at", "query_timeout"),
+        "commercial database schema",
+    )
+    require_markers(
+        "lib/rate-limit.ts",
+        ("ON CONFLICT (scope,subject,window_start)", "request_count=rate_limit_windows.request_count + 1", "Retry-After"),
+        "rate limiter",
+    )
+    require_markers(
+        "app/api/v1/seats/route.ts",
+        ("requireGithubOrganizationAdmin", "resolveActiveOrganizationMember", "assignSeat", "revokeSeat", "organization_seat_admin"),
+        "organization seat API",
+    )
+    require_markers(
+        "app/api/v1/template/archive/route.ts",
+        ("templateArchiveRedirect", "requireActiveSeat", "template_archive", "Cache-Control", "307"),
+        "template archive delivery",
+    )
+    require_markers(
+        "app/api/v1/provision/route.ts",
+        ("ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "idempotency_key_conflict", "ON CONFLICT (idempotency_key) DO NOTHING", "recordTemplateAccessGrant", "requireActiveSeat"),
+        "collaborator provisioning",
+    )
+    require_markers(
+        "lib/template-access.ts",
+        ("retained_due_to_other_active_grant", "removeTemplateCollaborator", "access_reconciliation_jobs", "retry_queued"),
+        "template access revocation",
+    )
+    require_markers(
+        "app/api/ready/route.ts",
+        ("configurationProblems", "asymmetricKeyType", '"rsa"', '"ed25519"', "organizationSeatCapacity", "SELECT 1"),
+        "readiness gate",
+    )
 
-    github_client = text("lib/github.ts")
-    for marker in ("marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens"):
-        if marker not in github_client:
-            fail(f"GitHub client missing required current integration marker: {marker}")
+    entitlement_schema = json.loads((ROOT / "schemas/license-entitlement.schema.json").read_text(encoding="utf-8"))
+    schema_text = json.dumps(entitlement_schema, sort_keys=True)
+    for marker in ('"principal"', '"format_version"', '"const": 2', '"github_account_type": {"const": "Organization"}'):
+        if marker not in schema_text:
+            fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
-    crypto = text("lib/crypto.ts")
-    for marker in ("timingSafeEqual", "Ed25519", "base64url"):
-        if marker not in crypto:
-            fail(f"entitlement cryptography missing marker: {marker}")
+    api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
+    if api_contract.get("schema_version") != 2:
+        fail("commercial service API contract must be schema_version 2")
+    contract_text = json.dumps(api_contract, sort_keys=True)
+    for marker in ("/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "organization_consumption_requires_explicit_seat_principal"):
+        if marker not in contract_text:
+            fail(f"commercial service API contract missing marker: {marker}")
 
-    provision = text("app/api/v1/provision/route.ts")
-    for marker in ("idempotency-key", "organization_seat_assignment_required", "private_template_access"):
-        if marker not in provision:
-            fail(f"provisioning guard missing marker: {marker}")
+    catalog = json.loads((ROOT / "config/licensing/product-catalog.json").read_text(encoding="utf-8"))
+    plans_source = text("lib/plans.ts")
+    for plan in catalog.get("plans", []):
+        plan_id = plan.get("id")
+        if plan_id and f"{plan_id}:" not in plans_source:
+            fail(f"commercial runtime plan map missing catalog plan: {plan_id}")
+        for entitlement in plan.get("entitlements", []):
+            if entitlement not in plans_source:
+                fail(f"commercial runtime plan features missing catalog entitlement: {plan_id}:{entitlement}")
 
     control = json.loads((ROOT / "config/security/control-plane-policy.json").read_text(encoding="utf-8"))
     if "/commercial-service/**" not in control.get("protected_paths", []):
@@ -84,6 +165,10 @@ def main() -> int:
     codeowners = (ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8")
     if "/commercial-service/" not in codeowners:
         fail("source CODEOWNERS must protect commercial-service")
+
+    bootstrap = (ROOT / "scripts/bootstrap_child.py").read_text(encoding="utf-8")
+    if "commercial-service" not in bootstrap or "shutil.rmtree" not in bootstrap:
+        fail("canonical child bootstrap must strip vendor-only commercial service")
 
     ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
     for marker in ("commercial-service/node_modules/", "commercial-service/.next/", "commercial-service/.vercel/"):
