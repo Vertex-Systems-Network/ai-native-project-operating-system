@@ -6,6 +6,7 @@
   "vendor_only_paths": [
     "commercial-service",
     "blueprints/commercial/github-app-manifest.example.json",
+    "blueprints/commercial/github-marketplace-compliance.json",
     "blueprints/commercial/legal-pack.template.md",
     "blueprints/commercial/marketplace-listing-draft.md",
     "blueprints/commercial/production-launch-checklist.json",
