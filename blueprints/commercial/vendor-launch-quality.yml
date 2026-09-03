@@ -31,13 +31,14 @@ jobs:
         run: python -m compileall -q scripts tests
 
       - name: Run vendor source-management tests
-        run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package tests.test_marketplace_staged_launch -v
+        run: python -m unittest tests.test_vendor_repository_export tests.test_commercial_launch_package tests.test_marketplace_staged_launch tests.test_operator_launch_bootstrap -v
 
-      - name: Validate vendor export, commercial launch and staged Marketplace strategy
+      - name: Validate vendor export, commercial launch, staged Marketplace strategy and operator bootstrap
         run: |
           python scripts/validate_vendor_repository_export.py
           python scripts/validate_commercial_launch_package.py
           python scripts/validate_marketplace_staged_launch.py
+          python scripts/validate_operator_launch_bootstrap.py
 
       - name: Run protected-base vendor validators when available
         if: github.event_name == 'pull_request'
@@ -68,4 +69,12 @@ jobs:
             rm -f scripts/.trusted-base-marketplace-staged-validator.py
           else
             echo 'Base predates Marketplace staged launch validator; current validator plus protected review remain required.'
+          fi
+
+          if git cat-file -e "${BASE_SHA}:scripts/validate_operator_launch_bootstrap.py" 2>/dev/null; then
+            git show "${BASE_SHA}:scripts/validate_operator_launch_bootstrap.py" > scripts/.trusted-base-operator-bootstrap-validator.py
+            python scripts/.trusted-base-operator-bootstrap-validator.py
+            rm -f scripts/.trusted-base-operator-bootstrap-validator.py
+          else
+            echo 'Base predates operator launch bootstrap validator; current validator plus protected review remain required.'
           fi
