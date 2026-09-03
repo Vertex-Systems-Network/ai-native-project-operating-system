@@ -56,13 +56,17 @@ def main() -> int:
 
     env_example = text(".env.example")
     for name in (
-        "DATABASE_URL", "GITHUB_WEBHOOK_SECRET", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
+        "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
+        "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+        "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
         "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
     ):
         if name not in env_example:
             fail(f"commercial service environment contract missing {name}")
+    if "GITHUB_APP_ID=" in env_example or "GITHUB_APP_PRIVATE_KEY=" in env_example:
+        fail("commercial service environment contract must not advertise legacy single-App credentials")
     if "ANPOS_COLLABORATOR_PROVISIONING_ENABLED=false" not in env_example:
         fail("collaborator provisioning must be off by default in the environment example")
 
@@ -71,6 +75,15 @@ def main() -> int:
         if forbidden in all_source:
             fail(f"commercial service source appears to contain a committed secret marker: {forbidden}")
 
+    require_markers(
+        "lib/env.ts",
+        (
+            "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+            "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
+            "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
+        ),
+        "commercial configuration",
+    )
     require_markers(
         "app/api/webhooks/github/marketplace/route.ts",
         (
@@ -84,6 +97,7 @@ def main() -> int:
         "lib/github.ts",
         (
             "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
+            'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "githubMarketplaceAppId", "githubVendorAppId",
             'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
             "removeTemplateCollaborator", "codeload.github.com",
         ),
@@ -147,12 +161,20 @@ def main() -> int:
     )
     require_markers(
         "app/api/ready/route.ts",
-        ("configurationProblems", "asymmetricKeyType", '"rsa"', '"ed25519"', "organizationSeatCapacity", "ensureSchema"),
+        (
+            "configurationProblems", "githubMarketplaceAppPrivateKeyPem", "githubVendorAppPrivateKeyPem",
+            "github_marketplace_app_key_must_be_rsa", "github_vendor_app_key_must_be_rsa",
+            '"ed25519"', "organizationSeatCapacity", "ensureSchema",
+        ),
         "readiness gate",
     )
     require_markers(
         "tests/security.test.ts",
-        ("plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large", "weak:GITHUB_WEBHOOK_SECRET"),
+        (
+            "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
+            "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
+            "legacy single-app credentials do not satisfy split configuration",
+        ),
         "commercial security unit tests",
     )
 
