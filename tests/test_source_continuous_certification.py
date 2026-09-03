@@ -36,6 +36,15 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             "source CI must remain read-only",
         )
 
+    def test_checkout_is_bound_to_exact_event_source_revision(self):
+        source = self.source()
+        expression = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+        self.assertIn(f"ref: {expression}", source)
+        self.assertIn(f"EXPECTED_SOURCE_SHA: {expression}", source)
+        self.assertIn('test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"', source)
+        self.assertIn("persist-credentials: false", source)
+        self.assertIn("fetch-depth: 0", source)
+
     def test_actions_are_commit_pinned(self):
         uses_lines = [line.strip() for line in self.source().splitlines() if line.strip().startswith("uses:")]
         self.assertTrue(uses_lines)
