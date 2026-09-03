@@ -26,8 +26,22 @@ class VendorRepositoryExportTests(unittest.TestCase):
         self.git("config", "user.name", "ANPOS Tests")
         self.write("README.md", "canonical\n")
         self.write("scripts/bootstrap_child.py", "print('bootstrap')\n")
+        self.write("scripts/vendor-operator.py", "print('vendor only')\n")
         self.write("commercial-service/package.json", '{"name":"service","version":"0.2.1"}\n')
         self.write("commercial-service/.env.example", "DATABASE_URL=\n")
+        self.write(
+            "config/licensing/vendor-source-boundary.json",
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "status": "template_blueprint",
+                    "activation_scope": "canonical_vendor_source_management_only",
+                    "vendor_only_paths": ["commercial-service", "scripts/vendor-operator.py"],
+                },
+                indent=2,
+            )
+            + "\n",
+        )
         self.git("add", ".")
         self.git("commit", "-m", "fixture")
 
@@ -62,15 +76,18 @@ class VendorRepositoryExportTests(unittest.TestCase):
         self.assertEqual(package["git_mode"], "100644")
         self.assertEqual(len(package["git_object"]), 40)
 
-    def test_template_export_excludes_vendor_commercial_service(self) -> None:
+    def test_template_export_excludes_all_vendor_only_paths(self) -> None:
         outputs = exporter.export_repositories(self.source, self.output, modes=("template",))
         template = outputs["template"]
         self.assertTrue((template / "README.md").is_file())
         self.assertTrue((template / "scripts/bootstrap_child.py").is_file())
         self.assertFalse((template / "commercial-service").exists())
+        self.assertFalse((template / "scripts/vendor-operator.py").exists())
         manifest = self.manifest(template)
-        origins = {item["origin"] for item in manifest["files"]}
-        self.assertFalse(any(str(origin).startswith("commercial-service/") for origin in origins))
+        self.assertEqual(manifest["source_scope"], "canonical-minus-vendor-only-paths")
+        origins = {str(item["origin"]) for item in manifest["files"]}
+        self.assertFalse(any(origin.startswith("commercial-service/") for origin in origins))
+        self.assertNotIn("scripts/vendor-operator.py", origins)
 
     def test_untracked_secret_is_never_exported(self) -> None:
         self.write("commercial-service/.env", "DATABASE_URL=secret\n")
@@ -118,6 +135,13 @@ class VendorRepositoryExportTests(unittest.TestCase):
     def test_output_inside_canonical_repository_is_refused(self) -> None:
         with self.assertRaisesRegex(exporter.ExportError, "outside the canonical source repository"):
             exporter.export_repositories(self.source, self.source / "exports", modes=("service",))
+
+    def test_invalid_committed_vendor_boundary_fails_closed(self) -> None:
+        self.write("config/licensing/vendor-source-boundary.json", '{"activation_scope":"wrong","vendor_only_paths":["commercial-service"]}\n')
+        self.git("add", "config/licensing/vendor-source-boundary.json")
+        self.git("commit", "-m", "invalid boundary fixture")
+        with self.assertRaisesRegex(exporter.ExportError, "activation_scope is invalid"):
+            exporter.export_repositories(self.source, self.output, modes=("template",))
 
     @unittest.skipIf(os.name == "nt", "symlink fixture requires POSIX semantics")
     def test_committed_symlink_is_refused(self) -> None:
