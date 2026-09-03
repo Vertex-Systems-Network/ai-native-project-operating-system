@@ -27,6 +27,12 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertEqual(data["status"], "inactive_blueprint")
         self.assertFalse(data["launch_authorized"])
         self.assertTrue(data["non_destructive_expiry"])
+        gate_ids = {gate["id"] for gate in data["required_gates"]}
+        self.assertTrue(
+            {"github_marketplace_app", "github_vendor_app", "github_app_role_separation", "vendor_app_installation"}.issubset(gate_ids)
+        )
+        self.assertNotIn("github_app", gate_ids)
+        self.assertNotIn("app_installation", gate_ids)
         for gate in data["required_gates"]:
             self.assertNotEqual(gate["status"], "verified")
             self.assertIsNone(gate["evidence"])
@@ -36,8 +42,14 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertEqual(data["status"], "operator_verification_required")
         self.assertEqual(data["activation_scope"], "vendor_marketplace_launch_only")
         self.assertEqual(data["source_checked_at"], "2026-09-04")
-        self.assertGreaterEqual(len(data["official_sources"]), 5)
+        self.assertGreaterEqual(len(data["official_sources"]), 6)
         self.assertTrue(all(url.startswith("https://docs.github.com/") for url in data["official_sources"]))
+
+        app = data["marketplace_github_app"]
+        self.assertTrue(app["must_be_public_installable_by_other_accounts"])
+        self.assertTrue(app["must_be_separate_from_vendor_distribution_app"])
+        self.assertTrue(app["must_not_require_vendor_template_administration_for_customer_installations"])
+        self.assertIn("github_app_public_installability", data["listing"]["required"])
 
         paid = data["paid_github_app"]
         self.assertTrue(paid["must_be_organization_owned"])
@@ -70,6 +82,10 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertEqual(data["schema_version"], 2)
         gate_ids = {gate["id"] for gate in data["required_gates"]}
         expected = {
+            "github_marketplace_app",
+            "github_vendor_app",
+            "github_app_role_separation",
+            "vendor_app_installation",
             "marketplace_publisher",
             "marketplace_installation_threshold",
             "marketplace_listing",
@@ -82,14 +98,37 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         }
         self.assertTrue(expected.issubset(gate_ids))
 
-    def test_app_blueprint_has_least_privilege_archive_mode(self) -> None:
-        data = json.loads((ROOT / "blueprints/commercial/github-app-manifest.example.json").read_text(encoding="utf-8"))
-        self.assertEqual(data["status"], "operator_configuration_required")
-        self.assertFalse(data["recommended_defaults"]["public"])
-        self.assertIn("marketplace_purchase", data["event_subscriptions"])
-        archive = data["minimum_permissions_by_capability"]["archive_first_delivery"]
+    def test_split_app_blueprints_enforce_least_privilege(self) -> None:
+        marketplace = json.loads((ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json").read_text(encoding="utf-8"))
+        vendor = json.loads((ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json").read_text(encoding="utf-8"))
+        self.assertEqual(marketplace["role"], "customer_marketplace_app")
+        self.assertTrue(marketplace["required_defaults"]["public"])
+        self.assertTrue(marketplace["required_defaults"]["webhook_active"])
+        self.assertIn("marketplace_purchase", marketplace["event_subscriptions"])
+        self.assertIn("administration:write_for_private_template_distribution", marketplace["forbidden_vendor_permissions"])
+
+        self.assertEqual(vendor["role"], "vendor_distribution_app")
+        self.assertFalse(vendor["required_defaults"]["public"])
+        self.assertFalse(vendor["required_defaults"]["webhook_active"])
+        self.assertEqual(vendor["event_subscriptions"], [])
+        archive = vendor["minimum_permissions_by_capability"]["archive_first_delivery"]
         self.assertEqual(archive, {"contents": "read", "metadata": "read"})
         self.assertNotIn("administration", archive)
+        collaborator = vendor["minimum_permissions_by_capability"]["optional_collaborator_provisioning"]
+        self.assertEqual(collaborator["administration"], "write")
+
+    def test_legacy_single_app_blueprint_is_deprecated(self) -> None:
+        data = json.loads((ROOT / "blueprints/commercial/github-app-manifest.example.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["status"], "deprecated_do_not_use_for_production")
+        self.assertEqual(
+            set(data["replacements"]),
+            {
+                "blueprints/commercial/github-marketplace-app-manifest.example.json",
+                "blueprints/commercial/github-vendor-app-manifest.example.json",
+            },
+        )
+        self.assertIn("GITHUB_MARKETPLACE_APP_*", data["migration_rule"])
+        self.assertIn("GITHUB_VENDOR_APP_*", data["migration_rule"])
 
     def test_vendor_launch_assets_are_classified_vendor_only(self) -> None:
         data = json.loads((ROOT / "config/licensing/vendor-source-boundary.json").read_text(encoding="utf-8"))
@@ -98,6 +137,8 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         for expected in (
             "commercial-service",
             "blueprints/commercial/github-app-manifest.example.json",
+            "blueprints/commercial/github-marketplace-app-manifest.example.json",
+            "blueprints/commercial/github-vendor-app-manifest.example.json",
             "blueprints/commercial/github-marketplace-compliance.json",
             "blueprints/commercial/legal-pack.template.md",
             "blueprints/commercial/marketplace-listing-draft.md",
