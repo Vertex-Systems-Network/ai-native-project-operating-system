@@ -2,16 +2,24 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "source-continuous-certification.yml"
+WORKFLOW_PATH = ".github/workflows/source-continuous-certification.yml"
 
 
 class SourceContinuousCertificationTests(unittest.TestCase):
     def source(self) -> str:
-        return WORKFLOW.read_text(encoding="utf-8")
+        result = subprocess.run(
+            ["git", "show", f"HEAD:{WORKFLOW_PATH}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout
 
     def test_source_workflow_is_guarded_read_only_and_main_scoped(self):
         source = self.source()
@@ -23,7 +31,10 @@ class SourceContinuousCertificationTests(unittest.TestCase):
         self.assertIn("github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'", source)
         self.assertNotIn("pull_request_target:", source)
         self.assertNotIn("secrets.", source)
-        self.assertNotRegex(source, r"^\s*[A-Za-z0-9_-]+:\s*write\s*$", msg="source CI must remain read-only")
+        self.assertIsNone(
+            re.search(r"^\s*[A-Za-z0-9_-]+:\s*write\s*$", source, flags=re.MULTILINE),
+            "source CI must remain read-only",
+        )
 
     def test_actions_are_commit_pinned(self):
         uses_lines = [line.strip() for line in self.source().splitlines() if line.strip().startswith("uses:")]
@@ -35,6 +46,8 @@ class SourceContinuousCertificationTests(unittest.TestCase):
     def test_full_certification_gates_are_present(self):
         source = self.source()
         for marker in (
+            "Hide source-only workflow during inert-template tests",
+            "Restore source-only workflow after inert-template tests",
             "python -m unittest discover -s tests -p 'test_*.py' -v",
             "python scripts/validate_ai_native_repo.py",
             "python scripts/validate_commercial_licensing.py",
@@ -56,7 +69,7 @@ class SourceContinuousCertificationTests(unittest.TestCase):
         boundary = json.loads((ROOT / "config" / "licensing" / "vendor-source-boundary.json").read_text())
         vendor_only = set(boundary["vendor_only_paths"])
         for path in (
-            ".github/workflows/source-continuous-certification.yml",
+            WORKFLOW_PATH,
             "scripts/validate_source_continuous_certification.py",
             "tests/test_source_continuous_certification.py",
         ):
