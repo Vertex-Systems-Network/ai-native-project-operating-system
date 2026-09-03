@@ -8,6 +8,7 @@ Vendor-only deployable reference backend for ANPOS GitHub Marketplace billing, l
 - bind `X-GitHub-Delivery` to a payload hash, deduplicate concurrent delivery, and safely retry failed/stale processing;
 - reconcile account subscription state against GitHub Marketplace REST using a GitHub App JWT;
 - persist a PostgreSQL entitlement, audit, rate-limit, seat, provisioning, and access-reconciliation ledger;
+- use explicit checksum-locked database migrations instead of request-path schema mutation;
 - issue short-lived Ed25519 signed entitlement envelopes;
 - issue format-v2 seat-bound signed entitlements for organization users so an organization token is not freely shareable between members;
 - expose public verification keys;
@@ -36,22 +37,41 @@ Use the minimum permissions needed for each trust boundary:
 
 Do not grant collaborator administration permission if archive-only distribution is used.
 
+## Database migrations
+
+Database DDL is never run by normal API requests. Run migrations explicitly from `commercial-service/`:
+
+```bash
+npm run migrate
+```
+
+The migrator:
+
+- takes a PostgreSQL advisory lock so two deploys cannot migrate concurrently;
+- applies ordered `migrations/*.sql` files transactionally;
+- records a SHA-256 checksum for every applied migration;
+- refuses to continue if an already-applied migration file was edited;
+- leaves request handlers/readiness fail-closed until the required migration is present.
+
+Never edit an applied migration in place. Add a new numbered migration.
+
 ## Deploy
 
 1. Create a durable PostgreSQL database.
 2. Configure environment variables from `.env.example` in the deployment platform secret store. Never commit real values.
-3. Create/install the GitHub App and configure its Marketplace listing.
-4. Map real Marketplace plan IDs in `ANPOS_MARKETPLACE_PLAN_MAP`.
-5. Set real organization capacity policy in `ANPOS_ORG_SEAT_LIMITS`; Marketplace `unit_count` wins when GitHub supplies one.
-6. Install the App on the vendor private-template repository with **Contents: read**. Add **Administration: write** only if collaborator provisioning is deliberately enabled.
-7. Set the Marketplace webhook URL to `/api/webhooks/github/marketplace` and use the same secret as `GITHUB_WEBHOOK_SECRET`.
-8. Verify `/api/health` returns 200 and `/api/ready` returns 200 before enabling sales.
-9. Exercise purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation tests before go-live.
+3. Run `npm run migrate` against the target database.
+4. Create/install the GitHub App and configure its Marketplace listing.
+5. Map real Marketplace plan IDs in `ANPOS_MARKETPLACE_PLAN_MAP`.
+6. Set real organization capacity policy in `ANPOS_ORG_SEAT_LIMITS`; Marketplace `unit_count` wins when GitHub supplies one.
+7. Install the App on the vendor private-template repository with **Contents: read**. Add **Administration: write** only if collaborator provisioning is deliberately enabled.
+8. Set the Marketplace webhook URL to `/api/webhooks/github/marketplace` and use the same secret as `GITHUB_WEBHOOK_SECRET`.
+9. Verify `/api/health` returns 200 and `/api/ready` returns 200 before enabling sales.
+10. Exercise purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation tests before go-live.
 
 ## API
 
 - `GET /api/health` — process liveness; does not imply billing readiness.
-- `GET /api/ready` — configuration, key-type, plan/seat policy, schema, and database readiness.
+- `GET /api/ready` — configuration, key-type, plan/seat policy, migration/schema, and database readiness.
 - `POST /api/webhooks/github/marketplace` — GitHub Marketplace webhook receiver.
 - `GET /api/v1/keys` — public entitlement verification key.
 - `GET /api/v1/entitlements/current` — refresh entitlement after GitHub identity verification; send `X-ANPOS-Account-Id`. Organization callers need an active assigned seat to receive a signed consumption token.
