@@ -1,6 +1,6 @@
 name: ANPOS Vendor Repository Export Certification
 
-# Temporary certification-only workflow. Remove before merging to canonical main.
+# Final ANPOS 1.3.2 certification-only workflow. Remove before merging to canonical main.
 on:
   push:
     branches:
