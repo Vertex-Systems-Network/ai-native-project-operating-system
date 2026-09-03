@@ -23,34 +23,46 @@
       "rule": "Create vendor-private anpos-commercial-template repository and populate it only from certified exporter output."
     },
     {
-      "id": "github_app",
+      "id": "github_marketplace_app",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Create the GitHub App under the intended publisher organization and store credentials only in approved secret storage."
+      "rule": "Create the customer-facing GitHub Marketplace App under the intended publisher organization. It must be public/installable by other accounts for Marketplace use, subscribe to required Marketplace events, and request only permissions justified by approved customer-facing capabilities."
     },
     {
-      "id": "app_installation",
+      "id": "github_vendor_app",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Install GitHub App on the private commercial template with least privileges for enabled delivery modes."
+      "rule": "Create a distinct private Vendor Distribution GitHub App under the vendor organization for private-template access. Do not use the customer-facing Marketplace App for vendor repository administration."
+    },
+    {
+      "id": "github_app_role_separation",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Verify Marketplace and Vendor GitHub App IDs are different, private keys are not reused, and production runtime uses GITHUB_MARKETPLACE_APP_* only for Marketplace reconciliation and GITHUB_VENDOR_APP_* only for vendor-template access."
+    },
+    {
+      "id": "vendor_app_installation",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Install only the Vendor Distribution App on the private commercial template with least privileges for enabled delivery modes. Archive-first requires Contents: read; Administration: write is allowed only for explicitly enabled collaborator provisioning."
     },
     {
       "id": "marketplace_publisher",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify the app is organization-owned; an organization owner controls/submits the listing; publisher verification prerequisites include verified organization domain, confirmed contact email and organization 2FA; complete financial onboarding for paid publication."
+      "rule": "Verify the Marketplace App is organization-owned; an organization owner controls/submits the listing; publisher verification prerequisites include verified organization domain, confirmed contact email and organization 2FA; complete financial onboarding for paid publication."
     },
     {
       "id": "marketplace_installation_threshold",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Before paid listing submission, verify the GitHub App meets GitHub's current paid-listing installation threshold. The 2026-09-04 compliance baseline records a minimum of 100 installations; re-check official GitHub documentation before submission. A genuine free listing may be used first according to marketplace-staged-launch.json rather than fabricating threshold evidence."
+      "rule": "Before paid listing submission, verify the Marketplace GitHub App meets GitHub's current paid-listing installation threshold. The 2026-09-04 compliance baseline records a minimum of 100 installations; re-check official GitHub documentation before submission. A genuine free listing may be used first according to marketplace-staged-launch.json rather than fabricating threshold evidence."
     },
     {
       "id": "marketplace_listing",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify valid publisher contact information, relevant description, pricing plan, privacy URL, support URL/email, working relevant links, integration value beyond authentication, public availability rather than preview/invite-only, and Marketplace plan-change/cancellation webhook configuration."
+      "rule": "Verify valid publisher contact information, relevant description, pricing plan, privacy URL, support URL/email, working relevant links, integration value beyond authentication, public/installable Marketplace App visibility, public availability rather than preview/invite-only, and Marketplace plan-change/cancellation webhook configuration."
     },
     {
       "id": "marketplace_listing_assets",
@@ -86,7 +98,7 @@
       "id": "vercel_production_env",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Configure production DATABASE_URL, GitHub App credentials, Marketplace mapping/webhook secret, Ed25519 signing key, operator token, vendor installation/repo identifiers and issuer URL."
+      "rule": "Configure production DATABASE_URL, Marketplace App ID/private key and webhook secret, distinct Vendor App ID/private key and vendor installation/repo identifiers, Marketplace mapping, Ed25519 signing key, operator token, organization seat limits, and final issuer URL. Legacy GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY must not be used as substitutes."
     },
     {
       "id": "webhook_public_reachability",
@@ -98,7 +110,7 @@
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration and migration checksum."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including split GitHub App credential checks and migration checksum."
     },
     {
       "id": "real_marketplace_events",
@@ -110,13 +122,13 @@
       "id": "reconciliation",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify missed-event operator reconciliation and periodic Marketplace account/plan reconciliation against authenticated GitHub Marketplace state."
+      "rule": "Verify missed-event operator reconciliation and periodic Marketplace account/plan reconciliation against authenticated GitHub Marketplace state using the Marketplace App credential."
     },
     {
       "id": "archive_delivery",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify entitled customer archive delivery from the vendor-private template."
+      "rule": "Verify entitled customer archive delivery from the vendor-private template using only the Vendor Distribution App credential."
     },
     {
       "id": "seat_flows",
@@ -143,6 +155,6 @@
       "rule": "Deploy production from vendor-private source or a verified immutable artifact; do not rely on public canonical source access."
     }
   ],
-  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion.",
+  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion. Marketplace/Vendor GitHub App role separation is mandatory for this reference architecture.",
   "non_destructive_expiry": true
 }
