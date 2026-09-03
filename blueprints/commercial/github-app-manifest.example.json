@@ -1,39 +1,17 @@
 {
-  "schema_version": 1,
-  "status": "operator_configuration_required",
-  "purpose": "Blueprint for the vendor GitHub App used by optional ANPOS commercial distribution. This file is not an App registration and contains no credentials.",
-  "operator_required": {
-    "app_name": null,
-    "homepage_url": null,
-    "callback_url": null,
-    "webhook_url": null,
-    "publisher_account_or_org": null,
-    "vendor_installation_id": null,
-    "private_template_repository": null
-  },
-  "recommended_defaults": {
-    "public": false,
-    "request_oauth_on_install": false,
-    "webhook_active": true
-  },
-  "minimum_permissions_by_capability": {
-    "archive_first_delivery": {
-      "contents": "read",
-      "metadata": "read"
-    },
-    "optional_collaborator_provisioning": {
-      "contents": "read",
-      "metadata": "read",
-      "administration": "write"
-    }
-  },
-  "event_subscriptions": ["marketplace_purchase"],
+  "schema_version": 2,
+  "status": "deprecated_do_not_use_for_production",
+  "purpose": "Legacy single-App blueprint retained only as a migration marker. Production ANPOS commercial deployments must separate the customer-facing Marketplace GitHub App from the private Vendor Distribution GitHub App.",
+  "replacements": [
+    "blueprints/commercial/github-marketplace-app-manifest.example.json",
+    "blueprints/commercial/github-vendor-app-manifest.example.json"
+  ],
+  "reason": "A Marketplace App must be public/installable by customers, while vendor private-template delivery may require repository permissions that customers must never be asked to grant. A single App registration collapses these trust boundaries.",
+  "migration_rule": "Do not configure GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY for new production deployments. Configure distinct GITHUB_MARKETPLACE_APP_* and GITHUB_VENDOR_APP_* credentials and verify /api/ready passes role-separation checks.",
   "security_requirements": [
-    "Generate the App private key only in GitHub and store it in an approved secret manager; never commit it.",
-    "Use the lowest permission set that supports the enabled delivery mode.",
-    "Do not enable collaborator administration unless collaborator provisioning is explicitly enabled.",
-    "Verify webhook signatures before processing payloads.",
-    "Reconcile ambiguous or missed Marketplace state through GitHub APIs.",
-    "Store final App/installation/repository identifiers only in deployed vendor runtime configuration."
+    "Marketplace and Vendor App IDs must be different.",
+    "Marketplace and Vendor App private keys must not be reused.",
+    "Vendor template Administration permission must never be granted to the customer-facing Marketplace App merely for vendor-side collaborator provisioning.",
+    "This deprecated file is not an App registration and contains no credentials."
   ]
 }
