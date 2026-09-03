@@ -94,18 +94,27 @@ def main() -> int:
         '"/api/v1/reconcile"',
         '"--expected-service-version"',
         '"--expected-protocol-version"',
+        '"--github-account-id"',
+        '"X-Anpos-Account-Id"',
+        '"entitlement_not_found"',
+        '"valid_account_id_required"',
+        '"anpos-production-verifier-contract-probe"',
+        'body=json.dumps({}, separators=(",", ":"))',
         "a stale artifact cannot be certified",
         "validate_version_payload",
+        "normalize_github_account_id",
     ):
         if marker not in verifier:
-            fail(f"production verifier missing deployment identity marker: {marker}")
+            fail(f"production verifier missing deployment/authenticated-smoke marker: {marker}")
     for stale in (
         'request(base_url, "/v1/keys"',
         '"/v1/entitlements/current",',
         '"/v1/reconcile",',
+        '"dry_run"',
+        'payload["github_account_id"]',
     ):
         if stale in verifier:
-            fail(f"production verifier still contains stale unprefixed API path: {stale}")
+            fail(f"production verifier still contains stale or unsafe smoke contract marker: {stale}")
 
     try:
         result = subprocess.run(
@@ -145,6 +154,7 @@ def main() -> int:
         "test_version_payload_requires_exact_service_protocol_and_runtime_contract",
         "test_require_ready_refuses_missing_expected_identity_before_network",
         "test_verifier_uses_actual_next_api_prefixes",
+        "test_authenticated_smoke_contract_is_fail_closed_and_canonical",
         "test_service_package_embeds_certified_source_identity",
         "test_version_route_is_public_non_secret_and_package_derived",
     ):
