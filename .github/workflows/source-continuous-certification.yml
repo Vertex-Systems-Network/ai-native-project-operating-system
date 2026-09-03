@@ -41,25 +41,8 @@ jobs:
       - name: Validate persistent source CI contract
         run: python scripts/validate_source_continuous_certification.py
 
-      - name: Hide source-only workflow during inert-template tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/source-ci"
-          mv .github/workflows/source-continuous-certification.yml "$RUNNER_TEMP/source-ci/source-continuous-certification.yml"
-
       - name: Run all Python unit and conformance tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
-
-      - name: Restore source-only workflow after inert-template tests
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f "$RUNNER_TEMP/source-ci/source-continuous-certification.yml" ]; then
-            mkdir -p .github/workflows
-            mv "$RUNNER_TEMP/source-ci/source-continuous-certification.yml" .github/workflows/source-continuous-certification.yml
-          fi
 
       - name: Run all source commercial vendor Marketplace operator deployment and CI validators
         run: |
