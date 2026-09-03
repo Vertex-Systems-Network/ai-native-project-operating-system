@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "template_blueprint",
+  "activation_scope": "canonical_vendor_source_management_only",
+  "purpose": "Single source of truth for paths that belong to the ANPOS vendor/operator source-management or commercial runtime boundary and must not be retained in initialized customer child repositories or customer-facing commercial-template exports.",
+  "vendor_only_paths": [
+    "commercial-service",
+    "blueprints/commercial/github-app-manifest.example.json",
+    "blueprints/commercial/legal-pack.template.md",
+    "blueprints/commercial/marketplace-listing-draft.md",
+    "blueprints/commercial/production-launch-checklist.json",
+    "blueprints/commercial/vendor-launch-quality.yml",
+    "scripts/export_vendor_repositories.py",
+    "scripts/validate_vendor_repository_export.py",
+    "scripts/validate_commercial_service.py",
+    "scripts/validate_commercial_launch_package.py",
+    "scripts/verify_commercial_production.py",
+    "tests/test_vendor_repository_export.py",
+    "tests/test_commercial_launch_package.py"
+  ],
+  "rules": [
+    "Canonical source may retain these paths as inert vendor/operator assets.",
+    "scripts/bootstrap_child.py must remove every listed path when initializing a child with --apply.",
+    "anpos-commercial-template export must exclude every listed path.",
+    "anpos-commercial-service export remains sourced only from committed commercial-service/ blobs and strips that prefix.",
+    "No untracked/local secrets may be copied by either bootstrap/export flow.",
+    "Removing vendor-only paths must not remove core ANPOS child development, security, quality, PM, AI selection, or non-secret entitlement-reference functionality."
+  ]
+}
