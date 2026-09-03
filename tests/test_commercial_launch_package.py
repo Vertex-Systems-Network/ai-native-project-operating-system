@@ -40,6 +40,23 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertEqual(archive, {"contents": "read", "metadata": "read"})
         self.assertNotIn("administration", archive)
 
+    def test_vendor_launch_assets_are_classified_vendor_only(self) -> None:
+        data = json.loads((ROOT / "config/licensing/vendor-source-boundary.json").read_text(encoding="utf-8"))
+        paths = set(data["vendor_only_paths"])
+        self.assertEqual(data["activation_scope"], "canonical_vendor_source_management_only")
+        for expected in (
+            "commercial-service",
+            "blueprints/commercial/github-app-manifest.example.json",
+            "blueprints/commercial/legal-pack.template.md",
+            "blueprints/commercial/marketplace-listing-draft.md",
+            "blueprints/commercial/production-launch-checklist.json",
+            "blueprints/commercial/vendor-launch-quality.yml",
+            "scripts/verify_commercial_production.py",
+            "scripts/validate_commercial_launch_package.py",
+            "tests/test_commercial_launch_package.py",
+        ):
+            self.assertIn(expected, paths)
+
     def test_normalize_base_url_requires_https(self) -> None:
         verifier = load_verifier()
         self.assertEqual(verifier.normalize_base_url("https://example.com/"), "https://example.com")
