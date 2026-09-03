@@ -98,7 +98,7 @@ def main() -> int:
         "lib/entitlements.ts",
         (
             "marketplacePlanMap", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:",
-            'subscription.type === "Organization"', "signed_entitlement: envelope", "revokeAllTemplateGrantsForSource",
+            'accountType === "Organization"', "signed_entitlement: envelope", "revokeAllTemplateGrantsForSource",
         ),
         "entitlement engine",
     )
