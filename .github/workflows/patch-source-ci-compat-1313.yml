@@ -31,64 +31,68 @@ jobs:
 
           validator_path = Path('scripts/validate_ai_native_repo.py')
           validator = validator_path.read_text(encoding='utf-8')
-          old_validator = '''    active = ROOT / ".github" / "workflows"
-              if active.exists() and any(active.glob("*.y*ml")):
-                  fail("template source: child runtime workflows must not exist in active .github/workflows")
-          '''.replace('              ', '    ')
-          new_validator = '''    active = ROOT / ".github" / "workflows"
-              active_workflows = sorted(
-                  [path.name for path in active.glob("*.yml")] +
-                  [path.name for path in active.glob("*.yaml")]
-              ) if active.exists() else []
-              allowed_source_workflows = ["source-continuous-certification.yml"]
-              if active_workflows not in ([], allowed_source_workflows):
-                  fail("template source: only guarded source-continuous-certification.yml may exist in active .github/workflows")
-              source_ci = active / "source-continuous-certification.yml"
-              if source_ci.is_file():
-                  source_ci_text = source_ci.read_text(encoding="utf-8")
-                  if "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'" not in source_ci_text:
-                      fail("template source: source continuous certification workflow must be repository-guarded")
-                  if "contents: write" in source_ci_text or "persist-credentials: true" in source_ci_text:
-                      fail("template source: source continuous certification workflow must remain read-only")
-          '''.replace('              ', '    ')
+          old_validator = (
+              '    active = ROOT / ".github" / "workflows"\n'
+              '    if active.exists() and any(active.glob("*.y*ml")):\n'
+              '        fail("template source: child runtime workflows must not exist in active .github/workflows")\n'
+          )
+          new_validator = (
+              '    active = ROOT / ".github" / "workflows"\n'
+              '    active_workflows = sorted(\n'
+              '        [path.name for path in active.glob("*.yml")] +\n'
+              '        [path.name for path in active.glob("*.yaml")]\n'
+              '    ) if active.exists() else []\n'
+              '    allowed_source_workflows = ["source-continuous-certification.yml"]\n'
+              '    if active_workflows not in ([], allowed_source_workflows):\n'
+              '        fail("template source: only guarded source-continuous-certification.yml may exist in active .github/workflows")\n'
+              '    source_ci = active / "source-continuous-certification.yml"\n'
+              '    if source_ci.is_file():\n'
+              '        source_ci_text = source_ci.read_text(encoding="utf-8")\n'
+              '        if "github.repository == \'Vertex-Systems-Network/ai-native-project-operating-system\'" not in source_ci_text:\n'
+              '            fail("template source: source continuous certification workflow must be repository-guarded")\n'
+              '        if "contents: write" in source_ci_text or "persist-credentials: true" in source_ci_text:\n'
+              '            fail("template source: source continuous certification workflow must remain read-only")\n'
+          )
           if validator.count(old_validator) != 1:
               raise SystemExit('expected validator workflow-boundary block not found exactly once')
           validator_path.write_text(validator.replace(old_validator, new_validator), encoding='utf-8')
 
           test_path = Path('tests/test_control_plane.py')
           test = test_path.read_text(encoding='utf-8')
-          old_test = '''    def test_source_has_only_guarded_source_certification_workflow(self):
-              workflow_dir = ROOT / ".github" / "workflows"
-              active = sorted(
-                  [p.name for p in workflow_dir.glob("*.yml")] +
-                  [p.name for p in workflow_dir.glob("*.yaml")]
-              ) if workflow_dir.exists() else []
-              self.assertEqual(active, ["source-continuous-certification.yml"])
-              source = (workflow_dir / "source-continuous-certification.yml").read_text()
-              self.assertIn(
-                  "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'",
-                  source,
-              )
-          '''.replace('              ', '    ')
-          new_test = '''    def test_source_template_has_only_optional_guarded_source_certification_workflow(self):
-              instance = json.loads((ROOT / "config/protocol/instance.json").read_text())
-              if instance.get("instance_status") != "template_source":
-                  self.skipTest("source-template workflow invariant does not apply after child bootstrap")
-              workflow_dir = ROOT / ".github" / "workflows"
-              active = sorted(
-                  [p.name for p in workflow_dir.glob("*.yml")] +
-                  [p.name for p in workflow_dir.glob("*.yaml")]
-              ) if workflow_dir.exists() else []
-              self.assertIn(active, ([], ["source-continuous-certification.yml"]))
-              if active:
-                  source = (workflow_dir / "source-continuous-certification.yml").read_text()
-                  self.assertIn(
-                      "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'",
-                      source,
-                  )
-                  self.assertNotIn("contents: write", source)
-                  self.assertNotIn("persist-credentials: true", source)
-          '''.replace('              ', '    ')
+          old_test = (
+              '    def test_source_has_only_guarded_source_certification_workflow(self):\n'
+              '        workflow_dir = ROOT / ".github" / "workflows"\n'
+              '        active = sorted(\n'
+              '            [p.name for p in workflow_dir.glob("*.yml")] +\n'
+              '            [p.name for p in workflow_dir.glob("*.yaml")]\n'
+              '        ) if workflow_dir.exists() else []\n'
+              '        self.assertEqual(active, ["source-continuous-certification.yml"])\n'
+              '        source = (workflow_dir / "source-continuous-certification.yml").read_text()\n'
+              '        self.assertIn(\n'
+              '            "github.repository == \'Vertex-Systems-Network/ai-native-project-operating-system\'",\n'
+              '            source,\n'
+              '        )\n'
+          )
+          new_test = (
+              '    def test_source_template_has_only_optional_guarded_source_certification_workflow(self):\n'
+              '        instance = json.loads((ROOT / "config/protocol/instance.json").read_text())\n'
+              '        if instance.get("instance_status") != "template_source":\n'
+              '            self.skipTest("source-template workflow invariant does not apply after child bootstrap")\n'
+              '        workflow_dir = ROOT / ".github" / "workflows"\n'
+              '        active = sorted(\n'
+              '            [p.name for p in workflow_dir.glob("*.yml")] +\n'
+              '            [p.name for p in workflow_dir.glob("*.yaml")]\n'
+              '        ) if workflow_dir.exists() else []\n'
+              '        self.assertIn(active, ([], ["source-continuous-certification.yml"]))\n'
+              '        if active:\n'
+              '            source = (workflow_dir / "source-continuous-certification.yml").read_text()\n'
+              '            self.assertIn(\n'
+              '                "github.repository == \'Vertex-Systems-Network/ai-native-project-operating-system\'",\n'
+              '                source,\n'
+              '            )\n'
+              '            self.assertNotIn("contents: write", source)\n'
+              '            self.assertNotIn("persist-credentials: true", source)\n'
+          )
           if test.count(old_test) != 1:
               raise SystemExit('expected source workflow unit-test block not found exactly once')
           test_path.write_text(test.replace(old_test, new_test), encoding='utf-8')
