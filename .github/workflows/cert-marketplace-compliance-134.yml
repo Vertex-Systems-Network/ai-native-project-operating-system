@@ -1,4 +1,5 @@
 name: ANPOS 1.3.4 Marketplace Compliance Certification
+# Full certification trigger after protocol bookkeeping.
 
 on:
   push:
