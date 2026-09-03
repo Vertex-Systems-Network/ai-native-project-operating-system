@@ -5,6 +5,12 @@ import { organizationSeatCapacity } from "./plans";
 const ACTIVE_STATES = new Set(["active", "trial", "grace"]);
 
 export type SeatUser = { id: number; login: string };
+export type SeatRevocationResult = {
+  revoked: boolean;
+  not_active: boolean;
+  github_user_id: number | null;
+  github_login: string | null;
+};
 
 async function audit(client: PoolClient, requestId: string, eventType: string, accountId: number, metadata: object = {}) {
   await client.query(
@@ -82,7 +88,12 @@ export async function assignSeat(accountId: number, target: SeatUser, assignedBy
   });
 }
 
-export async function revokeSeat(accountId: number, targetUserId: number, revokedByUserId: number, requestId: string) {
+export async function revokeSeat(
+  accountId: number,
+  targetUserId: number,
+  revokedByUserId: number,
+  requestId: string,
+): Promise<SeatRevocationResult> {
   return transaction(async (client) => {
     const result = await client.query(
       `UPDATE organization_seat_assignments
@@ -91,7 +102,9 @@ export async function revokeSeat(accountId: number, targetUserId: number, revoke
        RETURNING github_user_id,github_login`,
       [accountId, targetUserId],
     );
-    if (!result.rowCount) return { revoked: false, not_active: true };
+    if (!result.rowCount) {
+      return { revoked: false, not_active: true, github_user_id: null, github_login: null };
+    }
     const row = result.rows[0];
     await client.query(
       `UPDATE template_access_grants SET status='revoked',revoked_at=NOW(),updated_at=NOW()
@@ -109,6 +122,6 @@ export async function revokeSeat(accountId: number, targetUserId: number, revoke
       github_login: row.github_login,
       revoked_by_user_id: revokedByUserId,
     });
-    return { revoked: true, github_user_id: targetUserId, github_login: row.github_login };
+    return { revoked: true, not_active: false, github_user_id: targetUserId, github_login: row.github_login };
   });
 }
