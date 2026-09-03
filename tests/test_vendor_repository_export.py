@@ -77,13 +77,16 @@ class VendorRepositoryExportTests(unittest.TestCase):
         outputs = exporter.export_repositories(self.source, self.output, modes=("service",))
         service = outputs["service"]
         self.assertFalse((service / ".env").exists())
-        self.assertNotIn("secret", (service / exporter.MANIFEST_NAME).read_text(encoding="utf-8"))
+        manifest = self.manifest(service)
+        self.assertFalse(manifest["contains_secrets"])
+        self.assertNotIn(".env", {item["path"] for item in manifest["files"]})
+        self.assertNotIn("commercial-service/.env", {item["origin"] for item in manifest["files"]})
 
     def test_tracked_secret_like_file_fails_closed(self) -> None:
         self.write("commercial-service/.env.production", "DATABASE_URL=secret\n")
         self.git("add", "commercial-service/.env.production")
         self.git("commit", "-m", "unsafe fixture")
-        with self.assertRaisesRegex(exporter.ExportError, "secret-like tracked file"):
+        with self.assertRaisesRegex(exporter.ExportError, r"secret-like (tracked file|export target)"):
             exporter.export_repositories(self.source, self.output, modes=("service",))
         self.assertFalse((self.output / exporter.SERVICE_REPOSITORY_NAME).exists())
 
