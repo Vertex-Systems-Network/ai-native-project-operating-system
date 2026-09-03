@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import subprocess
 import sys
 import urllib.parse
@@ -21,6 +22,7 @@ VENDOR_BLUEPRINT = ROOT / "blueprints/commercial/github-vendor-app-manifest.exam
 ENV_EXAMPLE = ROOT / "commercial-service/.env.example"
 PACKAGE = ROOT / "commercial-service/package.json"
 PROTOCOL = ROOT / "config/protocol/version.json"
+SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 ERRORS: list[str] = []
 
 
@@ -76,6 +78,22 @@ def render(extra: list[str] | None = None) -> dict:
     return data
 
 
+def git_identity() -> tuple[str, str]:
+    try:
+        revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
+        ).stdout.strip()
+        tree = subprocess.run(
+            ["git", "rev-parse", "HEAD^{tree}"], cwd=ROOT, check=True, text=True, capture_output=True
+        ).stdout.strip()
+    except Exception as exc:
+        fail(f"unable to read canonical Git identity: {exc}")
+        return "", ""
+    if not SHA40_RE.fullmatch(revision) or not SHA40_RE.fullmatch(tree):
+        fail("canonical Git identity must use full SHA-1 revision/tree values")
+    return revision, tree
+
+
 def main() -> int:
     renderer_source = read(RENDERER)
     doc = read(DOC)
@@ -85,6 +103,7 @@ def main() -> int:
     env_example = read(ENV_EXAMPLE)
     package = load_json(PACKAGE)
     protocol = load_json(PROTOCOL)
+    source_revision, source_tree = git_identity()
 
     for source, path in ((renderer_source, RENDERER), (tests_source, TESTS)):
         if source:
@@ -115,6 +134,13 @@ def main() -> int:
         "artifact_identity",
         "production_verifier_arguments",
         "load_artifact_identity",
+        "load_source_export_identity",
+        "vendor_repository_handoff",
+        "canonical_source_revision",
+        "canonical_source_tree",
+        "service_verification_arguments",
+        "template_verification_arguments",
+        "scripts/verify_vendor_handoff.py",
         "PACKAGE_PATH",
         "PROTOCOL_PATH",
         "launch_authorized",
@@ -125,7 +151,7 @@ def main() -> int:
         if marker not in renderer_source:
             fail(f"operator launch renderer missing marker: {marker}")
 
-    for stale_literal in ('"0.3.0"', '"0.3.1"'):
+    for stale_literal in ('"0.3.0"', '"0.3.1"', '"0.3.2"'):
         if stale_literal in renderer_source:
             fail(f"operator launch renderer must not hard-code release version {stale_literal}")
 
@@ -142,8 +168,8 @@ def main() -> int:
 
     data = render()
     if data:
-        if data.get("schema_version") != 2:
-            fail("operator launch renderer output must be schema_version 2")
+        if data.get("schema_version") != 3:
+            fail("operator launch renderer output must be schema_version 3")
         if data.get("status") != "operator_actions_required" or data.get("launch_authorized") is not False:
             fail("operator launch renderer must remain fail-closed and non-authoritative")
         if data.get("artifact_identity") != expected_identity:
@@ -157,6 +183,49 @@ def main() -> int:
         ]
         if data.get("production_verifier_arguments") != expected_args:
             fail("operator handoff must emit exact package-derived production verifier arguments")
+
+        handoff = data.get("vendor_repository_handoff") or {}
+        if handoff.get("canonical_source_revision") != source_revision:
+            fail("operator handoff must bind vendor export to current canonical source revision")
+        if handoff.get("canonical_source_tree") != source_tree:
+            fail("operator handoff must bind vendor export to current canonical source tree")
+        if handoff.get("manifest_name") != "EXPORT-MANIFEST.json":
+            fail("operator handoff must identify deterministic export manifest")
+        if handoff.get("verifier") != "scripts/verify_vendor_handoff.py":
+            fail("operator handoff must route vendor checkout verification through canonical verifier")
+        if handoff.get("service_repository") != "anpos-commercial-service":
+            fail("operator handoff service repository name is invalid")
+        if handoff.get("template_repository") != "anpos-commercial-template":
+            fail("operator handoff template repository name is invalid")
+
+        service_args = handoff.get("service_verification_arguments") or []
+        template_args = handoff.get("template_verification_arguments") or []
+        for label, args, mode in (
+            ("service", service_args, "service"),
+            ("template", template_args, "template"),
+        ):
+            for required in (
+                "--expected-mode",
+                mode,
+                "--expected-source-revision",
+                source_revision,
+                "--expected-source-tree",
+                source_tree,
+            ):
+                if required not in args:
+                    fail(f"operator {label} handoff arguments missing exact source identity/mode: {required}")
+        for required in (
+            "--expected-service-version",
+            str(expected_identity["service_version"]),
+            "--expected-protocol-version",
+            str(expected_identity["source_protocol_version"]),
+            "--expected-runtime-contract",
+            str(expected_identity["runtime_contract"]),
+        ):
+            if required not in service_args:
+                fail(f"operator service handoff arguments missing artifact identity: {required}")
+        if "--expected-service-version" in template_args:
+            fail("template handoff verification must not require commercial service identity")
 
         apps = data.get("github_apps") or {}
         marketplace = apps.get("marketplace") or {}
@@ -219,6 +288,12 @@ def main() -> int:
         "package-derived artifact identity",
         "`artifact_identity`",
         "`production_verifier_arguments`",
+        "Deterministic vendor-repository handoff",
+        "`vendor_repository_handoff`",
+        "`canonical_source_revision`",
+        "`canonical_source_tree`",
+        "`scripts/verify_vendor_handoff.py`",
+        "JSON receipt",
         "public Marketplace App",
         "private Vendor Distribution App",
         "GITHUB_MARKETPLACE_APP_ID",
@@ -230,16 +305,25 @@ def main() -> int:
     ):
         if marker not in doc:
             fail(f"operator launch bootstrap documentation missing marker: {marker}")
-    for stale_doc in ("commercial service 0.3.0", "commercial service 0.3.1", "Deploy 0.3.0", "Deploy 0.3.1"):
+    for stale_doc in (
+        "commercial service 0.3.0",
+        "commercial service 0.3.1",
+        "commercial service 0.3.2",
+        "Deploy 0.3.0",
+        "Deploy 0.3.1",
+        "Deploy 0.3.2",
+    ):
         if stale_doc in doc:
             fail(f"operator launch bootstrap documentation contains stale hand-maintained version: {stale_doc}")
 
     for marker in (
         "test_artifact_identity_and_verifier_args_are_package_derived",
         "test_artifact_identity_fails_closed_on_package_protocol_mismatch",
+        "test_vendor_handoff_identity_is_git_derived_and_binds_both_exports",
+        "test_source_export_identity_rejects_invalid_injected_sha",
     ):
         if marker not in tests_source:
-            fail(f"operator bootstrap tests missing artifact-identity marker: {marker}")
+            fail(f"operator bootstrap tests missing identity/provenance marker: {marker}")
 
     boundary = load_json(BOUNDARY)
     vendor_only = set(boundary.get("vendor_only_paths") or [])
@@ -247,17 +331,27 @@ def main() -> int:
         "blueprints/commercial/operator-launch-bootstrap.md",
         "scripts/render_operator_launch_bootstrap.py",
         "scripts/validate_operator_launch_bootstrap.py",
+        "scripts/verify_vendor_handoff.py",
         "tests/test_operator_launch_bootstrap.py",
+        "tests/test_vendor_handoff.py",
     ):
         if relative not in vendor_only:
-            fail(f"vendor source boundary missing operator bootstrap path: {relative}")
+            fail(f"vendor source boundary missing operator bootstrap/handoff path: {relative}")
 
     if "python scripts/validate_operator_launch_bootstrap.py" not in vendor_quality:
         fail("vendor launch quality blueprint must run operator launch bootstrap validator")
     if "tests.test_operator_launch_bootstrap" not in vendor_quality:
         fail("vendor launch quality blueprint must run operator launch bootstrap tests")
-    if "validate_operator_launch_bootstrap.py" in child_quality or "test_operator_launch_bootstrap" in child_quality:
-        fail("child repository quality blueprint must not depend on vendor-only operator bootstrap tooling")
+    if "tests.test_vendor_handoff" not in vendor_quality:
+        fail("vendor launch quality blueprint must run deterministic vendor handoff tests")
+    for forbidden in (
+        "validate_operator_launch_bootstrap.py",
+        "test_operator_launch_bootstrap",
+        "verify_vendor_handoff.py",
+        "test_vendor_handoff",
+    ):
+        if forbidden in child_quality:
+            fail(f"child repository quality blueprint must not depend on vendor-only operator/handoff tooling: {forbidden}")
 
     if ERRORS:
         print("ANPOS operator launch bootstrap validation failed:", file=sys.stderr)
