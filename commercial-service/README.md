@@ -12,6 +12,7 @@ Vendor-only deployable reference backend for ANPOS GitHub Marketplace billing, l
 - issue short-lived Ed25519 signed entitlement envelopes;
 - issue format-v2 seat-bound signed entitlements for organization users so an organization token is not freely shareable between members;
 - expose public verification keys;
+- expose non-secret deployment identity so stale/wrong service artifacts cannot pass production verification merely because health is green;
 - allow authenticated customers to refresh current entitlement;
 - let verified organization admins assign/list/revoke seats, with active-member verification and capacity enforcement;
 - provide operator reconciliation for missed/ambiguous webhook deliveries and failed collaborator revocations;
@@ -51,6 +52,24 @@ Minimum permissions:
 - optional collaborator provision/revoke: **Administration: write** on the private template repository only when that fallback is explicitly enabled.
 
 This split prevents a customer-facing Marketplace installation from inheriting vendor repository administration capability and prevents a compromise of the Marketplace App credential from automatically granting access to the private template repository.
+
+## Deployment identity
+
+`GET /api/version` is public and intentionally secret-free. It reports the commercial-service package version, the ANPOS source protocol version embedded into the exported artifact, and the runtime-contract identifier. The response is `Cache-Control: no-store` and does not read deployment secrets.
+
+Production verification must not treat `/api/health` alone as proof that the intended artifact is deployed. `scripts/verify_commercial_production.py --require-ready` requires both `--expected-service-version` and `--expected-protocol-version`; it checks `/api/version` before readiness so a healthy but stale/wrong artifact fails certification.
+
+Example after deploying a certified artifact:
+
+```bash
+python scripts/verify_commercial_production.py \
+  --base-url https://YOUR-SERVICE.example.com \
+  --require-ready \
+  --expected-service-version 0.3.1 \
+  --expected-protocol-version 1.3.8
+```
+
+The production verifier uses the actual Next.js API route prefixes (`/api/v1/...`). There is no implicit `/v1/*` rewrite.
 
 ## Recommended distribution architecture
 
@@ -98,12 +117,14 @@ Never edit an applied migration in place. Add a new numbered migration.
 7. Set real organization capacity policy in `ANPOS_ORG_SEAT_LIMITS`; Marketplace `unit_count` wins when GitHub supplies one.
 8. Install only the Vendor App on the vendor private-template repository with **Contents: read**. Add **Administration: write** only if collaborator provisioning is deliberately enabled.
 9. Set the Marketplace App webhook URL to `/api/webhooks/github/marketplace` and use the same secret as `GITHUB_WEBHOOK_SECRET`.
-10. Verify `/api/health` returns 200 and `/api/ready` returns 200 before enabling sales.
-11. Exercise purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation tests before go-live.
+10. Verify `/api/health` returns 200, `/api/version` matches the exact certified artifact, and `/api/ready` returns 200 before enabling sales.
+11. Run the production verifier with `--require-ready`, `--expected-service-version`, and `--expected-protocol-version`.
+12. Exercise purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation tests before go-live.
 
 ## API
 
-- `GET /api/health` — process liveness; does not imply billing readiness.
+- `GET /api/health` — process liveness; does not imply artifact identity or billing readiness.
+- `GET /api/version` — public, secret-free service/protocol/runtime-contract identity for deployment attestation.
 - `GET /api/ready` — configuration, split GitHub App key types/role separation, plan/seat policy, migration/schema, and database readiness.
 - `POST /api/webhooks/github/marketplace` — GitHub Marketplace webhook receiver.
 - `GET /api/v1/keys` — public entitlement verification key.
