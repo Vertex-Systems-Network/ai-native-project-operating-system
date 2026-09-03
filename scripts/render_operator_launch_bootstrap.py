@@ -2,16 +2,17 @@
 """Render a secret-safe ANPOS commercial launch handoff.
 
 The renderer preconfigures GitHub App registration URLs, exact deployable
-artifact identity, production-verifier arguments, and the production
-environment-variable contract. It never accepts private keys, webhook secrets,
-database credentials, operator tokens, Marketplace plan IDs, prices, or other
-live secret/business-authority values.
+artifact identity, deterministic vendor-export provenance, production-verifier
+arguments, and the production environment-variable contract. It never accepts
+private keys, webhook secrets, database credentials, operator tokens,
+Marketplace plan IDs, prices, or other live secret/business-authority values.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import subprocess
 import sys
 import urllib.parse
 from dataclasses import dataclass
@@ -24,8 +25,13 @@ PROTOCOL_PATH = ROOT / "config/protocol/version.json"
 ORG_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 APP_NAME_RE = re.compile(r"^[^\r\n]{3,100}$")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 EXPECTED_SERVICE_NAME = "anpos-commercial-service"
 EXPECTED_RUNTIME_CONTRACT = "split-github-app-v1"
+SERVICE_REPOSITORY_NAME = "anpos-commercial-service"
+TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"
+EXPORT_MANIFEST_NAME = "EXPORT-MANIFEST.json"
+VENDOR_HANDOFF_VERIFIER = "scripts/verify_vendor_handoff.py"
 
 MARKETPLACE_APP_ENV = [
     "GITHUB_MARKETPLACE_APP_ID",
@@ -119,6 +125,42 @@ def load_artifact_identity(
     }
 
 
+def load_source_export_identity(source_root: Path = ROOT) -> dict[str, str]:
+    """Read the exact canonical Git commit/tree that deterministic vendor exports must represent."""
+    try:
+        revision_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=source_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        tree_result = subprocess.run(
+            ["git", "rev-parse", "HEAD^{tree}"],
+            cwd=source_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        raise BootstrapError(f"canonical Git identity is unavailable: {exc}") from exc
+    if revision_result.returncode != 0 or tree_result.returncode != 0:
+        detail = (
+            revision_result.stderr.strip()
+            or tree_result.stderr.strip()
+            or "git rev-parse failed"
+        )
+        raise BootstrapError(f"canonical Git identity is unavailable: {detail}")
+    revision = revision_result.stdout.strip()
+    tree = tree_result.stdout.strip()
+    if not SHA40_RE.fullmatch(revision) or not SHA40_RE.fullmatch(tree):
+        raise BootstrapError("canonical Git revision/tree must be full 40-character lowercase SHA-1 identities")
+    return {
+        "canonical_source_revision": revision,
+        "canonical_source_tree": tree,
+    }
+
+
 def normalize_https_url(value: str, label: str) -> str:
     parsed = urllib.parse.urlsplit(value.strip())
     if parsed.scheme != "https" or not parsed.netloc:
@@ -183,11 +225,20 @@ def vendor_registration_url(inputs: Inputs) -> str:
 def render(
     inputs: Inputs,
     artifact_identity: dict[str, str] | None = None,
+    source_export_identity: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     identity = dict(artifact_identity or load_artifact_identity())
     required_identity = {"service", "service_version", "source_protocol_version", "runtime_contract"}
     if set(identity) != required_identity or any(not str(identity[key]) for key in required_identity):
         raise BootstrapError("artifact identity is incomplete")
+
+    export_identity = dict(source_export_identity or load_source_export_identity())
+    required_export_identity = {"canonical_source_revision", "canonical_source_tree"}
+    if set(export_identity) != required_export_identity:
+        raise BootstrapError("canonical vendor export identity is incomplete")
+    for key in required_export_identity:
+        if not SHA40_RE.fullmatch(str(export_identity[key])):
+            raise BootstrapError(f"canonical vendor export identity has invalid {key}")
 
     vendor_permissions = {"contents": "read", "metadata": "read"}
     if inputs.collaborator_provisioning:
@@ -200,9 +251,31 @@ def render(
         "--expected-protocol-version",
         identity["source_protocol_version"],
     ]
+    common_handoff_arguments = [
+        "--expected-source-revision",
+        export_identity["canonical_source_revision"],
+        "--expected-source-tree",
+        export_identity["canonical_source_tree"],
+    ]
+    service_handoff_arguments = [
+        "--expected-mode",
+        "service",
+        *common_handoff_arguments,
+        "--expected-service-version",
+        identity["service_version"],
+        "--expected-protocol-version",
+        identity["source_protocol_version"],
+        "--expected-runtime-contract",
+        identity["runtime_contract"],
+    ]
+    template_handoff_arguments = [
+        "--expected-mode",
+        "template",
+        *common_handoff_arguments,
+    ]
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "status": "operator_actions_required",
         "launch_authorized": False,
         "organization": inputs.organization,
@@ -210,6 +283,17 @@ def render(
         "homepage_url": inputs.homepage_url,
         "artifact_identity": identity,
         "production_verifier_arguments": verifier_arguments,
+        "vendor_repository_handoff": {
+            "manifest_name": EXPORT_MANIFEST_NAME,
+            "verifier": VENDOR_HANDOFF_VERIFIER,
+            "canonical_source_revision": export_identity["canonical_source_revision"],
+            "canonical_source_tree": export_identity["canonical_source_tree"],
+            "service_repository": SERVICE_REPOSITORY_NAME,
+            "template_repository": TEMPLATE_REPOSITORY_NAME,
+            "service_verification_arguments": service_handoff_arguments,
+            "template_verification_arguments": template_handoff_arguments,
+            "verification_rule": "Run the verifier from the canonical checkout at canonical_source_revision against each exported directory or clean private-repository checkout before accepting/pushing/deploying it.",
+        },
         "github_apps": {
             "marketplace": {
                 "role": "customer_marketplace_app",
@@ -233,7 +317,9 @@ def render(
         "service_environment_keys": SERVICE_ENV,
         "legacy_single_app_environment_keys_forbidden": LEGACY_SINGLE_APP_ENV,
         "operator_sequence": [
-            "Create private vendor service and template repositories from certified deterministic exports.",
+            "Generate deterministic private vendor service and template exports from the certified canonical revision.",
+            "Verify both exports with scripts/verify_vendor_handoff.py using vendor_repository_handoff arguments before accepting or pushing them; retain the successful JSON receipts as provenance evidence.",
+            "Create the private vendor repositories and populate them only from verified deterministic exports; verify a clean checkout again after the initial push.",
             "Register the public Marketplace App using the prefilled URL; review every field before submission.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",
@@ -244,9 +330,11 @@ def render(
             "Require /api/ready HTTP 200 and real Marketplace E2E evidence before launch authorization.",
         ],
         "safety": [
-            "This output contains no credentials and is not proof that either GitHub App exists.",
+            "This output contains no credentials and is not proof that either GitHub App or private vendor repository exists.",
             "Registration URLs are prefilled operator aids; GitHub remains the authority for the final App configuration.",
             "Artifact identity is read from committed deployable package metadata and checked against canonical protocol metadata; do not replace it with hand-maintained expected versions.",
+            "Vendor export identity is read from canonical Git commit/tree identity; handoff verification reconstructs expected bytes from committed canonical blobs and rejects extra, missing, dirty, tampered, stale, or wrong-mode vendor checkouts.",
+            "A handoff verification receipt proves byte equality to the approved deterministic export; it does not prove GitHub repository ownership, visibility, App installation, Marketplace approval, or production deployment.",
             "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
             "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
             "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, or production readiness from this output.",
