@@ -16,13 +16,27 @@ ANPOS helps teams start and operate software projects with a reusable AI-native 
 
 Core customer projects are not remotely disabled when a commercial entitlement expires. Expiry may stop future premium updates, provisioning, hosted services, or support according to verified entitlement state and the final customer agreement.
 
+## GitHub App trust architecture
+
+ANPOS commercial production uses **two distinct GitHub Apps**:
+
+1. **Marketplace App — public/customer-facing.** This App owns the GitHub Marketplace listing, is installable by customer accounts, receives Marketplace events, and is used for Marketplace account reconciliation. It must not be granted vendor private-template Administration permission merely to support vendor-side delivery.
+2. **Vendor Distribution App — private/vendor-only.** This App is installed only on the vendor-controlled private commercial-template repository. Archive-first delivery requires Contents: read. Optional collaborator provisioning may require Administration: write on the vendor repository only.
+
+The two App IDs and private keys must be different. Production readiness fails closed if the roles collapse or the same private key is reused. The deprecated single-App blueprint is retained only as a migration marker.
+
+This separation keeps customer installation consent independent from privileged vendor repository access and reduces the blast radius of either App credential.
+
 ## GitHub Marketplace compliance baseline
 
 The machine-readable baseline is `blueprints/commercial/github-marketplace-compliance.json`. It was checked against official GitHub documentation on **2026-09-04** and must be re-verified immediately before Marketplace submission because GitHub requirements may change.
 
-For a paid GitHub App listing, the current baseline requires or records:
+For Marketplace publication and paid conversion, the current baseline requires or records:
 
-- the app is owned by an organization;
+- the customer-facing Marketplace GitHub App is public/installable by other GitHub accounts;
+- the Marketplace App is separate from the private Vendor Distribution App;
+- customer installations are not asked for vendor-template Administration permission;
+- the paid Marketplace App is owned by an organization;
 - an organization owner controls/submits the Marketplace listing;
 - verified-publisher prerequisites include a verified organization domain, confirmed contact email, and organization-wide two-factor authentication;
 - paid publication requires publisher verification and financial onboarding;
@@ -36,14 +50,14 @@ For a paid GitHub App listing, the current baseline requires or records:
 - the customer-facing billing experience shows plan/price, plan changes, cancellation/trial state, billing cycle, and usage/remaining resources where applicable;
 - if Marketplace free trials are offered, re-verify the current GitHub trial behavior and private-data deletion requirement before launch. The 2026-09-04 baseline records a 14-day trial and deletion of private customer data within 30 days after a cancelled trial.
 
-None of these repository statements prove that the external requirements have been met. Installation count, publisher verification, financial onboarding, legal URLs, support contacts, prices, plan IDs, listing approval, and production evidence must come from real external state.
+None of these repository statements prove that the external requirements have been met. App registrations, installation count, publisher verification, financial onboarding, legal URLs, support contacts, prices, plan IDs, listing approval, and production evidence must come from real external state.
 
 ## Recommended staged publication path
 
 While paid eligibility evidence is missing, `blueprints/commercial/marketplace-staged-launch.json` recommends **free-first then paid**:
 
 1. Define a real free offering that provides GitHub-integrated value beyond authentication. The repository does not invent a Community plan or its entitlements.
-2. Publish a free Marketplace listing only after the general listing, privacy, support, asset, public-availability and purchase/cancellation webhook requirements are met.
+2. Publish a free Marketplace listing only after the general listing, privacy, support, asset, public-App/installability, public-availability and purchase/cancellation webhook requirements are met.
 3. Accumulate genuine installations and operating evidence; never manufacture or buy installations merely to reach an eligibility threshold.
 4. Once current paid requirements are met—including the documented installation threshold—complete verified-publisher and financial onboarding.
 5. Add approved paid plans to the existing free listing. GitHub's current documentation supports adding paid plans later after verification/onboarding.
@@ -118,16 +132,17 @@ All published links must resolve to relevant working pages.
 
 ## Required Marketplace configuration
 
-- organization-owned GitHub App;
+- organization-owned **public Marketplace GitHub App** for customer installation/listing;
+- separate **private Vendor Distribution GitHub App** for vendor private-template access;
+- distinct App IDs and private keys; no role/key reuse;
 - organization-owner control of listing submission;
 - verified publisher prerequisites and approval before paid publication;
 - current minimum-installation threshold for paid GitHub Apps;
 - financial onboarding before paid publication;
 - actual monthly and annual USD price decisions for each paid plan;
 - real Marketplace plan IDs;
-- GitHub App ID/client ID/private key;
-- Marketplace webhook URL and strong webhook secret;
-- vendor installation ID and private commercial-template repository;
+- Marketplace App ID/private key and strong Marketplace webhook secret;
+- Vendor App ID/private key, vendor installation ID, and private commercial-template repository;
 - production issuer/base URL;
 - customer billing/status experience;
 - support/refund/cancellation/trial policy;
@@ -140,5 +155,6 @@ All published links must resolve to relevant working pages.
 - Existing generated customer projects are not deleted, encrypted, remotely modified, or intentionally broken when an entitlement expires or is cancelled.
 - Organization membership alone is not a licensed seat.
 - Archive-first private delivery is preferred; collaborator provisioning is optional and disabled by default.
+- Vendor repository Administration permission belongs only to the private Vendor Distribution App when explicitly required; it must not be added to the customer-facing Marketplace App merely for vendor delivery.
 - A free-first listing must deliver real product value and cannot be used as an installation-count shell.
 - No final price, legal promise, uptime SLA, tax treatment, refund right, warranty, installation count, publisher verification, or Marketplace approval is created by this draft.
