@@ -42,6 +42,9 @@ jobs:
       - name: Validate commercial distribution and licensing blueprint
         run: python scripts/validate_commercial_licensing.py
 
+      - name: Validate deterministic vendor repository export contract
+        run: python scripts/validate_vendor_repository_export.py
+
       - name: Run protected-base validators against proposed tree
         if: github.event_name == 'pull_request'
         env:
@@ -59,6 +62,14 @@ jobs:
             rm -f scripts/.trusted-base-commercial-validator.py
           else
             echo 'Base branch predates commercial validator; current commercial validator and protected review remain required for this migration.'
+          fi
+
+          if git cat-file -e "${BASE_SHA}:scripts/validate_vendor_repository_export.py" 2>/dev/null; then
+            git show "${BASE_SHA}:scripts/validate_vendor_repository_export.py" > scripts/.trusted-base-vendor-export-validator.py
+            python scripts/.trusted-base-vendor-export-validator.py
+            rm -f scripts/.trusted-base-vendor-export-validator.py
+          else
+            echo 'Base branch predates vendor export validator; current vendor export validator and protected review remain required for this migration.'
           fi
 
       - name: Report control-plane changes for review evidence
@@ -90,4 +101,4 @@ jobs:
           fi
 
       - name: Show repository integrity success
-        run: echo 'Repository integrity, conformance tests, JSON Schema, core/commercial validators, protected-base validation, workflow pinning, JSON, and YAML checks passed.'
+        run: echo 'Repository integrity, conformance tests, JSON Schema, core/commercial/vendor-export validators, protected-base validation, workflow pinning, JSON, and YAML checks passed.'
