@@ -4,6 +4,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 import urllib.parse
 from pathlib import Path
@@ -95,7 +96,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             "source_protocol_version": package["anpos"]["source_protocol_version"],
             "runtime_contract": package["anpos"]["runtime_contract"],
         }
-        self.assertEqual(data["schema_version"], 2)
+        self.assertEqual(data["schema_version"], 3)
         self.assertEqual(data["artifact_identity"], expected)
         self.assertEqual(expected["source_protocol_version"], protocol["version"])
         self.assertEqual(
@@ -111,10 +112,55 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertNotIn('"0.3.0"', source)
         self.assertNotIn('"0.3.1"', source)
+        self.assertNotIn('"0.3.2"', source)
+
+    def test_vendor_handoff_identity_is_git_derived_and_binds_both_exports(self) -> None:
+        data = self.renderer.render(self.inputs)
+        handoff = data["vendor_repository_handoff"]
+        revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
+        ).stdout.strip()
+        tree = subprocess.run(
+            ["git", "rev-parse", "HEAD^{tree}"], cwd=ROOT, check=True, text=True, capture_output=True
+        ).stdout.strip()
+        package = json.loads((ROOT / "commercial-service/package.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(handoff["canonical_source_revision"], revision)
+        self.assertEqual(handoff["canonical_source_tree"], tree)
+        self.assertEqual(handoff["manifest_name"], "EXPORT-MANIFEST.json")
+        self.assertEqual(handoff["verifier"], "scripts/verify_vendor_handoff.py")
+        self.assertEqual(handoff["service_repository"], "anpos-commercial-service")
+        self.assertEqual(handoff["template_repository"], "anpos-commercial-template")
+
+        service_args = handoff["service_verification_arguments"]
+        template_args = handoff["template_verification_arguments"]
+        for args in (service_args, template_args):
+            self.assertIn("--expected-source-revision", args)
+            self.assertIn(revision, args)
+            self.assertIn("--expected-source-tree", args)
+            self.assertIn(tree, args)
+        self.assertIn("--expected-mode", service_args)
+        self.assertIn("service", service_args)
+        self.assertIn("--expected-service-version", service_args)
+        self.assertIn(package["version"], service_args)
+        self.assertIn("--expected-protocol-version", service_args)
+        self.assertIn(package["anpos"]["source_protocol_version"], service_args)
+        self.assertIn("--expected-runtime-contract", service_args)
+        self.assertIn(package["anpos"]["runtime_contract"], service_args)
+        self.assertIn("template", template_args)
+        self.assertNotIn("--expected-service-version", template_args)
+
+    def test_source_export_identity_rejects_invalid_injected_sha(self) -> None:
+        with self.assertRaisesRegex(self.renderer.BootstrapError, "invalid canonical_source_revision"):
+            self.renderer.render(
+                self.inputs,
+                source_export_identity={
+                    "canonical_source_revision": "not-a-sha",
+                    "canonical_source_tree": "0" * 40,
+                },
+            )
 
     def test_artifact_identity_fails_closed_on_package_protocol_mismatch(self) -> None:
-        import tempfile
-
         package = json.loads((ROOT / "commercial-service/package.json").read_text(encoding="utf-8"))
         protocol = json.loads((ROOT / "config/protocol/version.json").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as tmp:
