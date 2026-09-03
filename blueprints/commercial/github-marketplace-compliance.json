@@ -3,15 +3,21 @@
   "status": "operator_verification_required",
   "activation_scope": "vendor_marketplace_launch_only",
   "source_checked_at": "2026-09-04",
-  "purpose": "Machine-readable baseline of GitHub Marketplace requirements that must be re-verified against official GitHub documentation before paid ANPOS publication. This file is not launch authority and contains no pricing, credentials, customer data, or Marketplace plan IDs.",
+  "purpose": "Machine-readable baseline of GitHub Marketplace requirements that must be re-verified against official GitHub documentation before ANPOS Marketplace publication or paid conversion. This file is not launch authority and contains no pricing, credentials, customer data, or Marketplace plan IDs.",
   "official_sources": [
     "https://docs.github.com/en/apps/github-marketplace/creating-apps-for-github-marketplace/requirements-for-listing-an-app",
+    "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private",
     "https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization",
     "https://docs.github.com/en/apps/github-marketplace/listing-an-app-on-github-marketplace/setting-pricing-plans-for-your-listing",
     "https://docs.github.com/en/apps/github-marketplace/selling-your-app-on-github-marketplace/pricing-plans-for-github-marketplace-apps",
     "https://docs.github.com/en/apps/github-marketplace/selling-your-app-on-github-marketplace/billing-customers",
     "https://docs.github.com/en/apps/github-marketplace/using-the-github-marketplace-api-in-your-app"
   ],
+  "marketplace_github_app": {
+    "must_be_public_installable_by_other_accounts": true,
+    "must_be_separate_from_vendor_distribution_app": true,
+    "must_not_require_vendor_template_administration_for_customer_installations": true
+  },
   "paid_github_app": {
     "must_be_organization_owned": true,
     "listing_submitter_must_be_organization_owner": true,
@@ -33,6 +39,7 @@
       "support_url_or_support_email",
       "working_relevant_additional_links",
       "integration_value_beyond_authentication",
+      "github_app_public_installability",
       "public_availability_not_preview_or_invite_only",
       "marketplace_plan_change_and_cancellation_webhook",
       "logo",
@@ -70,6 +77,7 @@
     "Re-check official GitHub documentation before Marketplace submission because platform requirements can change.",
     "Do not treat repository compliance metadata as proof of publisher verification, installation count, financial onboarding, Marketplace approval, or customer billing readiness.",
     "Do not invent installation evidence, prices, plan IDs, legal URLs, support contacts, or customer data.",
+    "Keep customer-facing Marketplace App credentials and vendor private-template App credentials separated in production.",
     "Production sales remain fail-closed until every applicable production-launch gate has real evidence."
   ]
 }
