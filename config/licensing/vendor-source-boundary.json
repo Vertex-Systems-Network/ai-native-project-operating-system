@@ -9,6 +9,7 @@
     "blueprints/commercial/github-marketplace-compliance.json",
     "blueprints/commercial/legal-pack.template.md",
     "blueprints/commercial/marketplace-listing-draft.md",
+    "blueprints/commercial/marketplace-staged-launch.json",
     "blueprints/commercial/production-launch-checklist.json",
     "blueprints/commercial/vendor-launch-quality.yml",
     "scripts/export_vendor_repositories.py",
