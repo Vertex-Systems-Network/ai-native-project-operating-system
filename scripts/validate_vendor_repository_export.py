@@ -10,7 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXPORTER = ROOT / "scripts" / "export_vendor_repositories.py"
 TESTS = ROOT / "tests" / "test_vendor_repository_export.py"
-QUALITY_BLUEPRINT = ROOT / "blueprints" / "github" / "workflows" / "repository-quality.yml"
+VENDOR_QUALITY_BLUEPRINT = ROOT / "blueprints" / "commercial" / "vendor-launch-quality.yml"
+CHILD_QUALITY_BLUEPRINT = ROOT / "blueprints" / "github" / "workflows" / "repository-quality.yml"
 BOUNDARY = ROOT / "config" / "licensing" / "vendor-source-boundary.json"
 ERRORS: list[str] = []
 
@@ -65,6 +66,7 @@ def main() -> int:
         "tests/test_vendor_repository_export.py",
         "scripts/verify_commercial_production.py",
         "blueprints/commercial/production-launch-checklist.json",
+        "blueprints/commercial/vendor-launch-quality.yml",
     ):
         if required not in vendor_only:
             fail(f"vendor source boundary missing required path: {required}")
@@ -106,18 +108,23 @@ def main() -> int:
         "vendor exporter tests",
     )
 
-    if not QUALITY_BLUEPRINT.is_file():
-        fail("missing blueprints/github/workflows/repository-quality.yml")
+    if not VENDOR_QUALITY_BLUEPRINT.is_file():
+        fail("missing blueprints/commercial/vendor-launch-quality.yml")
     else:
-        quality = QUALITY_BLUEPRINT.read_text(encoding="utf-8")
+        quality = VENDOR_QUALITY_BLUEPRINT.read_text(encoding="utf-8")
         require_markers(
             quality,
             (
                 "python scripts/validate_vendor_repository_export.py",
                 "scripts/.trusted-base-vendor-export-validator.py",
+                "tests.test_vendor_repository_export",
             ),
-            "repository quality blueprint vendor export integration",
+            "vendor-only quality blueprint export integration",
         )
+
+    child_quality = CHILD_QUALITY_BLUEPRINT.read_text(encoding="utf-8") if CHILD_QUALITY_BLUEPRINT.is_file() else ""
+    if "validate_vendor_repository_export.py" in child_quality or "test_vendor_repository_export" in child_quality:
+        fail("child repository-quality blueprint must not depend on vendor-only export files")
 
     bootstrap = (ROOT / "scripts" / "bootstrap_child.py").read_text(encoding="utf-8")
     require_markers(
