@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 2,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service.",
   "endpoints": [
