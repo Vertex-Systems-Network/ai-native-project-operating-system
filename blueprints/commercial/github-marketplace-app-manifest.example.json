@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "operator_configuration_required",
+  "role": "customer_marketplace_app",
+  "purpose": "Blueprint for the public/customer-facing GitHub App that owns the ANPOS GitHub Marketplace listing and is used for Marketplace account reconciliation. This file is not an App registration and contains no credentials.",
+  "operator_required": {
+    "app_name": null,
+    "homepage_url": null,
+    "callback_urls": [],
+    "webhook_url": null,
+    "publisher_organization": null
+  },
+  "required_defaults": {
+    "public": true,
+    "webhook_active": true
+  },
+  "event_subscriptions": ["marketplace_purchase"],
+  "repository_permissions": {},
+  "account_permissions": {},
+  "permission_rule": "Start with no repository/organization permissions beyond those genuinely required by approved customer-facing product capabilities. Add permissions only when a concrete feature requires them and re-review the Marketplace installation consent surface.",
+  "forbidden_vendor_permissions": [
+    "administration:write_for_private_template_distribution"
+  ],
+  "security_requirements": [
+    "This App must be distinct from the private Vendor Distribution GitHub App.",
+    "Generate its private key only in GitHub and store it in an approved secret manager; never commit it.",
+    "Use a strong Marketplace webhook secret and verify webhook signatures before processing payloads.",
+    "Do not grant vendor private-template Administration permission to this customer-facing App.",
+    "Do not claim Marketplace publication, installation count, publisher verification, pricing, or free-plan value from this blueprint.",
+    "Re-check current GitHub Marketplace and GitHub App visibility requirements immediately before registration/listing submission."
+  ]
+}
