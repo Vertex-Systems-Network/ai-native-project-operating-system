@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.7",
+  "current_protocol_version": "1.3.8",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -374,12 +374,40 @@
         "config/licensing/vendor-source-boundary.json strips operator bootstrap assets from customer-template exports",
         "Full temporary certification workflow must pass before canonical main promotion"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.7-to-1.3.8",
+      "from_version": "1.3.7",
+      "to_version": "1.3.8",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Add a public secret-free /api/version endpoint to the commercial service so deployment identity is observable independently of health/readiness",
+        "Embed source_protocol_version and split-github-app-v1 runtime-contract identity in the exported commercial-service package metadata",
+        "Require exact expected service/protocol versions whenever the production verifier is run with --require-ready so stale healthy artifacts cannot be certified",
+        "Correct production verifier customer/operator paths from stale /v1/* URLs to the actual Next.js /api/v1/* routes",
+        "Add deployment identity tests and a dedicated validator covering route identity, stale-version rejection, route-prefix correctness and vendor/customer boundary enforcement",
+        "Bump commercial service from 0.3.0 to 0.3.1 because the public operational API gains deployment identity and the production verifier contract is hardened",
+        "Do not add secrets, live Marketplace state, pricing, plan IDs, customer data or production authorization"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Deployment identity tooling and the commercial service remain vendor-only. Customer child repositories must not receive the commercial runtime or vendor verifier merely by adopting protocol metadata.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        "commercial-service/app/api/version/route.ts derives non-secret identity from package metadata and uses Cache-Control: no-store",
+        "scripts/verify_commercial_production.py requires exact expected artifact identity with --require-ready and uses /api/v1 route prefixes",
+        "tests/test_deployment_identity.py covers exact identity, stale-version rejection, route-prefix regression and contract invariants",
+        "scripts/validate_deployment_identity.py behaviorally verifies the pre-network production readiness identity gate",
+        "Deterministic vendor export retains service 0.3.1 identity while customer-template export strips vendor-only identity-verification tooling",
+        "Full temporary certification workflow must pass before canonical main promotion"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.7-to-NEXT",
-    "from_version": "1.3.7",
+    "id": "ANPOS-1.3.8-to-NEXT",
+    "from_version": "1.3.8",
     "to_version": null,
     "detected_at": null,
     "impact": [],

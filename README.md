@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.7`
+**Current protocol:** `1.3.8`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -396,6 +396,12 @@ The generated Marketplace App registration is public, webhook-enabled and subscr
 
 The output does not create GitHub Apps or repositories and cannot prove Marketplace approval, installation counts, publisher verification, pricing, plan IDs or production readiness. GitHub remains authoritative for the final App registrations, and current GitHub/Marketplace requirements must be re-checked before registration and listing submission.
 
+## Deployment identity attestation in 1.3.8
+
+ANPOS 1.3.8 makes commercial deployment identity a first-class production gate. Commercial service `0.3.1` exposes `GET /api/version`, derived from package metadata, with the service version, source ANPOS protocol version and runtime-contract identifier. The endpoint is public, secret-free and `Cache-Control: no-store`.
+
+`scripts/verify_commercial_production.py --require-ready` now requires `--expected-service-version` and `--expected-protocol-version` and verifies `/api/version` before readiness. This prevents a stale or wrong artifact from being certified merely because `/api/health` is green. The verifier also uses the actual Next.js `/api/v1/...` paths; the previously unprefixed `/v1/...` smoke-check paths were invalid and returned 404 on the connected deployment.
+
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.
@@ -472,6 +478,7 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 - `scripts/validate_commercial_licensing.py` — commercial distribution/licensing validator
 - `scripts/render_operator_launch_bootstrap.py` — secret-safe vendor/operator GitHub App registration + environment-key handoff renderer
 - `scripts/validate_operator_launch_bootstrap.py` — operator launch bootstrap safety/behavior validator
+- `scripts/validate_deployment_identity.py` — commercial deployment identity/version + production verifier route validator
 - `blueprints/github/` — inactive child workflow/Dependabot blueprints
 
 ## Start prompt

@@ -284,8 +284,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not args.require_ready:
         print(
-            "NOTE: production launch is not certified unless --require-ready includes exact expected versions, "
-            "readiness passes, and real Marketplace E2E evidence is recorded."
+            "NOTE: production launch is not certified unless --require-ready passes and real Marketplace E2E evidence is recorded. "
+            "--require-ready also requires exact expected service/protocol versions and exact deployment identity."
         )
     return 0
 
