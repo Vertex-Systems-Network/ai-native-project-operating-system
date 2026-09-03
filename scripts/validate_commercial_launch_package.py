@@ -304,9 +304,9 @@ def main() -> int:
         (
             '"/api/health"',
             '"/api/ready"',
-            '"/v1/keys"',
-            '"/v1/entitlements/current"',
-            '"/v1/reconcile"',
+            '"/api/v1/keys"',
+            '"/api/v1/entitlements/current"',
+            '"/api/v1/reconcile"',
             '"--require-ready"',
             '"--github-token-env"',
             '"--operator-token-env"',
