@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.9`
+**Current protocol:** `1.3.10`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -494,3 +494,9 @@ For commercial distribution work, ask a compatible AI to load the repository's `
 The vendor-only operator launch bootstrap now derives the exact deployable commercial-service identity directly from `commercial-service/package.json` and cross-checks its embedded source protocol against `config/protocol/version.json`. The rendered handoff includes `artifact_identity` plus `production_verifier_arguments`, so expected service/protocol versions are no longer copied by hand into deployment instructions.
 
 The renderer fails closed on missing/malformed package identity, package/protocol mismatch, or an unexpected runtime contract. Operators must deploy the exact exported artifact, verify `/api/version` against the generated identity, and only then accept `/api/ready` plus real Marketplace E2E evidence. This tooling remains vendor-only and does not create repositories, credentials, GitHub Apps, Marketplace approvals, prices, plan IDs, installations, or launch authority.
+
+## Deterministic vendor handoff verification in 1.3.10
+
+ANPOS now binds the vendor/operator handoff to the exact canonical Git commit and tree used for deterministic private-repository exports. `scripts/verify_vendor_handoff.py` reconstructs the expected service or customer-template export from committed canonical Git blobs and compares the complete target file/byte set, including `EXPORT-MANIFEST.json`, before that export or a clean private-repository checkout is accepted.
+
+For Git checkouts, verification reads committed `HEAD` blobs and requires a clean checkout including untracked files. It fails closed on stale source identity, extra/missing files, byte drift, unsupported Git modes/symlinks, wrong export mode, or wrong service/protocol/runtime identity. Successful verification emits a JSON provenance receipt with canonical source revision/tree, target repository revision when applicable, manifest SHA-256 and content-set SHA-256. The receipt proves exact deterministic-export equality only; it does not prove repository privacy/ownership, GitHub App installation, Marketplace approval, credentials, deployment, or launch authority.

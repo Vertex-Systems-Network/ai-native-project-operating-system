@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.9",
+  "current_protocol_version": "1.3.10",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -430,12 +430,41 @@
         "Deterministic vendor export must retain service 0.3.2 / protocol 1.3.9 identity while customer-template export strips vendor-only operator/deployment tooling",
         "Full temporary certification workflow must pass before canonical main promotion"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.9-to-1.3.10",
+      "from_version": "1.3.9",
+      "to_version": "1.3.10",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Add a vendor-only handoff verifier that reconstructs the approved service/template export from committed canonical Git blobs and compares the complete target byte set",
+        "Verify clean private Git checkouts from committed HEAD blobs so newline-converted working-tree bytes cannot create false mismatches",
+        "Reject extra, missing, dirty, stale, tampered, wrong-mode, symlinked or wrong-identity vendor repository content before private-source acceptance",
+        "Emit deterministic verification receipts with canonical source revision/tree, target repository revision, manifest SHA-256 and content-set SHA-256",
+        "Upgrade operator handoff schema to bind both vendor repositories to canonical source revision/tree and generate exact service/template verifier arguments",
+        "Route exporter and handoff verifier explicitly to commercial-distribution agents and keep all new verification tooling vendor-only",
+        "Bump commercial service from 0.3.2 to 0.3.3 because exported package source_protocol_version changes to 1.3.10 and /api/version must attest the exact certified source identity",
+        "Preserve split-github-app-v1, paid draft catalog, secret boundaries, fail-closed launch authorization and non-destructive cancellation behavior"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Vendor export/handoff verification is vendor-only source-management tooling. Customer child repositories and customer-facing commercial-template exports must strip it and gain no commercial runtime dependency from this migration.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        "scripts/verify_vendor_handoff.py reconstructs expected exports from committed canonical blobs and compares exact target files/bytes",
+        "Target Git checkout verification reads committed HEAD blobs and requires a clean checkout including untracked files",
+        "tests/test_vendor_handoff.py covers valid service/template handoff, private-style Git checkout, tampering, extra files, stale source identity, dirty checkout and service identity mismatch",
+        "Operator handoff schema_version=3 emits canonical source revision/tree plus exact service/template verification argument lists",
+        "Vendor source boundary strips verifier/tests from customer templates and .ai commercial_distribution routing includes exporter/verifier",
+        "Deterministic double export, full ANPOS/commercial/vendor tests and commercial service certification must pass before canonical main promotion"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.9-to-NEXT",
-    "from_version": "1.3.9",
+    "id": "ANPOS-1.3.10-to-NEXT",
+    "from_version": "1.3.10",
     "to_version": null,
     "detected_at": null,
     "impact": [],
