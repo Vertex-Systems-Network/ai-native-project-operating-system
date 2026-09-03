@@ -86,7 +86,6 @@ def main() -> int:
             (
                 "python scripts/validate_vendor_repository_export.py",
                 "scripts/.trusted-base-vendor-export-validator.py",
-                "core/commercial/vendor-export validators",
             ),
             "repository quality blueprint vendor export integration",
         )
