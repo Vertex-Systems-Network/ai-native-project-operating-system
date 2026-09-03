@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "source-continuous-certification.yml"
+WORKFLOW_PATH = ".github/workflows/source-continuous-certification.yml"
 BOUNDARY = ROOT / "config" / "licensing" / "vendor-source-boundary.json"
 SOURCE_REPOSITORY = "Vertex-Systems-Network/ai-native-project-operating-system"
 ERRORS: list[str] = []
@@ -23,12 +24,22 @@ def require(source: str, marker: str, label: str | None = None) -> None:
         fail(label or f"source continuous certification workflow missing marker: {marker}")
 
 
+def committed_workflow() -> str:
+    result = subprocess.run(
+        ["git", "show", f"HEAD:{WORKFLOW_PATH}"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        fail("canonical source must commit .github/workflows/source-continuous-certification.yml")
+        return ""
+    return result.stdout
+
+
 def main() -> int:
-    if not WORKFLOW.is_file():
-        fail("canonical source must retain .github/workflows/source-continuous-certification.yml")
-        source = ""
-    else:
-        source = WORKFLOW.read_text(encoding="utf-8")
+    source = committed_workflow()
 
     for marker in (
         "name: ANPOS Source Continuous Certification",
@@ -47,6 +58,8 @@ def main() -> int:
         "python-version: '3.12'",
         "jsonschema==4.25.1",
         "python -m compileall -q scripts tests",
+        "Hide source-only workflow during inert-template tests",
+        "Restore source-only workflow after inert-template tests",
         "python -m unittest discover -s tests -p 'test_*.py' -v",
         "python scripts/validate_ai_native_repo.py",
         "python scripts/validate_commercial_licensing.py",
@@ -100,7 +113,7 @@ def main() -> int:
         boundary = {}
     vendor_only = set(boundary.get("vendor_only_paths") or [])
     for path in (
-        ".github/workflows/source-continuous-certification.yml",
+        WORKFLOW_PATH,
         "scripts/validate_source_continuous_certification.py",
         "tests/test_source_continuous_certification.py",
     ):
