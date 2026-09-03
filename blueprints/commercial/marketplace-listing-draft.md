@@ -38,9 +38,21 @@ For a paid GitHub App listing, the current baseline requires or records:
 
 None of these repository statements prove that the external requirements have been met. Installation count, publisher verification, financial onboarding, legal URLs, support contacts, prices, plan IDs, listing approval, and production evidence must come from real external state.
 
+## Recommended staged publication path
+
+While paid eligibility evidence is missing, `blueprints/commercial/marketplace-staged-launch.json` recommends **free-first then paid**:
+
+1. Define a real free offering that provides GitHub-integrated value beyond authentication. The repository does not invent a Community plan or its entitlements.
+2. Publish a free Marketplace listing only after the general listing, privacy, support, asset, public-availability and purchase/cancellation webhook requirements are met.
+3. Accumulate genuine installations and operating evidence; never manufacture or buy installations merely to reach an eligibility threshold.
+4. Once current paid requirements are met—including the documented installation threshold—complete verified-publisher and financial onboarding.
+5. Add approved paid plans to the existing free listing. GitHub's current documentation supports adding paid plans later after verification/onboarding.
+
+This staged route does **not** alter the draft Developer, Pro, Team, or Enterprise product catalog. Any free plan definition and entitlements remain an explicit operator product decision and must be tested against runtime authorization before publication.
+
 ## Suggested plans
 
-All prices and Marketplace plan IDs remain operator-controlled and must be configured outside this repository. The current Marketplace baseline supports at most 10 plans; ANPOS proposes four logical tiers.
+All prices and Marketplace plan IDs remain operator-controlled and must be configured outside this repository. The current Marketplace baseline supports at most 10 plans; ANPOS proposes four logical paid tiers. A separate free acquisition plan may be defined only if the operator deliberately approves real user value and entitlements.
 
 ### Developer
 
@@ -108,9 +120,9 @@ All published links must resolve to relevant working pages.
 
 - organization-owned GitHub App;
 - organization-owner control of listing submission;
-- verified publisher prerequisites and approval;
+- verified publisher prerequisites and approval before paid publication;
 - current minimum-installation threshold for paid GitHub Apps;
-- financial onboarding;
+- financial onboarding before paid publication;
 - actual monthly and annual USD price decisions for each paid plan;
 - real Marketplace plan IDs;
 - GitHub App ID/client ID/private key;
@@ -128,4 +140,5 @@ All published links must resolve to relevant working pages.
 - Existing generated customer projects are not deleted, encrypted, remotely modified, or intentionally broken when an entitlement expires or is cancelled.
 - Organization membership alone is not a licensed seat.
 - Archive-first private delivery is preferred; collaborator provisioning is optional and disabled by default.
+- A free-first listing must deliver real product value and cannot be used as an installation-count shell.
 - No final price, legal promise, uptime SLA, tax treatment, refund right, warranty, installation count, publisher verification, or Marketplace approval is created by this draft.
