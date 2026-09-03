@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   patch:
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     timeout-minutes: 10
     steps:
       - name: Checkout exact compatibility branch
@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
 
           validator_path = Path('scripts/validate_ai_native_repo.py')
@@ -81,7 +81,7 @@ jobs:
               '        workflow_dir = ROOT / ".github" / "workflows"\n'
               '        active = sorted(\n'
               '            [p.name for p in workflow_dir.glob("*.yml")] +\n'
-              '            [p.name for p in workflow_dir.glob("*.yaml")]\n'
+              '            [p.name for p in workflow_dir.glob("*.yaml") ]\n'
               '        ) if workflow_dir.exists() else []\n'
               '        self.assertIn(active, ([], ["source-continuous-certification.yml"]))\n'
               '        if active:\n'
