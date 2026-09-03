@@ -10,6 +10,18 @@ import { processPendingTemplateAccessJobs, revokeAllTemplateGrantsForSource } fr
 
 const ACTIVE_STATES = new Set(["active", "trial", "grace"]);
 
+export type ReconciledEntitlement = {
+  state: "cancelled" | "trial" | "active";
+  github_account_id: number;
+  github_account_type: "User" | "Organization" | null;
+  github_login: string | null;
+  plan_id: string | null;
+  seats: number | null;
+  entitlements: string[];
+  signed_entitlement: ReturnType<typeof signEntitlement> | null;
+  seat_assignment_required: boolean;
+};
+
 function tokenExpiry(now: Date): string {
   const configured = Number(process.env.ANPOS_ENTITLEMENT_TTL_SECONDS ?? "86400");
   const seconds = Number.isFinite(configured) ? Math.min(Math.max(configured, 900), 604800) : 86400;
@@ -28,9 +40,9 @@ async function audit(client: PoolClient, requestId: string, eventType: string, a
   );
 }
 
-export async function reconcileEntitlement(accountId: number, requestId: string) {
+export async function reconcileEntitlement(accountId: number, requestId: string): Promise<ReconciledEntitlement> {
   const subscription = await getMarketplaceSubscription(accountId);
-  const result = await transaction(async (client) => {
+  const result = await transaction<ReconciledEntitlement>(async (client) => {
     const existing = await client.query("SELECT * FROM entitlements WHERE github_account_id=$1 FOR UPDATE", [accountId]);
     if (!subscription?.marketplace_purchase?.plan?.id) {
       if (existing.rowCount) {
@@ -40,7 +52,17 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
         );
       }
       await audit(client, requestId, "entitlement_cancelled_or_absent", accountId);
-      return { state: "cancelled", github_account_id: accountId, signed_entitlement: null, entitlements: [] as string[] };
+      return {
+        state: "cancelled",
+        github_account_id: accountId,
+        github_account_type: null,
+        github_login: null,
+        plan_id: null,
+        seats: null,
+        signed_entitlement: null,
+        entitlements: [],
+        seat_assignment_required: false,
+      };
     }
 
     if (!Number.isSafeInteger(subscription.id) || subscription.id <= 0 || subscription.id !== accountId) {
@@ -57,13 +79,14 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
     const now = new Date();
     const licenseId = existing.rows[0]?.license_id ?? randomUUID();
     const seats = subscription.marketplace_purchase.unit_count ?? null;
-    const state = subscription.marketplace_purchase.on_free_trial ? "trial" : "active";
+    const state: "trial" | "active" = subscription.marketplace_purchase.on_free_trial ? "trial" : "active";
+    const accountType = subscription.type as "User" | "Organization";
     const features = PLAN_FEATURES[planId];
     const issuedAt = now.toISOString();
     const envelopeExpiresAt = tokenExpiry(now);
-    const envelope = subscription.type === "Organization" ? null : signEntitlement({
+    const envelope = accountType === "Organization" ? null : signEntitlement({
       issuer: serviceConfig().entitlementIssuer,
-      subject: { github_account_id: subscription.id, github_account_type: subscription.type, github_login: subscription.login },
+      subject: { github_account_id: subscription.id, github_account_type: accountType, github_login: subscription.login },
       license_id: licenseId,
       plan_id: planId,
       seats,
@@ -85,7 +108,7 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
         expires_at=EXCLUDED.expires_at,billing_updated_at=EXCLUDED.billing_updated_at,
         signed_envelope=EXCLUDED.signed_envelope,updated_at=NOW()
     `, [
-      subscription.id, subscription.login, subscription.type, licenseId, planId, marketplacePlanId, seats, state,
+      subscription.id, subscription.login, accountType, licenseId, planId, marketplacePlanId, seats, state,
       JSON.stringify(features), subscription.marketplace_purchase.billing_cycle ?? null, issuedAt, envelopeExpiresAt,
       subscription.marketplace_purchase.updated_at ?? null, JSON.stringify(envelope),
     ]);
@@ -93,18 +116,18 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
       plan_id: planId,
       marketplace_plan_id: marketplacePlanId,
       state,
-      account_type: subscription.type,
+      account_type: accountType,
     });
     return {
       state,
       github_account_id: accountId,
-      github_account_type: subscription.type,
+      github_account_type: accountType,
       github_login: subscription.login,
       plan_id: planId,
       seats,
       entitlements: features,
       signed_entitlement: envelope,
-      seat_assignment_required: subscription.type === "Organization",
+      seat_assignment_required: accountType === "Organization",
     };
   });
 
