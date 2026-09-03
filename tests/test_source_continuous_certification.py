@@ -46,8 +46,6 @@ class SourceContinuousCertificationTests(unittest.TestCase):
     def test_full_certification_gates_are_present(self):
         source = self.source()
         for marker in (
-            "Hide source-only workflow during inert-template tests",
-            "Restore source-only workflow after inert-template tests",
             "python -m unittest discover -s tests -p 'test_*.py' -v",
             "python scripts/validate_ai_native_repo.py",
             "python scripts/validate_commercial_licensing.py",
