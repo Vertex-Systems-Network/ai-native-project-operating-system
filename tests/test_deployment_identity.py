@@ -71,6 +71,20 @@ class DeploymentIdentityTests(unittest.TestCase):
         ):
             self.assertNotIn(stale, source)
 
+    def test_authenticated_smoke_contract_is_fail_closed_and_canonical(self) -> None:
+        source = VERIFIER_PATH.read_text(encoding="utf-8")
+        for expected in (
+            '"X-Anpos-Account-Id"',
+            '"entitlement_not_found"',
+            '"valid_account_id_required"',
+            '"anpos-production-verifier-contract-probe"',
+            'body=json.dumps({}, separators=(",", ":"))',
+            '"--github-account-id"',
+        ):
+            self.assertIn(expected, source)
+        self.assertNotIn('"dry_run"', source)
+        self.assertNotIn('payload["github_account_id"]', source)
+
     def test_service_package_embeds_certified_source_identity(self) -> None:
         package, protocol = self.current_identity()
         self.assertRegex(package["version"], r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
