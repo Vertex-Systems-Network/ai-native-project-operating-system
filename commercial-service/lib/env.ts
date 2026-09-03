@@ -1,8 +1,10 @@
 export type ServiceConfig = {
   databaseUrl: string;
   githubWebhookSecret: string;
-  githubAppId: string;
-  githubAppPrivateKeyPem: string;
+  githubMarketplaceAppId: string;
+  githubMarketplaceAppPrivateKeyPem: string;
+  githubVendorAppId: string;
+  githubVendorAppPrivateKeyPem: string;
   entitlementPrivateKeyPem: string;
   entitlementKeyId: string;
   entitlementIssuer: string;
@@ -22,8 +24,10 @@ function pem(name: string): string | null {
 const REQUIRED = [
   "DATABASE_URL",
   "GITHUB_WEBHOOK_SECRET",
-  "GITHUB_APP_ID",
-  "GITHUB_APP_PRIVATE_KEY",
+  "GITHUB_MARKETPLACE_APP_ID",
+  "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+  "GITHUB_VENDOR_APP_ID",
+  "GITHUB_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_KEY_ID",
   "ANPOS_OPERATOR_TOKEN",
@@ -37,6 +41,13 @@ export function missingConfig(): string[] {
   return REQUIRED.filter((name) => !value(name));
 }
 
+function validatePrivateKeyMarker(name: string, problems: string[]): void {
+  const key = pem(name);
+  if (key && (!key.includes("BEGIN") || !key.includes("PRIVATE KEY"))) {
+    problems.push(`invalid:${name}`);
+  }
+}
+
 export function configurationProblems(): string[] {
   const problems = missingConfig().map((name) => `missing:${name}`);
   const databaseUrl = value("DATABASE_URL");
@@ -45,8 +56,15 @@ export function configurationProblems(): string[] {
   if (webhookSecret && webhookSecret.length < 32) problems.push("weak:GITHUB_WEBHOOK_SECRET");
   const operatorToken = value("ANPOS_OPERATOR_TOKEN");
   if (operatorToken && operatorToken.length < 32) problems.push("weak:ANPOS_OPERATOR_TOKEN");
-  const appId = value("GITHUB_APP_ID");
-  if (appId && !/^\d+$/.test(appId)) problems.push("invalid:GITHUB_APP_ID");
+
+  const marketplaceAppId = value("GITHUB_MARKETPLACE_APP_ID");
+  if (marketplaceAppId && !/^\d+$/.test(marketplaceAppId)) problems.push("invalid:GITHUB_MARKETPLACE_APP_ID");
+  const vendorAppId = value("GITHUB_VENDOR_APP_ID");
+  if (vendorAppId && !/^\d+$/.test(vendorAppId)) problems.push("invalid:GITHUB_VENDOR_APP_ID");
+  if (marketplaceAppId && vendorAppId && marketplaceAppId === vendorAppId) {
+    problems.push("unsafe:GITHUB_APP_ROLE_SEPARATION");
+  }
+
   const installationId = value("GITHUB_VENDOR_INSTALLATION_ID");
   if (installationId && !/^\d+$/.test(installationId)) problems.push("invalid:GITHUB_VENDOR_INSTALLATION_ID");
   const repository = value("ANPOS_PRIVATE_TEMPLATE_REPO");
@@ -67,14 +85,15 @@ export function configurationProblems(): string[] {
       } catch { problems.push(`invalid:${name}`); }
     }
   }
-  const githubKey = pem("GITHUB_APP_PRIVATE_KEY");
-  if (githubKey && !githubKey.includes("BEGIN") || githubKey && !githubKey.includes("PRIVATE KEY")) {
-    problems.push("invalid:GITHUB_APP_PRIVATE_KEY");
+
+  validatePrivateKeyMarker("GITHUB_MARKETPLACE_APP_PRIVATE_KEY", problems);
+  validatePrivateKeyMarker("GITHUB_VENDOR_APP_PRIVATE_KEY", problems);
+  const marketplaceKey = pem("GITHUB_MARKETPLACE_APP_PRIVATE_KEY");
+  const vendorKey = pem("GITHUB_VENDOR_APP_PRIVATE_KEY");
+  if (marketplaceKey && vendorKey && marketplaceKey === vendorKey) {
+    problems.push("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE");
   }
-  const entitlementKey = pem("ANPOS_ENTITLEMENT_PRIVATE_KEY");
-  if (entitlementKey && (!entitlementKey.includes("BEGIN") || !entitlementKey.includes("PRIVATE KEY"))) {
-    problems.push("invalid:ANPOS_ENTITLEMENT_PRIVATE_KEY");
-  }
+  validatePrivateKeyMarker("ANPOS_ENTITLEMENT_PRIVATE_KEY", problems);
   return [...new Set(problems)];
 }
 
@@ -86,8 +105,10 @@ export function serviceConfig(): ServiceConfig {
   return {
     databaseUrl: value("DATABASE_URL")!,
     githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")!,
-    githubAppId: value("GITHUB_APP_ID")!,
-    githubAppPrivateKeyPem: pem("GITHUB_APP_PRIVATE_KEY")!,
+    githubMarketplaceAppId: value("GITHUB_MARKETPLACE_APP_ID")!,
+    githubMarketplaceAppPrivateKeyPem: pem("GITHUB_MARKETPLACE_APP_PRIVATE_KEY")!,
+    githubVendorAppId: value("GITHUB_VENDOR_APP_ID")!,
+    githubVendorAppPrivateKeyPem: pem("GITHUB_VENDOR_APP_PRIVATE_KEY")!,
     entitlementPrivateKeyPem: pem("ANPOS_ENTITLEMENT_PRIVATE_KEY")!,
     entitlementKeyId: value("ANPOS_ENTITLEMENT_KEY_ID")!,
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
