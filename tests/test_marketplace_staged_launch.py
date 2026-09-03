@@ -14,8 +14,17 @@ class MarketplaceStagedLaunchTests(unittest.TestCase):
         self.assertEqual(strategy["activation_scope"], "vendor_marketplace_launch_only")
         self.assertEqual(strategy["strategy"], "free_first_then_paid")
         self.assertEqual(strategy["source_checked_at"], "2026-09-04")
+
+        architecture = strategy["github_app_architecture"]
+        self.assertEqual(architecture["marketplace_app_reference"], "blueprints/commercial/github-marketplace-app-manifest.example.json")
+        self.assertEqual(architecture["vendor_app_reference"], "blueprints/commercial/github-vendor-app-manifest.example.json")
+        self.assertTrue(architecture["marketplace_app_must_be_public"])
+        self.assertTrue(architecture["apps_must_remain_distinct"])
+        self.assertTrue(architecture["vendor_administration_must_not_be_requested_from_customer_installations"])
+
         free = strategy["phase_1_free_listing"]
         self.assertTrue(free["requires_general_marketplace_listing_compliance"])
+        self.assertTrue(free["requires_public_marketplace_app_installability"])
         self.assertTrue(free["requires_public_availability"])
         self.assertTrue(free["requires_value_beyond_authentication"])
         self.assertTrue({"purchased", "cancelled"}.issubset(set(free["required_marketplace_events_when_free_only"])))
@@ -49,6 +58,12 @@ class MarketplaceStagedLaunchTests(unittest.TestCase):
         self.assertEqual(publication["strategy"], "free_first_then_paid")
         self.assertEqual(publication["reference"], "blueprints/commercial/marketplace-staged-launch.json")
         self.assertTrue(publication["operator_override_allowed"])
+        gate_ids = {gate["id"] for gate in checklist["required_gates"]}
+        self.assertTrue(
+            {"github_marketplace_app", "github_vendor_app", "github_app_role_separation", "vendor_app_installation"}.issubset(gate_ids)
+        )
+        self.assertNotIn("github_app", gate_ids)
+        self.assertNotIn("app_installation", gate_ids)
 
 
 if __name__ == "__main__":
