@@ -380,6 +380,14 @@ The staged strategy is intentionally fail-closed. It does not invent a Community
 
 Installation thresholds and Marketplace rules can change, so official GitHub documentation must be re-checked before free submission and paid conversion. Artificial, purchased, deceptive, or otherwise non-genuine installations are explicitly outside the strategy.
 
+## GitHub App trust separation in 1.3.6
+
+ANPOS 1.3.6 separates the GitHub App used for customer-facing Marketplace publication/reconciliation from the GitHub App used for vendor private-template distribution. The Marketplace App is a public/installable customer-facing trust boundary; the Vendor Distribution App stays private to the publisher and receives only the private-repository permissions required for archive delivery or the explicitly enabled collaborator fallback.
+
+Commercial service `0.3.0` requires distinct `GITHUB_MARKETPLACE_APP_*` and `GITHUB_VENDOR_APP_*` credentials. Readiness fails closed if the App IDs are equal, if the private keys are reused, or if an operator supplies only the legacy `GITHUB_APP_ID` / `GITHUB_APP_PRIVATE_KEY` pair. Marketplace reconciliation uses only the Marketplace App JWT; vendor installation tokens use only the Vendor App JWT.
+
+The legacy single-App manifest remains only as a deprecated migration marker. Separate vendor-only manifests define the public Marketplace App and private Vendor Distribution App, and deterministic customer-template export strips all of these vendor launch assets. This change does not create either App, grant Marketplace approval, configure production credentials, define a free plan, or authorize sales.
+
 ## Repository hygiene
 
 ANPOS keeps a minimal protected `.gitignore` for its own tooling and secret/temp safety. It ignores Python caches/virtual environments, coverage caches, `.env` variants, common OS/editor residue and temporary/backup files. Stack-specific generated/build/dependency ignores belong to each child project after its actual technology stack is approved.

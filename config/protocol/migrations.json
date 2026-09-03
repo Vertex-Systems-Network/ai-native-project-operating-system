@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.5",
+  "current_protocol_version": "1.3.6",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -314,12 +314,43 @@
         "Dedicated staged-launch validator rejects automatic paid conversion, repository-authorized paid conversion and staged-plan mutation of the paid catalog",
         "Full ANPOS/commercial/vendor certification must pass before this migration is promoted to canonical main"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.5-to-1.3.6",
+      "from_version": "1.3.5",
+      "to_version": "1.3.6",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Separate the public/customer-facing GitHub Marketplace App trust boundary from the private Vendor Distribution GitHub App used for vendor-template access",
+        "Require the Marketplace App to be public/installable for Marketplace publication while keeping the Vendor Distribution App private and vendor-only",
+        "Move Marketplace reconciliation to GITHUB_MARKETPLACE_APP_ID/GITHUB_MARKETPLACE_APP_PRIVATE_KEY and vendor template access to GITHUB_VENDOR_APP_ID/GITHUB_VENDOR_APP_PRIVATE_KEY",
+        "Fail closed when Marketplace and Vendor App IDs are equal or their private keys are reused",
+        "Reject legacy GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY as production substitutes instead of silently collapsing App roles",
+        "Keep vendor repository Administration permission off the customer-facing Marketplace App; optional collaborator Administration permission remains Vendor-App-only",
+        "Add separate Marketplace/Vendor App blueprints and deprecate the legacy single-App blueprint",
+        "Bind free-first Marketplace staged publication and launch gates to public App installability plus App-role separation",
+        "Bump the commercial service contract from 0.2.1 to 0.3.0 because production environment configuration changes are intentionally non-backward-compatible",
+        "Preserve customer child/template vendor-source stripping and the existing Developer/Pro/Team/Enterprise paid catalog"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing customer child projects do not receive vendor-only GitHub App or commercial runtime assets. No child code migration is required. Vendor operators upgrading the commercial service must create/configure two distinct GitHub Apps and replace legacy single-App environment variables before 0.3.0 readiness can pass.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        "Official GitHub documentation checked on 2026-09-04 confirms public Apps can be installed by other accounts and Marketplace publication is associated with public Apps",
+        "commercial-service configuration fails closed on equal Marketplace/Vendor App IDs and reused App private keys",
+        "commercial-service Marketplace reconciliation and vendor-template installation-token calls use separate App JWT roles",
+        "Production readiness validates both App private keys as RSA and legacy single-App credentials do not satisfy required configuration",
+        "Separate Marketplace and Vendor App blueprints are vendor-only and customer-template exports exclude them",
+        "Full ANPOS/commercial/vendor certification must pass before this migration is promoted to canonical main"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.5-to-NEXT",
-    "from_version": "1.3.5",
+    "id": "ANPOS-1.3.6-to-NEXT",
+    "from_version": "1.3.6",
     "to_version": null,
     "detected_at": null,
     "impact": [],
