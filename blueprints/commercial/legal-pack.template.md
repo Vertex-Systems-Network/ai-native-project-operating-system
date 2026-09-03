@@ -7,6 +7,8 @@
 - Legal entity: `[OPERATOR REQUIRED]`
 - Registered address: `[OPERATOR REQUIRED]`
 - Country/jurisdiction: `[OPERATOR REQUIRED]`
+- Verified organization domain used for Marketplace publisher verification: `[OPERATOR REQUIRED]`
+- Publisher/contact email: `[OPERATOR REQUIRED]`
 - Support contact: `[OPERATOR REQUIRED]`
 - Legal/privacy contact: `[OPERATOR REQUIRED]`
 - Tax/VAT identifiers where applicable: `[OPERATOR REQUIRED]`
@@ -26,7 +28,13 @@ State GitHub-account requirements, organization seat assignment rules, authorize
 
 ## Billing and subscriptions
 
-State the actual Marketplace plans, billing cycle, taxes, upgrades/downgrades, renewal behavior, cancellation timing, refunds/credits, and GitHub Marketplace billing relationship. Repository drafts do not define price or refund rights.
+State the actual Marketplace plans, monthly and annual billing options, taxes, upgrades/downgrades, renewal behavior, cancellation timing, refunds/credits, and GitHub Marketplace billing relationship. Repository drafts do not define price or refund rights.
+
+If a GitHub Marketplace free trial is offered, verify the current GitHub trial duration and conversion behavior immediately before publication. The 2026-09-04 GitHub documentation baseline records a 14-day Marketplace free trial that converts to the paid plan unless cancelled before trial end. Do not promise or implement trial terms from this template without re-verification and legal review.
+
+## Customer billing visibility
+
+Describe where customers can see their current plan and price, purchases, upgrades/downgrades, cancellations, trial status/remaining time, monthly-vs-annual billing cycle, and usage/remaining resources when relevant to the plan. Customer-facing behavior must match verified Marketplace state.
 
 ## Entitlements
 
@@ -118,6 +126,8 @@ List actual providers such as GitHub, Vercel, Neon, email/support/observability 
 
 Define retention for active subscriptions, cancelled trials, audit/security records, support tickets, backups, and legal/accounting obligations. Match configured deletion/retention behavior.
 
+For a cancelled GitHub Marketplace free trial, the 2026-09-04 GitHub documentation baseline expects private customer data to be deleted within **30 days** of the cancellation event. Re-verify the current GitHub requirement before publication, classify what constitutes private customer data in the deployed service, document lawful retention exceptions where applicable, and implement/test deletion so the privacy policy matches reality.
+
 ## Security
 
 Describe controls truthfully: signed webhooks, short-lived credentials/tokens, least privilege, secret storage, audit logging, rate limits, backups, and incident handling where actually deployed.
@@ -142,13 +152,14 @@ Define:
 - when cancellation becomes effective;
 - whether partial-period refunds/credits are available;
 - treatment of upgrades/downgrades;
+- treatment of monthly vs annual billing-cycle changes;
 - duplicate/erroneous charges;
-- trial conversion/cancellation;
+- free-trial conversion/cancellation when trials are enabled;
 - chargebacks;
 - statutory rights that cannot be waived;
 - how support requests are submitted.
 
-The final wording must match GitHub Marketplace rules and applicable law.
+The final wording must match GitHub Marketplace rules, actual configured pricing/trial behavior, and applicable law.
 
 ---
 
@@ -172,10 +183,12 @@ All numeric commitments remain `[OPERATOR REQUIRED]` until approved.
 # Publication gate
 
 These templates may be converted into customer-facing documents only after:
-1. operator identity and jurisdiction are known;
-2. actual plans/prices/refund behavior are configured;
-3. production data flows/subprocessors are verified;
-4. tax treatment is approved;
-5. support/SLA promises are operationally supportable;
-6. legal/accounting review appropriate to the business/jurisdiction is complete;
-7. final URLs/versions are recorded in the production launch evidence.
+1. operator identity, organization ownership and jurisdiction are known;
+2. Marketplace publisher prerequisites, listing ownership/submitter role and financial onboarding are verified;
+3. actual monthly/annual plans, prices, refund behavior and any trial behavior are configured;
+4. production data flows/subprocessors and customer billing/status UX are verified;
+5. cancelled-trial private-data deletion behavior is implemented/tested when applicable and current GitHub retention requirements are re-checked;
+6. tax treatment is approved;
+7. support/SLA promises are operationally supportable;
+8. legal/accounting review appropriate to the business/jurisdiction is complete;
+9. final URLs/versions are recorded in the production launch evidence.
