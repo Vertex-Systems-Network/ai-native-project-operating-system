@@ -21,6 +21,7 @@ from typing import Any
 
 DEFAULT_TIMEOUT = 15.0
 MAX_RESPONSE_BYTES = 1_000_000
+MAX_SAFE_GITHUB_ACCOUNT_ID = 9_007_199_254_740_991
 EXPECTED_SERVICE_NAME = "anpos-commercial-service"
 EXPECTED_RUNTIME_CONTRACT = "split-github-app-v1"
 
@@ -61,6 +62,18 @@ def normalize_expected_version(value: str | None, label: str) -> str | None:
     if not normalized or len(normalized) > 100 or any(ch.isspace() for ch in normalized):
         raise VerificationError(f"{label} must be a non-empty, whitespace-free value up to 100 characters")
     return normalized
+
+
+def normalize_github_account_id(value: str | None) -> int | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized or not normalized.isascii() or not normalized.isdigit():
+        raise VerificationError("GitHub account ID must be a positive decimal integer")
+    account_id = int(normalized)
+    if account_id <= 0 or account_id > MAX_SAFE_GITHUB_ACCOUNT_ID:
+        raise VerificationError("GitHub account ID must be a positive JavaScript-safe integer")
+    return account_id
 
 
 def request(
@@ -177,25 +190,33 @@ def check_public_keys(base_url: str, timeout: float) -> None:
         raise VerificationError("public entitlement keys endpoint must return a JSON object")
 
 
-def check_current_entitlement(base_url: str, timeout: float, github_token: str) -> None:
+def check_current_entitlement(base_url: str, timeout: float, github_token: str, account_id: int) -> None:
     response = request(
         base_url,
         "/api/v1/entitlements/current",
-        headers={"Authorization": f"Bearer {github_token}"},
+        headers={
+            "Authorization": f"Bearer {github_token}",
+            "X-Anpos-Account-Id": str(account_id),
+        },
         timeout=timeout,
     )
-    if response.status not in {200, 401, 403, 404}:
-        raise VerificationError(f"current entitlement endpoint returned unexpected HTTP {response.status}")
     if response.status == 200:
         data = response.json()
-        if not isinstance(data, dict):
-            raise VerificationError("current entitlement response must be a JSON object")
+        if not isinstance(data, dict) or data.get("ok") is not True:
+            raise VerificationError("current entitlement HTTP 200 response must be a JSON object with ok=true")
+        return
+    if response.status == 404:
+        data = response.json()
+        if isinstance(data, dict) and data.get("error") == "entitlement_not_found":
+            return
+        raise VerificationError("current entitlement HTTP 404 did not match the canonical entitlement_not_found contract")
+    raise VerificationError(
+        f"current entitlement authenticated smoke expected HTTP 200 or structured entitlement_not_found 404, got {response.status}"
+    )
 
 
-def check_operator_reconcile(base_url: str, timeout: float, operator_token: str, account_id: str | None) -> None:
-    payload: dict[str, Any] = {"dry_run": True}
-    if account_id:
-        payload["github_account_id"] = account_id
+def check_operator_reconcile(base_url: str, timeout: float, operator_token: str) -> None:
+    """Authenticate the operator route without performing a real reconciliation mutation."""
     response = request(
         base_url,
         "/api/v1/reconcile",
@@ -203,13 +224,20 @@ def check_operator_reconcile(base_url: str, timeout: float, operator_token: str,
         headers={
             "Authorization": f"Bearer {operator_token}",
             "Content-Type": "application/json",
-            "Idempotency-Key": "anpos-production-verifier-dry-run",
+            "Idempotency-Key": "anpos-production-verifier-contract-probe",
         },
-        body=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        body=json.dumps({}, separators=(",", ":")).encode("utf-8"),
         timeout=timeout,
     )
-    if response.status not in {200, 202, 400, 404}:
-        raise VerificationError(f"operator reconciliation dry-run returned unexpected HTTP {response.status}")
+    if response.status != 400:
+        raise VerificationError(
+            f"operator reconciliation authenticated contract probe expected HTTP 400, got {response.status}"
+        )
+    data = response.json()
+    if not isinstance(data, dict) or data.get("error") != "valid_account_id_required":
+        raise VerificationError(
+            "operator reconciliation HTTP 400 did not match the canonical valid_account_id_required contract"
+        )
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -235,9 +263,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--operator-token-env",
         default=None,
-        help="Optional environment-variable name containing the operator token for dry-run reconciliation verification",
+        help="Optional environment-variable name containing the operator token for non-mutating authenticated route verification",
     )
-    parser.add_argument("--github-account-id", default=None, help="Optional numeric GitHub account ID for operator dry-run reconciliation")
+    parser.add_argument(
+        "--github-account-id",
+        default=None,
+        help="Positive numeric GitHub account ID required when --github-token-env is used",
+    )
     return parser.parse_args(argv)
 
 
@@ -258,21 +290,25 @@ def main(argv: list[str] | None = None) -> int:
         base_url = normalize_base_url(args.base_url)
         expected_service_version = normalize_expected_version(args.expected_service_version, "expected service version")
         expected_protocol_version = normalize_expected_version(args.expected_protocol_version, "expected protocol version")
+        github_account_id = normalize_github_account_id(args.github_account_id)
         if args.require_ready and (not expected_service_version or not expected_protocol_version):
             raise VerificationError(
                 "--require-ready requires --expected-service-version and --expected-protocol-version so a stale artifact cannot be certified"
             )
         github_token = read_secret_from_env(args.github_token_env)
         operator_token = read_secret_from_env(args.operator_token_env)
+        if github_token and github_account_id is None:
+            raise VerificationError("--github-token-env requires --github-account-id for the canonical entitlement route contract")
 
         check_health(base_url, args.timeout)
         identity = check_version(base_url, args.timeout, expected_service_version, expected_protocol_version)
         check_readiness(base_url, args.timeout, args.require_ready)
         check_public_keys(base_url, args.timeout)
         if github_token:
-            check_current_entitlement(base_url, args.timeout, github_token)
+            assert github_account_id is not None
+            check_current_entitlement(base_url, args.timeout, github_token, github_account_id)
         if operator_token:
-            check_operator_reconcile(base_url, args.timeout, operator_token, args.github_account_id)
+            check_operator_reconcile(base_url, args.timeout, operator_token)
     except VerificationError as exc:
         print(f"ANPOS commercial production verification FAILED: {exc}", file=sys.stderr)
         return 1
