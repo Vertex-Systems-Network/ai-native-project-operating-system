@@ -131,7 +131,7 @@ The vendor-only operator launch bootstrap now derives the exact deployable comme
 The renderer fails closed on missing/malformed package identity, package/protocol mismatch, or an unexpected runtime contract. Operators must deploy the exact exported artifact, verify `/api/version` against the generated identity, and only then accept `/api/ready` plus real Marketplace E2E evidence. This tooling remains vendor-only and does not create repositories, credentials, GitHub Apps, Marketplace approvals, prices, plan IDs, installations, or launch authority.
 """
     if "## Operator artifact identity binding in 1.3.9" not in readme:
-        readme = readme.rstrip() + section + "\n"
+        readme = readme.rstrip() + section.rstrip() + "\n"
 
     dump(version_path, version)
     dump(instance_path, instance)
