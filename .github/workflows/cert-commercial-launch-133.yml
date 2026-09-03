@@ -1,4 +1,5 @@
 name: ANPOS Commercial Launch Package Certification
+# Final full certification trigger after protocol bookkeeping.
 
 on:
   push:
