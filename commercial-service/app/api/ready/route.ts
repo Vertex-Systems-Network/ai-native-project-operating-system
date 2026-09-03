@@ -12,8 +12,10 @@ export async function GET() {
   }
   try {
     const cfg = serviceConfig();
-    const githubKey = createPrivateKey(cfg.githubAppPrivateKeyPem);
-    if (githubKey.asymmetricKeyType !== "rsa") throw new Error("github_app_key_must_be_rsa");
+    const marketplaceKey = createPrivateKey(cfg.githubMarketplaceAppPrivateKeyPem);
+    if (marketplaceKey.asymmetricKeyType !== "rsa") throw new Error("github_marketplace_app_key_must_be_rsa");
+    const vendorKey = createPrivateKey(cfg.githubVendorAppPrivateKeyPem);
+    if (vendorKey.asymmetricKeyType !== "rsa") throw new Error("github_vendor_app_key_must_be_rsa");
     const entitlementKey = createPrivateKey(cfg.entitlementPrivateKeyPem);
     if (entitlementKey.asymmetricKeyType !== "ed25519") throw new Error("entitlement_key_must_be_ed25519");
 
