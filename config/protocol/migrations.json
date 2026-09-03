@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.1",
+  "current_protocol_version": "1.3.2",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -192,12 +192,40 @@
         "scripts/validate_commercial_service.py verifies rate limiting, webhook retry/idempotency, organization seats, archive-first distribution, access revocation, migration gating, readiness and vendor-safe child bootstrap invariants",
         "Canonical source retained no active .github/workflows runtime files or active .github/dependabot.yml after certification"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.1-to-1.3.2",
+      "from_version": "1.3.1",
+      "to_version": "1.3.2",
+      "detected_at": "2026-09-03T23:09:16+05:00",
+      "impact": [
+        "Add deterministic vendor repository export tooling that reads committed Git blobs from HEAD rather than working-tree bytes",
+        "Define anpos-commercial-service export with the commercial-service/ prefix stripped for a future vendor-private backend repository",
+        "Define anpos-commercial-template export that excludes commercial-service/ for a future customer-facing private template repository",
+        "Fail closed on tracked secret-like files, committed symlinks, generated/runtime paths, unsupported Git modes, dirty tracked trees by default, in-repository outputs and existing export targets",
+        "Generate deterministic EXPORT-MANIFEST.json provenance with source revision/tree plus per-file Git object, mode, size and SHA-256 evidence",
+        "Add dedicated vendor-export unit tests and static validation while preserving canonical source inertness and canonical child bootstrap vendor stripping",
+        "Do not create private repositories, activate commercial runtime, attach Marketplace/GitHub App state, or introduce billing checks into child-project runtime"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing child projects do not need this vendor-side export tooling and must not receive commercial-service/. This patch does not introduce billing/runtime dependencies into children. Preserve project-specific behavior and adopt vendor-export tooling only in the canonical/vendor source-management context.",
+      "status": "applied",
+      "applied_at": "2026-09-03T23:09:16+05:00",
+      "verification_evidence": [
+        "GitHub Actions certification run 33788462032 completed successfully on the vendor-export implementation before protocol bookkeeping",
+        "ANPOS Python suite passed 36 tests including eight vendor repository export safety tests",
+        "Core, commercial licensing, commercial service and vendor repository export validators all passed",
+        "Two independent vendor exports were byte-for-byte identical and their manifests matched the certified source revision",
+        "Node 22/npm 11.19.1 locked npm ci and npm audit completed with 0 reported vulnerabilities",
+        "Commercial TypeScript typecheck, four security unit tests, Next.js 16.3.4 production build and final tracked clean-tree gate passed"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.1-to-NEXT",
-    "from_version": "1.3.1",
+    "id": "ANPOS-1.3.2-to-NEXT",
+    "from_version": "1.3.2",
     "to_version": null,
     "detected_at": null,
     "impact": [],

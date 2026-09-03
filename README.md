@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.1`
+**Current protocol:** `1.3.2`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -341,6 +341,19 @@ The optional vendor-side `commercial-service/` reference implementation now incl
 The commercial service was certified with locked `npm ci`, TypeScript typecheck, commercial security unit tests, Next.js production build, ANPOS validators/tests, and source-boundary checks. This certification proves the repository implementation/build contract; it does **not** claim that a GitHub Marketplace listing, GitHub App, production database, Vercel deployment, secrets, pricing, or customer billing runtime is live.
 
 `scripts/bootstrap_child.py` remains the canonical child bootstrap entrypoint and removes the vendor-only `commercial-service/` implementation from initialized customer/child repositories.
+
+
+## Vendor repository separation in 1.3.2
+
+`scripts/export_vendor_repositories.py` provides a deterministic, fail-closed source-management bridge for the future private vendor repositories. Run it from a clean canonical Git worktree with an output directory outside the repository:
+
+```bash
+python scripts/export_vendor_repositories.py --output <outside-directory>
+```
+
+The default export produces `anpos-commercial-service` from committed `commercial-service/` Git blobs with the prefix stripped, and `anpos-commercial-template` from the canonical source with `commercial-service/` excluded. Exported bytes come from committed Git objects at `HEAD`, not untracked or modified working-tree files. Each output includes `EXPORT-MANIFEST.json` with source revision/tree and per-file Git object/mode/SHA-256 provenance.
+
+The exporter refuses tracked secret-like files, committed symlinks, generated/runtime paths, unsupported Git modes, dirty tracked trees by default, output paths inside the canonical repository, and pre-existing targets. It does **not** create GitHub repositories, configure a GitHub App/Marketplace listing, transfer credentials, deploy a runtime, or make commercial licensing a child-project dependency.
 
 ## Repository hygiene
 
