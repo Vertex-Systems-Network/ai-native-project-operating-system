@@ -102,9 +102,17 @@ def filesystem_snapshot(repository: Path) -> tuple[dict[str, bytes], dict[str, s
 
 
 def git_snapshot(repository: Path) -> tuple[dict[str, bytes], dict[str, str], str]:
-    dirty = run_git_text(repository, "status", "--porcelain").strip()
+    dirty = run_git_text(
+        repository,
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+        "--ignored=matching",
+    ).strip()
     if dirty:
-        raise VerificationError("target Git checkout must be clean, including untracked files, before handoff verification")
+        raise VerificationError(
+            "target Git checkout must be clean, including tracked changes, untracked files, and ignored files, before handoff verification"
+        )
 
     revision = run_git_text(repository, "rev-parse", "HEAD").strip()
     raw = run_git_bytes(repository, "ls-tree", "-r", "-z", "HEAD")
