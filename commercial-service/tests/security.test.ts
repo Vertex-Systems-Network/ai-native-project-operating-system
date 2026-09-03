@@ -10,7 +10,10 @@ const entitlementKeys = generateKeyPairSync("ed25519");
 const entitlementPrivateKey = entitlementKeys.privateKey.export({ format: "pem", type: "pkcs8" }).toString();
 
 const MANAGED_ENV = [
-  "DATABASE_URL", "GITHUB_WEBHOOK_SECRET", "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
+  "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
+  "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+  "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
+  "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_ENTITLEMENT_ISSUER",
   "ANPOS_OPERATOR_TOKEN", "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS",
   "GITHUB_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO",
@@ -19,8 +22,10 @@ const MANAGED_ENV = [
 function configure() {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/anpos";
   process.env.GITHUB_WEBHOOK_SECRET = "w".repeat(48);
-  process.env.GITHUB_APP_ID = "123456";
-  process.env.GITHUB_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nplaceholder\n-----END RSA PRIVATE KEY-----";
+  process.env.GITHUB_MARKETPLACE_APP_ID = "123456";
+  process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nmarketplace-placeholder\n-----END RSA PRIVATE KEY-----";
+  process.env.GITHUB_VENDOR_APP_ID = "654321";
+  process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nvendor-placeholder\n-----END RSA PRIVATE KEY-----";
   process.env.ANPOS_ENTITLEMENT_PRIVATE_KEY = entitlementPrivateKey;
   process.env.ANPOS_ENTITLEMENT_KEY_ID = "test-key-1";
   process.env.ANPOS_ENTITLEMENT_ISSUER = "https://license.example.test";
@@ -90,6 +95,31 @@ test("configuration rejects weak or missing production controls", () => {
   assert.ok(problems.includes("weak:ANPOS_OPERATOR_TOKEN"));
   delete process.env.ANPOS_ORG_SEAT_LIMITS;
   assert.ok(configurationProblems().includes("missing:ANPOS_ORG_SEAT_LIMITS"));
+});
+
+test("Marketplace and vendor GitHub App roles cannot collapse", () => {
+  clearManagedEnv();
+  configure();
+  process.env.GITHUB_VENDOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
+  assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_ROLE_SEPARATION"));
+
+  process.env.GITHUB_VENDOR_APP_ID = "654321";
+  process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY;
+  assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE"));
+});
+
+test("legacy single-app credentials do not satisfy split configuration", () => {
+  clearManagedEnv();
+  configure();
+  delete process.env.GITHUB_MARKETPLACE_APP_ID;
+  delete process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY;
+  delete process.env.GITHUB_VENDOR_APP_ID;
+  delete process.env.GITHUB_VENDOR_APP_PRIVATE_KEY;
+  process.env.GITHUB_APP_ID = "123456";
+  process.env.GITHUB_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nlegacy-placeholder\n-----END RSA PRIVATE KEY-----";
+  const problems = configurationProblems();
+  assert.ok(problems.includes("missing:GITHUB_MARKETPLACE_APP_ID"));
+  assert.ok(problems.includes("missing:GITHUB_VENDOR_APP_ID"));
 });
 
 test("request parser bounds bodies and sanitizes caller-controlled identifiers", async () => {
