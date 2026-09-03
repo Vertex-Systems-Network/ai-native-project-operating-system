@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract validation for deterministic ANPOS vendor repository export."""
+"""Static contract validation for deterministic ANPOS vendor repository export and handoff verification."""
 from __future__ import annotations
 
 import ast
@@ -9,7 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORTER = ROOT / "scripts" / "export_vendor_repositories.py"
+HANDOFF_VERIFIER = ROOT / "scripts" / "verify_vendor_handoff.py"
 TESTS = ROOT / "tests" / "test_vendor_repository_export.py"
+HANDOFF_TESTS = ROOT / "tests" / "test_vendor_handoff.py"
 VENDOR_QUALITY_BLUEPRINT = ROOT / "blueprints" / "commercial" / "vendor-launch-quality.yml"
 CHILD_QUALITY_BLUEPRINT = ROOT / "blueprints" / "github" / "workflows" / "repository-quality.yml"
 BOUNDARY = ROOT / "config" / "licensing" / "vendor-source-boundary.json"
@@ -26,26 +28,23 @@ def require_markers(source: str, markers: tuple[str, ...], label: str) -> None:
             fail(f"{label} missing marker: {marker}")
 
 
-def main() -> int:
-    if not EXPORTER.is_file():
-        fail("missing scripts/export_vendor_repositories.py")
-        source = ""
-    else:
-        source = EXPORTER.read_text(encoding="utf-8")
-        try:
-            ast.parse(source, filename=str(EXPORTER))
-        except SyntaxError as exc:
-            fail(f"vendor exporter is not valid Python: {exc}")
+def read_python(path: Path, label: str) -> str:
+    if not path.is_file():
+        fail(f"missing {path.relative_to(ROOT)}")
+        return ""
+    source = path.read_text(encoding="utf-8")
+    try:
+        ast.parse(source, filename=str(path))
+    except SyntaxError as exc:
+        fail(f"{label} is not valid Python: {exc}")
+    return source
 
-    if not TESTS.is_file():
-        fail("missing tests/test_vendor_repository_export.py")
-        tests = ""
-    else:
-        tests = TESTS.read_text(encoding="utf-8")
-        try:
-            ast.parse(tests, filename=str(TESTS))
-        except SyntaxError as exc:
-            fail(f"vendor exporter tests are not valid Python: {exc}")
+
+def main() -> int:
+    source = read_python(EXPORTER, "vendor exporter")
+    verifier = read_python(HANDOFF_VERIFIER, "vendor handoff verifier")
+    tests = read_python(TESTS, "vendor exporter tests")
+    handoff_tests = read_python(HANDOFF_TESTS, "vendor handoff tests")
 
     if not BOUNDARY.is_file():
         fail("missing config/licensing/vendor-source-boundary.json")
@@ -63,7 +62,9 @@ def main() -> int:
         "commercial-service",
         "scripts/export_vendor_repositories.py",
         "scripts/validate_vendor_repository_export.py",
+        "scripts/verify_vendor_handoff.py",
         "tests/test_vendor_repository_export.py",
+        "tests/test_vendor_handoff.py",
         "scripts/verify_commercial_production.py",
         "blueprints/commercial/production-launch-checklist.json",
         "blueprints/commercial/vendor-launch-quality.yml",
@@ -93,6 +94,24 @@ def main() -> int:
         "vendor exporter",
     )
     require_markers(
+        verifier,
+        (
+            "exporter.export_repositories(",
+            "allow_dirty_tracked=True",
+            "canonical checkout revision mismatch",
+            "target Git checkout must be clean, including untracked files",
+            "vendor handoff file set mismatch",
+            "vendor handoff byte mismatch",
+            "service handoff verification requires expected service, protocol, and runtime-contract identities",
+            '"cat-file", "blob"',
+            '"ls-tree", "-r", "-z", "HEAD"',
+            '"manifest_sha256"',
+            '"content_set_sha256"',
+            '"verification": "exact_deterministic_vendor_export"',
+        ),
+        "vendor handoff verifier",
+    )
+    require_markers(
         tests,
         (
             "test_service_export_strips_prefix_and_uses_committed_blob_provenance",
@@ -107,6 +126,20 @@ def main() -> int:
         ),
         "vendor exporter tests",
     )
+    require_markers(
+        handoff_tests,
+        (
+            "test_plain_service_export_verifies_with_content_receipt",
+            "test_clean_private_style_git_checkout_verifies_from_committed_blobs",
+            "test_tampered_export_bytes_are_rejected",
+            "test_extra_file_is_rejected",
+            "test_wrong_canonical_revision_is_rejected_before_target_acceptance",
+            "test_template_export_verifies_without_service_identity_arguments",
+            "test_dirty_git_checkout_is_rejected_even_when_committed_export_is_valid",
+            "test_service_identity_arguments_are_required_and_exact",
+        ),
+        "vendor handoff tests",
+    )
 
     if not VENDOR_QUALITY_BLUEPRINT.is_file():
         fail("missing blueprints/commercial/vendor-launch-quality.yml")
@@ -118,13 +151,20 @@ def main() -> int:
                 "python scripts/validate_vendor_repository_export.py",
                 "scripts/.trusted-base-vendor-export-validator.py",
                 "tests.test_vendor_repository_export",
+                "tests.test_vendor_handoff",
             ),
             "vendor-only quality blueprint export integration",
         )
 
     child_quality = CHILD_QUALITY_BLUEPRINT.read_text(encoding="utf-8") if CHILD_QUALITY_BLUEPRINT.is_file() else ""
-    if "validate_vendor_repository_export.py" in child_quality or "test_vendor_repository_export" in child_quality:
-        fail("child repository-quality blueprint must not depend on vendor-only export files")
+    for forbidden in (
+        "validate_vendor_repository_export.py",
+        "test_vendor_repository_export",
+        "verify_vendor_handoff.py",
+        "test_vendor_handoff",
+    ):
+        if forbidden in child_quality:
+            fail(f"child repository-quality blueprint must not depend on vendor-only export/handoff file: {forbidden}")
 
     bootstrap = (ROOT / "scripts" / "bootstrap_child.py").read_text(encoding="utf-8")
     require_markers(
@@ -143,7 +183,7 @@ def main() -> int:
         for error in ERRORS:
             print(f"- {error}", file=sys.stderr)
         return 1
-    print("ANPOS vendor repository export static checks passed.")
+    print("ANPOS vendor repository export and handoff static checks passed.")
     return 0
 
 
