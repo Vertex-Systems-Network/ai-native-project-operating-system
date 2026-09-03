@@ -8,6 +8,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:unit": "tsx --test tests/*.test.ts",
+    "migrate": "tsx scripts/migrate.ts",
     "certify": "npm run typecheck && npm run test:unit && npm run build"
   },
   "engines": {
