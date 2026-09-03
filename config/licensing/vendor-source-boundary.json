@@ -6,6 +6,8 @@
   "vendor_only_paths": [
     "commercial-service",
     "blueprints/commercial/github-app-manifest.example.json",
+    "blueprints/commercial/github-marketplace-app-manifest.example.json",
+    "blueprints/commercial/github-vendor-app-manifest.example.json",
     "blueprints/commercial/github-marketplace-compliance.json",
     "blueprints/commercial/legal-pack.template.md",
     "blueprints/commercial/marketplace-listing-draft.md",
@@ -28,6 +30,7 @@
     "anpos-commercial-template export must exclude every listed path.",
     "anpos-commercial-service export remains sourced only from committed commercial-service/ blobs and strips that prefix.",
     "No untracked/local secrets may be copied by either bootstrap/export flow.",
+    "GitHub Marketplace App and Vendor Distribution App blueprints are vendor-only launch architecture and must not leak into customer templates.",
     "Removing vendor-only paths must not remove core ANPOS child development, security, quality, PM, AI selection, or non-secret entitlement-reference functionality."
   ]
 }
