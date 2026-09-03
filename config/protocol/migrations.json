@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.10",
+  "current_protocol_version": "1.3.11",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -459,12 +459,38 @@
         "Vendor source boundary strips verifier/tests from customer templates and .ai commercial_distribution routing includes exporter/verifier",
         "Deterministic double export, full ANPOS/commercial/vendor tests and commercial service certification must pass before canonical main promotion"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.10-to-1.3.11",
+      "from_version": "1.3.10",
+      "to_version": "1.3.11",
+      "detected_at": "2026-09-04T00:00:00+05:00",
+      "impact": [
+        "Make clean private vendor-repository verification include ignored untracked files instead of relying on default git status visibility",
+        "Use explicit porcelain-v1 status with all untracked files and matching ignored paths before committed-blob comparison",
+        "Add regression coverage proving a file hidden only by .git/info/exclude cannot pass private checkout acceptance",
+        "Strengthen the vendor-export static validator so future changes cannot silently remove ignored-file cleanliness enforcement",
+        "Bump commercial service from 0.3.3 to 0.3.4 because exported package source_protocol_version changes to 1.3.11 and /api/version must attest the exact certified source identity",
+        "Preserve deterministic export receipts, split-github-app-v1, paid draft catalog, secret boundaries, fail-closed launch authorization and non-destructive cancellation behavior"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Vendor checkout cleanliness verification is vendor-only source-management tooling. Customer child repositories and customer-facing commercial-template exports must strip it and gain no commercial runtime dependency from this migration.",
+      "status": "applied",
+      "applied_at": "2026-09-04T00:00:00+05:00",
+      "verification_evidence": [
+        "scripts/verify_vendor_handoff.py uses git status --porcelain=v1 --untracked-files=all --ignored=matching before accepting a target Git checkout",
+        "tests/test_vendor_handoff.py proves an ignored untracked file hidden from default git status is rejected",
+        "scripts/validate_vendor_repository_export.py requires both ignored-file status flags and the regression test marker",
+        "Deterministic service/template export verification and receipt generation remain unchanged after the cleanliness preflight",
+        "Full ANPOS/commercial/vendor certification must pass before canonical main promotion"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.10-to-NEXT",
-    "from_version": "1.3.10",
+    "id": "ANPOS-1.3.11-to-NEXT",
+    "from_version": "1.3.11",
     "to_version": null,
     "detected_at": null,
     "impact": [],

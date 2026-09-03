@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.10`
+**Current protocol:** `1.3.11`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -500,3 +500,9 @@ The renderer fails closed on missing/malformed package identity, package/protoco
 ANPOS now binds the vendor/operator handoff to the exact canonical Git commit and tree used for deterministic private-repository exports. `scripts/verify_vendor_handoff.py` reconstructs the expected service or customer-template export from committed canonical Git blobs and compares the complete target file/byte set, including `EXPORT-MANIFEST.json`, before that export or a clean private-repository checkout is accepted.
 
 For Git checkouts, verification reads committed `HEAD` blobs and requires a clean checkout including untracked files. It fails closed on stale source identity, extra/missing files, byte drift, unsupported Git modes/symlinks, wrong export mode, or wrong service/protocol/runtime identity. Successful verification emits a JSON provenance receipt with canonical source revision/tree, target repository revision when applicable, manifest SHA-256 and content-set SHA-256. The receipt proves exact deterministic-export equality only; it does not prove repository privacy/ownership, GitHub App installation, Marketplace approval, credentials, deployment, or launch authority.
+
+## Ignored-file vendor checkout hardening in 1.3.11
+
+Private vendor-repository acceptance now treats ignored untracked files as checkout contamination. `scripts/verify_vendor_handoff.py` runs Git status with explicit all-untracked plus ignored matching-path visibility before reading committed `HEAD` blobs, so `.gitignore` or `.git/info/exclude` cannot hide extra target bytes from the cleanliness gate.
+
+This strengthens the 1.3.10 exact handoff contract without changing export content, Marketplace state, credentials, pricing, plan IDs or launch authority. Vendor repositories should be verified from a truly clean checkout before they are accepted as source of record or used for deployment.
