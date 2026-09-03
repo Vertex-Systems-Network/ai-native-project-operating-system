@@ -2,8 +2,9 @@
 """Production smoke verifier for the separately deployed ANPOS commercial service.
 
 This tool never creates Marketplace purchases or treats synthetic events as real billing
-evidence. It verifies only observable deployment/runtime gates and optional authenticated
-operator/customer paths supplied by the operator at execution time.
+evidence. It verifies observable deployment/runtime gates, exact deployment identity when
+production readiness is required, and optional authenticated operator/customer paths supplied
+by the operator at execution time.
 """
 from __future__ import annotations
 
@@ -20,6 +21,8 @@ from typing import Any
 
 DEFAULT_TIMEOUT = 15.0
 MAX_RESPONSE_BYTES = 1_000_000
+EXPECTED_SERVICE_NAME = "anpos-commercial-service"
+EXPECTED_RUNTIME_CONTRACT = "split-github-app-v1"
 
 
 class VerificationError(RuntimeError):
@@ -49,6 +52,15 @@ def normalize_base_url(value: str) -> str:
         raise VerificationError("base URL must not contain query/fragment data")
     path = parsed.path.rstrip("/")
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def normalize_expected_version(value: str | None, label: str) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized or len(normalized) > 100 or any(ch.isspace() for ch in normalized):
+        raise VerificationError(f"{label} must be a non-empty, whitespace-free value up to 100 characters")
+    return normalized
 
 
 def request(
@@ -89,6 +101,57 @@ def check_health(base_url: str, timeout: float) -> None:
     data = response.json()
     if not isinstance(data, dict):
         raise VerificationError("health endpoint must return a JSON object")
+    if data.get("service") != EXPECTED_SERVICE_NAME or data.get("status") != "alive":
+        raise VerificationError("health endpoint returned an unexpected service identity/status")
+
+
+def validate_version_payload(
+    data: Any,
+    expected_service_version: str | None,
+    expected_protocol_version: str | None,
+) -> dict[str, str]:
+    if not isinstance(data, dict):
+        raise VerificationError("version endpoint must return a JSON object")
+    if data.get("ok") is not True:
+        raise VerificationError("version endpoint must report ok=true")
+    if data.get("service") != EXPECTED_SERVICE_NAME:
+        raise VerificationError("version endpoint returned an unexpected service name")
+
+    service_version = data.get("service_version")
+    protocol_version = data.get("source_protocol_version")
+    runtime_contract = data.get("runtime_contract")
+    if not isinstance(service_version, str) or not service_version.strip():
+        raise VerificationError("version endpoint is missing service_version")
+    if not isinstance(protocol_version, str) or not protocol_version.strip():
+        raise VerificationError("version endpoint is missing source_protocol_version")
+    if runtime_contract != EXPECTED_RUNTIME_CONTRACT:
+        raise VerificationError(
+            f"version endpoint runtime_contract must be {EXPECTED_RUNTIME_CONTRACT!r}, got {runtime_contract!r}"
+        )
+    if expected_service_version and service_version != expected_service_version:
+        raise VerificationError(
+            f"deployed service version mismatch: expected {expected_service_version}, got {service_version}"
+        )
+    if expected_protocol_version and protocol_version != expected_protocol_version:
+        raise VerificationError(
+            f"deployed source protocol version mismatch: expected {expected_protocol_version}, got {protocol_version}"
+        )
+    return {
+        "service_version": service_version,
+        "source_protocol_version": protocol_version,
+        "runtime_contract": runtime_contract,
+    }
+
+
+def check_version(
+    base_url: str,
+    timeout: float,
+    expected_service_version: str | None,
+    expected_protocol_version: str | None,
+) -> dict[str, str]:
+    response = request(base_url, "/api/version", timeout=timeout)
+    require_status(response, 200, "version endpoint")
+    return validate_version_payload(response.json(), expected_service_version, expected_protocol_version)
 
 
 def check_readiness(base_url: str, timeout: float, require_ready: bool) -> None:
@@ -96,8 +159,8 @@ def check_readiness(base_url: str, timeout: float, require_ready: bool) -> None:
     if require_ready:
         require_status(response, 200, "readiness endpoint")
         data = response.json()
-        if not isinstance(data, dict):
-            raise VerificationError("readiness endpoint must return a JSON object")
+        if not isinstance(data, dict) or data.get("ok") is not True or data.get("status") != "ready":
+            raise VerificationError("readiness endpoint must return ok=true/status=ready for production certification")
     elif response.status == 200:
         response.json()
     elif response.status not in {401, 403, 404, 503}:
@@ -107,7 +170,7 @@ def check_readiness(base_url: str, timeout: float, require_ready: bool) -> None:
 
 
 def check_public_keys(base_url: str, timeout: float) -> None:
-    response = request(base_url, "/v1/keys", timeout=timeout)
+    response = request(base_url, "/api/v1/keys", timeout=timeout)
     require_status(response, 200, "public entitlement keys endpoint")
     data = response.json()
     if not isinstance(data, dict):
@@ -117,7 +180,7 @@ def check_public_keys(base_url: str, timeout: float) -> None:
 def check_current_entitlement(base_url: str, timeout: float, github_token: str) -> None:
     response = request(
         base_url,
-        "/v1/entitlements/current",
+        "/api/v1/entitlements/current",
         headers={"Authorization": f"Bearer {github_token}"},
         timeout=timeout,
     )
@@ -135,7 +198,7 @@ def check_operator_reconcile(base_url: str, timeout: float, operator_token: str,
         payload["github_account_id"] = account_id
     response = request(
         base_url,
-        "/v1/reconcile",
+        "/api/v1/reconcile",
         method="POST",
         headers={
             "Authorization": f"Bearer {operator_token}",
@@ -153,7 +216,17 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", required=True, help="Production/staging commercial-service HTTPS base URL")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
-    parser.add_argument("--require-ready", action="store_true", help="Require /api/ready to return HTTP 200")
+    parser.add_argument("--require-ready", action="store_true", help="Require exact deployment identity and /api/ready HTTP 200")
+    parser.add_argument(
+        "--expected-service-version",
+        default=None,
+        help="Expected deployed commercial-service version. Required with --require-ready.",
+    )
+    parser.add_argument(
+        "--expected-protocol-version",
+        default=None,
+        help="Expected ANPOS source protocol version embedded in the deployed artifact. Required with --require-ready.",
+    )
     parser.add_argument(
         "--github-token-env",
         default=None,
@@ -183,10 +256,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.timeout <= 0 or args.timeout > 60:
             raise VerificationError("timeout must be > 0 and <= 60 seconds")
         base_url = normalize_base_url(args.base_url)
+        expected_service_version = normalize_expected_version(args.expected_service_version, "expected service version")
+        expected_protocol_version = normalize_expected_version(args.expected_protocol_version, "expected protocol version")
+        if args.require_ready and (not expected_service_version or not expected_protocol_version):
+            raise VerificationError(
+                "--require-ready requires --expected-service-version and --expected-protocol-version so a stale artifact cannot be certified"
+            )
         github_token = read_secret_from_env(args.github_token_env)
         operator_token = read_secret_from_env(args.operator_token_env)
 
         check_health(base_url, args.timeout)
+        identity = check_version(base_url, args.timeout, expected_service_version, expected_protocol_version)
         check_readiness(base_url, args.timeout, args.require_ready)
         check_public_keys(base_url, args.timeout)
         if github_token:
@@ -197,9 +277,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ANPOS commercial production verification FAILED: {exc}", file=sys.stderr)
         return 1
 
-    print("ANPOS commercial production smoke verification passed.")
+    print(
+        "ANPOS commercial production smoke verification passed "
+        f"(service={identity['service_version']}, protocol={identity['source_protocol_version']}, "
+        f"contract={identity['runtime_contract']})."
+    )
     if not args.require_ready:
-        print("NOTE: production launch is not certified unless --require-ready passes and real Marketplace E2E evidence is recorded.")
+        print(
+            "NOTE: production launch is not certified unless --require-ready includes exact expected versions, "
+            "readiness passes, and real Marketplace E2E evidence is recorded."
+        )
     return 0
 
 
