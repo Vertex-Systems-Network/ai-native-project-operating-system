@@ -1,0 +1,109 @@
+name: ANPOS Commercial Launch Package Certification
+
+on:
+  push:
+    branches:
+      - cert/commercial-launch-package-133
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout certification branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Apply pending ANPOS 1.3.3 bookkeeping
+        id: bookkeeping
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f scripts/apply_protocol_133.py ]; then
+            python scripts/apply_protocol_133.py
+            git diff --check
+            git config user.name 'ANPOS Protocol Bot'
+            git config user.email 'actions@users.noreply.github.com'
+            git add -A
+            git commit -m 'Bump ANPOS protocol to 1.3.3'
+            git push origin HEAD:cert/commercial-launch-package-133
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Install Python validation dependency
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: python -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+
+      - name: Compile Python sources and tests
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: python -m compileall -q scripts tests
+
+      - name: Hide temporary certification workflow from source-inert validation
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: rm .github/workflows/cert-commercial-launch-133.yml
+
+      - name: Run Python unit and conformance tests
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Run ANPOS validators
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: |
+          set -euo pipefail
+          python scripts/validate_ai_native_repo.py
+          python scripts/validate_commercial_licensing.py
+          python scripts/validate_commercial_service.py
+          python scripts/validate_vendor_repository_export.py
+          python scripts/validate_commercial_launch_package.py
+
+      - name: Restore certification workflow and verify tracked source clean
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        run: |
+          git checkout -- .github/workflows/cert-commercial-launch-133.yml
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Set up Node 22
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: commercial-service/package-lock.json
+
+      - name: Pin npm 11.19.1 and install locked dependencies
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        working-directory: commercial-service
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1 --ignore-scripts
+          test "$(npm --version)" = "11.19.1"
+          node -e "if (!process.version.startsWith('v22.')) process.exit(1)"
+          npm ci
+          npm audit --audit-level=low
+
+      - name: Certify commercial service
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        working-directory: commercial-service
+        run: npm run certify
+
+      - name: Restore expected Next build mutations and verify tracked tree clean
+        if: ${{ steps.bookkeeping.outputs.changed != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          unexpected="$(printf '%s\n' "$changed" | sed '/^$/d' | grep -Ev '^(commercial-service/tsconfig.json|commercial-service/next-env.d.ts)$' || true)"
+          test -z "$unexpected"
+          git checkout -- commercial-service/tsconfig.json commercial-service/next-env.d.ts
+          test -z "$(git status --porcelain --untracked-files=no)"
