@@ -19,7 +19,8 @@
     "scripts/validate_marketplace_staged_launch.py",
     "scripts/verify_commercial_production.py",
     "tests/test_vendor_repository_export.py",
-    "tests/test_commercial_launch_package.py"
+    "tests/test_commercial_launch_package.py",
+    "tests/test_marketplace_staged_launch.py"
   ],
   "rules": [
     "Canonical source may retain these paths as inert vendor/operator assets.",
