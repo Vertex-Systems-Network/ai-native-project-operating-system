@@ -1,4 +1,4 @@
-import { marketplaceRepositoryReadToken } from "./github";
+import { verifyMarketplaceRepositoryAuditInstallation } from "./github";
 
 const GITHUB_API = "https://api.github.com";
 const CANONICAL_REPOSITORY = "Vertex-Systems-Network/ai-native-project-operating-system";
@@ -144,11 +144,12 @@ async function readControlFile(
   repository: string,
   path: CommunityAuditPath,
   ref: string,
-  installationToken: string,
+  userToken: string,
 ): Promise<ControlFileObservation> {
-  const response = await githubGet(apiPathForFile(repository, path, ref), installationToken);
+  const response = await githubGet(apiPathForFile(repository, path, ref), userToken);
   if (response.status === 404) return { present: false, json_valid: false, sha: null, json: null };
-  if (response.status === 403) throw new RepositoryAuditError(403, "marketplace_app_control_file_permission_required");
+  if (response.status === 403) throw new RepositoryAuditError(403, "github_user_control_file_permission_required");
+  if (response.status === 401) throw new RepositoryAuditError(401, "github_user_token_invalid");
   if (!response.ok) throw new RepositoryAuditError(502, "github_control_file_read_failed");
 
   const body = await response.json() as GitHubContentsFile;
@@ -271,6 +272,7 @@ export function buildRepositoryAudit(
     },
     limitations: [
       "This audit reads only the ten explicitly approved ANPOS control files; it does not read application source code.",
+      "The target Marketplace App installation and its ten-file permission set are verified before reads; the reads themselves use the authenticated GitHub user token so repository access remains user-bound.",
       "It does not inspect GitHub branch protection, repository rulesets, required-check enforcement, workflow execution results, secrets, environments, deployments, billing state, PM connections, or attached AI runtimes.",
       "File presence is evidence of repository configuration only; it is not proof that an external platform capability is enabled or enforced.",
     ],
@@ -283,11 +285,11 @@ export async function auditRepository(repositoryInput: unknown, userToken: strin
   const [owner, repo] = metadata.full_name.split("/", 2);
   if (!owner || !repo) throw new RepositoryAuditError(502, "github_repository_metadata_invalid");
 
-  const installationToken = await marketplaceRepositoryReadToken(owner, repo, COMMUNITY_AUDIT_PATHS);
+  await verifyMarketplaceRepositoryAuditInstallation(owner, repo, COMMUNITY_AUDIT_PATHS);
   const entries = await Promise.all(
     COMMUNITY_AUDIT_PATHS.map(async (path) => [
       path,
-      await readControlFile(metadata.full_name, path, metadata.default_branch, installationToken),
+      await readControlFile(metadata.full_name, path, metadata.default_branch, userToken),
     ] as const),
   );
   return buildRepositoryAudit(metadata, Object.fromEntries(entries) as Record<CommunityAuditPath, ControlFileObservation>);
