@@ -26,6 +26,17 @@ The Developer, Pro, Team, and Enterprise IDs remain useful compatibility anchors
 
 Standard provider compatibility is part of the **core/capability-dependent ANPOS product**, not a paid `standard_provider_adapters` entitlement. ANPOS can select/use providers only when the active host/runtime exposes a real compatible connection or invocation path. A future paid provider claim must be a separately implemented premium adapter with explicit support/evidence.
 
+### Provider compatibility truth levels
+
+`config/licensing/provider-compatibility-matrix.json` is the machine-readable authority for how those provider names may be described commercially. It is deliberately conservative:
+
+- **Linear** has a dedicated ANPOS synchronization blueprint (`config/integrations/linear-sync.json`), but that blueprint still requires a real runtime connection and does **not** mean a complete provider-specific execution adapter, OAuth service, hosted integration, or vendor-certified integration is bundled.
+- **GitHub Projects, Jira, ClickUp, GitLab, Azure DevOps, Plane, Asana, monday.com, and Notion** currently have the generic provider-agnostic adapter contract plus declared connection modes only. Their status is runtime-discovery/contract-only until a real host connection and provider-specific behavior are verified.
+- **Codex/ChatGPT, Claude Code, GitHub Copilot, Gemini, Cursor, Windsurf, and other compatible development agents** are runtime-discovery candidates, not bundled ANPOS adapters. Selection is not authorization; runtime identity and least-privilege permissions remain required.
+- The matrix explicitly makes no vendor-partnership/certification claim and no paid-entitlement claim. Tests bind provider IDs, names and connection modes back to the canonical PM/AI catalogs so marketing truth cannot silently drift from repository truth.
+
+This matrix is a support/compatibility truth boundary, not a promise that every operation in the generic adapter interface is implemented for every provider. Premium provider adapters remain a future Pro-or-higher differentiator only after separate implementation, versioning, tests and evidence exist.
+
 The following higher-tier labels are not yet independently productized enough to sell without qualification:
 
 - `premium_blueprints` — no dedicated premium blueprint content boundary currently exists;
@@ -77,6 +88,8 @@ Implemented source value:
 - organization-seat enforcement when the paid purchaser is an organization;
 - non-destructive cancellation/expiry.
 
+Core compatibility available alongside every package is governed by `config/licensing/provider-compatibility-matrix.json`; it is not a Developer-only paid entitlement and must not be used to inflate Developer differentiation.
+
 Still required before sale:
 
 - operator-approved commercial license/EULA, Privacy/Terms/refund/cancellation boundaries;
@@ -97,7 +110,7 @@ Target deliverables:
 
 - everything in Developer;
 - a real versioned Premium Blueprint Pack with clearly enumerated files/capabilities;
-- concrete Premium Provider Adapters with supported provider/version matrix and tests;
+- concrete Premium Provider Adapters with a provider/version/capability matrix that is distinct from the core compatibility matrix and backed by provider-specific implementation/tests;
 - advanced governance/automation recipes that are not simply copies of the public core;
 - hosted orchestration only after an ANPOS-operated hosted service exists and is production-certified.
 
@@ -150,9 +163,9 @@ ANPOS currently does not include bundled LLM inference/compute. Until hosted orc
 
 ## Package implementation order
 
-1. **Feature truth** — maintain `config/licensing/feature-catalog.json` and prevent unsupported package claims.
+1. **Feature truth** — maintain `config/licensing/feature-catalog.json` plus the tested core `provider-compatibility-matrix.json`, and prevent unsupported package/provider claims.
 2. **Community source product** — implemented; finish real Marketplace App/listing/production E2E and activation.
-3. **Developer source foundation** — implemented release/update distribution path; finish private vendor repositories, legal/pricing, Marketplace configuration, deployment, and paid E2E.
+3. **Developer source foundation** — implemented release/update distribution path and core provider-claim truth; finish private vendor repositories, legal/pricing, Marketplace configuration, deployment, and paid E2E.
 4. **Premium layer** — create actual premium blueprints/adapters with explicit manifests and tests; only then activate Pro differentiation.
 5. **Team product** — complete production seat/admin/billing UX and support policy.
 6. **Enterprise product** — build enterprise-only control/deployment assets and contractual operating model.
@@ -162,7 +175,8 @@ ANPOS currently does not include bundled LLM inference/compute. Until hosted orc
 
 - Do not convert an entitlement label into a marketing claim merely because it exists in `product-catalog.json` or `commercial-service/lib/plans.ts`.
 - Do not call a capability hosted unless an ANPOS-operated production service actually exists and has production evidence.
-- Do not call all listed PM systems or AI agents bundled integrations; they are selectable only when the customer host/runtime exposes a real compatible connection/invocation path.
+- Do not call all listed PM systems or AI agents bundled integrations; use the tested provider compatibility matrix and require a real compatible connection/invocation path.
+- Linear's dedicated synchronization blueprint is not evidence that a complete provider-specific execution adapter or hosted integration is bundled.
 - Standard provider compatibility is core/capability-dependent and must not be charged/advertised as `standard_provider_adapters`.
 - Paid release delivery must use the exact handoff-verified private-template commit in `ANPOS_COMMERCIAL_RELEASE_REF`; mutable branches/tags are forbidden.
 - Do not represent source implementation as Marketplace activation, production deployment, pricing approval, or legal readiness.
