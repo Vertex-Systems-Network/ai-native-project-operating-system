@@ -1,18 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "template_blueprint",
   "activation_scope": "commercial_distribution_only",
-  "purpose": "Machine-readable commercial feature truth for ANPOS. This catalog separates implemented protocol/runtime capabilities from partial, planned, capability-dependent, and contract-only promises so packages cannot be marketed as operational without evidence.",
+  "purpose": "Machine-readable commercial feature truth for ANPOS. This catalog separates implemented protocol/runtime capabilities from partial, planned, capability-dependent, externally unlaunched, and contract-only promises so packages cannot be marketed as operational without evidence.",
   "availability_states": [
     "implemented_protocol",
     "implemented_commercial_runtime",
+    "implemented_source_pending_external_activation",
     "partial_implementation",
     "capability_dependent",
     "operator_configuration_required",
     "planned_not_implemented",
     "external_contract_required"
   ],
-  "commercial_readiness_rule": "An entitlement may appear in a draft package before it is operational, but it must not be represented as launch-ready customer value until its availability state and evidence support that claim. Planned, partial, capability-dependent, or contract-only features require explicit qualification at sale time.",
+  "commercial_readiness_rule": "An entitlement or product capability may exist in source before it is operationally launched, but it must not be represented as launch-ready customer value until its availability state and evidence support that claim. External activation/E2E, planned, partial, capability-dependent, or contract-only features require explicit qualification at sale time.",
   "entitlements": [
     {
       "id": "private_template_access",
@@ -53,61 +54,42 @@
       "id": "premium_blueprints",
       "availability": "planned_not_implemented",
       "commercial_differentiator_status": "blocked",
-      "evidence": [
-        "config/licensing/product-catalog.json"
-      ],
+      "evidence": ["config/licensing/product-catalog.json"],
       "notes": "The entitlement exists in draft packages, but no dedicated premium blueprint content boundary is currently present in the canonical repository."
     },
     {
       "id": "premium_provider_adapters",
       "availability": "planned_not_implemented",
       "commercial_differentiator_status": "blocked",
-      "evidence": [
-        "config/licensing/product-catalog.json"
-      ],
+      "evidence": ["config/licensing/product-catalog.json"],
       "notes": "The entitlement exists in draft packages, but dedicated premium provider adapters are not currently implemented as a separately deliverable commercial layer."
     },
     {
       "id": "hosted_orchestrator_when_offered",
       "availability": "planned_not_implemented",
       "commercial_differentiator_status": "blocked_until_hosted_service_exists",
-      "evidence": [
-        "ORCHESTRATOR.md",
-        "MULTI-AGENT-ORCHESTRATION.md",
-        "config/licensing/product-catalog.json"
-      ],
+      "evidence": ["ORCHESTRATOR.md", "MULTI-AGENT-ORCHESTRATION.md", "config/licensing/product-catalog.json"],
       "notes": "Repository-side orchestration protocol exists. No ANPOS-operated hosted orchestrator service is currently implemented or launch-certified."
     },
     {
       "id": "organization_team_features",
       "availability": "partial_implementation",
       "commercial_differentiator_status": "runtime_core_exists_customer_experience_incomplete",
-      "evidence": [
-        "commercial-service/app/api/v1/seats/route.ts",
-        "commercial-service/lib/plans.ts",
-        "commercial-service/README.md"
-      ],
+      "evidence": ["commercial-service/app/api/v1/seats/route.ts", "commercial-service/lib/plans.ts", "commercial-service/README.md"],
       "notes": "Organization seat assignment, revocation, membership verification, capacity enforcement, and principal-bound entitlements are implemented in the commercial service. A complete customer-facing team administration and billing experience still requires production validation."
     },
     {
       "id": "commercial_support",
       "availability": "external_contract_required",
       "commercial_differentiator_status": "operator_service_commitment",
-      "evidence": [
-        "COMMERCIAL-LICENSING.md",
-        "blueprints/commercial/legal-pack.template.md"
-      ],
+      "evidence": ["COMMERCIAL-LICENSING.md", "blueprints/commercial/legal-pack.template.md"],
       "notes": "Support scope, channels, response targets, exclusions, and refund/cancellation commitments are operator-controlled commercial terms and are not created by repository code."
     },
     {
       "id": "hosted_or_self_hosted_orchestrator_when_offered",
       "availability": "planned_not_implemented",
       "commercial_differentiator_status": "blocked_until_productized",
-      "evidence": [
-        "ORCHESTRATOR.md",
-        "MULTI-AGENT-ORCHESTRATION.md",
-        "config/licensing/product-catalog.json"
-      ],
+      "evidence": ["ORCHESTRATOR.md", "MULTI-AGENT-ORCHESTRATION.md", "config/licensing/product-catalog.json"],
       "notes": "The orchestration protocol is present, but neither a vendor-hosted service nor an enterprise self-hosting distribution/support package is currently productized."
     },
     {
@@ -127,10 +109,7 @@
       "id": "priority_support_or_sla_when_contracted",
       "availability": "external_contract_required",
       "commercial_differentiator_status": "operator_contract_only",
-      "evidence": [
-        "COMMERCIAL-LICENSING.md",
-        "blueprints/commercial/legal-pack.template.md"
-      ],
+      "evidence": ["COMMERCIAL-LICENSING.md", "blueprints/commercial/legal-pack.template.md"],
       "notes": "Priority support or SLA exists only when the operator deliberately offers and contracts it."
     }
   ],
@@ -169,6 +148,20 @@
       "id": "continuous_improvement",
       "availability": "implemented_protocol",
       "evidence": ["CONTINUOUS-IMPROVEMENT.md", "config/maintenance/innovation-scout.json", "config/maintenance/technology-watch.json"]
+    },
+    {
+      "id": "community_repository_readiness_audit",
+      "availability": "implemented_source_pending_external_activation",
+      "evidence": [
+        "commercial-service/app/setup/github/route.ts",
+        "commercial-service/app/api/auth/github/callback/route.ts",
+        "commercial-service/app/api/v1/audit/repositories/route.ts",
+        "commercial-service/app/api/v1/audit/repository/route.ts",
+        "commercial-service/lib/repository-audit.ts",
+        "commercial-service/lib/session.ts",
+        "commercial-service/app/community/CommunityClient.tsx"
+      ],
+      "notes": "Community source implements Marketplace Setup -> PKCE GitHub App OAuth -> installation-bound repository discovery -> read-only ten-control-file audit with encrypted short-lived browser sessions. It remains externally unlaunched until a real Marketplace App/configuration passes production E2E and operator activation."
     },
     {
       "id": "commercial_entitlement_and_distribution_runtime",
