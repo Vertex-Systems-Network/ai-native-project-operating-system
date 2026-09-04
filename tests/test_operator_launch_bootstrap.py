@@ -50,6 +50,15 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             query["webhook_url"],
             ["https://license.example.test/api/webhooks/github/marketplace"],
         )
+        self.assertEqual(query["request_oauth_on_install"], ["false"])
+        self.assertEqual(query["callback_urls[]"], ["https://license.example.test/api/auth/github/callback"])
+        self.assertEqual(query["setup_url"], ["https://license.example.test/setup/github"])
+        self.assertEqual(query["setup_on_update"], ["true"])
+        self.assertEqual(marketplace["callback_url"], "https://license.example.test/api/auth/github/callback")
+        self.assertEqual(marketplace["setup_url"], "https://license.example.test/setup/github")
+        self.assertFalse(marketplace["request_oauth_on_install"])
+        self.assertTrue(marketplace["setup_on_update"])
+        self.assertEqual(marketplace["community_auth_flow"], "marketplace_setup_url_then_pkce_github_app_oauth")
         self.assertEqual(query["single_file"], ["read"])
         self.assertEqual(query["single_file_paths[]"], self.renderer.COMMUNITY_AUDIT_PATHS)
         self.assertEqual(marketplace["repository_permissions"], {"metadata": "read", "single_file": "read"})
@@ -82,10 +91,15 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         data = self.renderer.render(self.inputs)
         marketplace_keys = set(data["github_apps"]["marketplace"]["environment_keys"])
         vendor_keys = set(data["github_apps"]["vendor_distribution"]["environment_keys"])
+        service_keys = set(data["service_environment_keys"])
         self.assertIn("GITHUB_MARKETPLACE_APP_ID", marketplace_keys)
         self.assertIn("GITHUB_MARKETPLACE_APP_PRIVATE_KEY", marketplace_keys)
+        self.assertIn("GITHUB_MARKETPLACE_CLIENT_ID", marketplace_keys)
+        self.assertIn("GITHUB_MARKETPLACE_CLIENT_SECRET", marketplace_keys)
         self.assertIn("GITHUB_VENDOR_APP_ID", vendor_keys)
         self.assertIn("GITHUB_VENDOR_APP_PRIVATE_KEY", vendor_keys)
+        self.assertIn("ANPOS_PUBLIC_BASE_URL", service_keys)
+        self.assertIn("ANPOS_SESSION_SECRET", service_keys)
         self.assertEqual(
             data["legacy_single_app_environment_keys_forbidden"],
             ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"],
@@ -102,7 +116,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             "source_protocol_version": package["anpos"]["source_protocol_version"],
             "runtime_contract": package["anpos"]["runtime_contract"],
         }
-        self.assertEqual(data["schema_version"], 4)
+        self.assertEqual(data["schema_version"], 5)
         self.assertEqual(data["artifact_identity"], expected)
         self.assertEqual(expected["source_protocol_version"], protocol["version"])
         self.assertEqual(
@@ -209,7 +223,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertNotIn("github_pat_", serialized)
         self.assertNotIn("ghp_", serialized)
         source = SCRIPT.read_text(encoding="utf-8")
-        for forbidden in ("--private-key", "--webhook-secret", "--database-url", "--operator-token"):
+        for forbidden in ("--private-key", "--webhook-secret", "--database-url", "--operator-token", "--client-secret", "--session-secret"):
             self.assertNotIn(forbidden, source)
 
     def test_invalid_organization_and_newline_app_names_fail(self) -> None:
