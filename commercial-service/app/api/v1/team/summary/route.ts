@@ -1,11 +1,10 @@
 import { requireGithubOrganizationAdmin } from "@/lib/auth";
 import { reconcileEntitlement } from "@/lib/entitlements";
-import { getMarketplaceSubscription } from "@/lib/github";
 import { requestIdFrom } from "@/lib/http";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { listSeats } from "@/lib/seats";
 import { githubSessionFromRequest } from "@/lib/session";
-import { buildTeamDashboardSummary, ORGANIZATION_TEAM_FEATURE } from "@/lib/team-dashboard";
+import { buildTeamDashboardSummary, loadTeamEntitlementRecord, ORGANIZATION_TEAM_FEATURE } from "@/lib/team-dashboard";
 import { resolveUserInstallationAccount } from "@/lib/team-installation";
 
 export const runtime = "nodejs";
@@ -59,24 +58,11 @@ export async function GET(request: Request) {
       throw new Error("ORGANIZATION_TEAM_FEATURES_REQUIRED");
     }
 
-    const [subscription, seats] = await Promise.all([
-      getMarketplaceSubscription(installation.github_account_id),
+    const [entitlement, seats] = await Promise.all([
+      loadTeamEntitlementRecord(installation.github_account_id),
       listSeats(installation.github_account_id),
     ]);
-    const purchase = subscription?.marketplace_purchase;
-    const summary = buildTeamDashboardSummary({
-      github_account_id: refreshed.github_account_id,
-      github_login: refreshed.github_login,
-      github_account_type: refreshed.github_account_type,
-      plan_id: refreshed.plan_id,
-      marketplace_plan_id: purchase?.plan?.id ?? null,
-      seats: refreshed.seats,
-      state: refreshed.state,
-      features: refreshed.entitlements,
-      billing_cycle: purchase?.billing_cycle ?? null,
-      billing_updated_at: purchase?.updated_at ?? null,
-      updated_at: null,
-    }, seats);
+    const summary = buildTeamDashboardSummary(entitlement, seats);
 
     return Response.json({
       ok: true,
