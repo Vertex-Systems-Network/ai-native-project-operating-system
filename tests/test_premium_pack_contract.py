@@ -92,19 +92,32 @@ class PremiumPackContractTests(unittest.TestCase):
 
     def test_contract_is_fail_closed_and_does_not_claim_pro_value(self) -> None:
         contract = load("config/licensing/premium-pack-contract.json")
-        self.assertEqual(contract["status"], "contract_only_no_premium_payload_in_canonical_source")
+        self.assertEqual(contract["schema_version"], 2)
+        self.assertEqual(contract["status"], "contract_and_distribution_source_no_premium_payload")
         self.assertTrue(contract["private_repository_required"])
         self.assertTrue(contract["canonical_source_must_not_contain_premium_payload"])
         self.assertTrue(contract["source_contract_is_not_premium_entitlement_value"])
         readiness = contract["current_readiness"]
         self.assertTrue(readiness["contract_defined"])
+        self.assertTrue(readiness["distribution_runtime_source_implemented"])
         self.assertFalse(readiness["private_premium_repository_exists"])
         self.assertFalse(readiness["premium_blueprint_payload_implemented"])
         self.assertFalse(readiness["premium_provider_adapter_payload_implemented"])
         self.assertFalse(readiness["entitlement_gated_premium_distribution_implemented"])
+        self.assertFalse(readiness["production_premium_e2e_verified"])
         self.assertFalse(readiness["pro_sale_ready"])
 
-    def test_commercial_role_routes_contract_schema_docs_and_verifier(self) -> None:
+    def test_distribution_boundary_is_immutable_digest_bound_and_conditional(self) -> None:
+        boundary = load("config/licensing/premium-pack-contract.json")["distribution_boundary"]
+        self.assertEqual(boundary["required_entitlements"], ["premium_blueprints", "premium_provider_adapters"])
+        self.assertTrue(boundary["private_pack_repository_must_be_distinct_from_private_template_repository"])
+        self.assertTrue(boundary["runtime_manifest_sha256_must_match_offline_verifier_receipt"])
+        self.assertTrue(boundary["runtime_content_set_sha256_must_match_offline_verifier_receipt"])
+        self.assertTrue(boundary["runtime_release_ref_must_be_exact_40_character_commit_sha"])
+        self.assertTrue(boundary["higher_paid_plan_activation_requires_premium_distribution_configuration"])
+        self.assertTrue(boundary["developer_only_plan_activation_does_not_require_premium_distribution_configuration"])
+
+    def test_commercial_role_routes_contract_schema_docs_verifier_and_runtime(self) -> None:
         manifest = load(".ai/manifest.json")
         role = set(manifest["roles"]["commercial_distribution"])
         for expected in [
@@ -112,18 +125,30 @@ class PremiumPackContractTests(unittest.TestCase):
             "schemas/premium-pack-manifest.schema.json",
             "docs/commercial/premium-pack-boundary.md",
             "scripts/verify_premium_pack.py",
+            "commercial-service/lib/premium-releases.ts",
+            "commercial-service/app/api/v1/premium/releases/current/route.ts",
+            "commercial-service/app/api/v1/premium/archive/route.ts",
         ]:
             self.assertIn(expected, role)
 
-    def test_feature_catalog_keeps_premium_entitlements_blocked_but_references_contract(self) -> None:
+    def test_feature_catalog_keeps_premium_entitlements_blocked_but_references_distribution_source(self) -> None:
         catalog = load("config/licensing/feature-catalog.json")
         rows = {row["id"]: row for row in catalog["entitlements"]}
         for entitlement_id in ["premium_blueprints", "premium_provider_adapters"]:
             row = rows[entitlement_id]
             self.assertEqual(row["availability"], "planned_not_implemented")
-            self.assertEqual(row["commercial_differentiator_status"], "contract_defined_payload_not_implemented")
-            self.assertIn("config/licensing/premium-pack-contract.json", row["evidence"])
-            self.assertIn("scripts/verify_premium_pack.py", row["evidence"])
+            self.assertEqual(
+                row["commercial_differentiator_status"],
+                "contract_and_distribution_runtime_source_implemented_payload_not_implemented",
+            )
+            for expected in [
+                "config/licensing/premium-pack-contract.json",
+                "scripts/verify_premium_pack.py",
+                "commercial-service/lib/premium-releases.ts",
+                "commercial-service/app/api/v1/premium/releases/current/route.ts",
+                "commercial-service/app/api/v1/premium/archive/route.ts",
+            ]:
+                self.assertIn(expected, row["evidence"])
 
     def test_valid_private_pack_returns_integrity_receipt_without_sale_claim(self) -> None:
         first = self.write_payload("premium/blueprints/delivery.md", b"ANPOS premium delivery workflow v1 unique test payload\n")
