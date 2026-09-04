@@ -41,11 +41,12 @@ const COMMUNITY_LAUNCH_REQUIRED = [
   "DATABASE_URL",
   "GITHUB_WEBHOOK_SECRET",
   ...MARKETPLACE_APP_REQUIRED,
-  "ANPOS_MARKETPLACE_PLAN_MAP",
+  "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
 ] as const;
 
 const FULL_REQUIRED = [
   ...COMMUNITY_LAUNCH_REQUIRED,
+  "ANPOS_MARKETPLACE_PLAN_MAP",
   "GITHUB_VENDOR_APP_ID",
   "GITHUB_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
@@ -121,6 +122,11 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
   const publicBaseUrl = value("ANPOS_PUBLIC_BASE_URL");
   if (requiredSet.has("ANPOS_PUBLIC_BASE_URL") && publicBaseUrl && !validHttpsBaseUrl(publicBaseUrl)) {
     problems.push("invalid:ANPOS_PUBLIC_BASE_URL");
+  }
+
+  const communityPlanId = value("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID");
+  if (requiredSet.has("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID") && communityPlanId && !/^\d+$/.test(communityPlanId)) {
+    problems.push("invalid:ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID");
   }
 
   if (requiredSet.has("ANPOS_MARKETPLACE_PLAN_MAP")) {
