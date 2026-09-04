@@ -45,16 +45,28 @@
     {
       "id": "premium_blueprints",
       "availability": "planned_not_implemented",
-      "commercial_differentiator_status": "blocked",
-      "evidence": ["config/licensing/product-catalog.json"],
-      "notes": "The entitlement exists in draft higher-tier packages, but no dedicated premium blueprint content boundary is currently present in the canonical repository."
+      "commercial_differentiator_status": "contract_defined_payload_not_implemented",
+      "evidence": [
+        "config/licensing/product-catalog.json",
+        "config/licensing/premium-pack-contract.json",
+        "schemas/premium-pack-manifest.schema.json",
+        "scripts/verify_premium_pack.py",
+        "docs/commercial/premium-pack-boundary.md"
+      ],
+      "notes": "Canonical source now defines the private Premium Pack manifest, verification, provenance and immutable-distribution boundary. No private premium repository or premium blueprint payload is evidenced yet, so this entitlement remains planned_not_implemented and must not be marketed as active customer value."
     },
     {
       "id": "premium_provider_adapters",
       "availability": "planned_not_implemented",
-      "commercial_differentiator_status": "blocked",
-      "evidence": ["config/licensing/product-catalog.json"],
-      "notes": "The entitlement exists in draft higher-tier packages, but dedicated premium provider adapters are not currently implemented as a separately deliverable commercial layer."
+      "commercial_differentiator_status": "contract_defined_payload_not_implemented",
+      "evidence": [
+        "config/licensing/product-catalog.json",
+        "config/licensing/premium-pack-contract.json",
+        "schemas/premium-pack-manifest.schema.json",
+        "scripts/verify_premium_pack.py",
+        "docs/commercial/premium-pack-boundary.md"
+      ],
+      "notes": "Canonical source now defines provider-specific premium adapter manifest and verification requirements, including provider/API evidence, capability mapping, no-secret provenance and no partnership/certification claim by default. No private premium provider adapter payload or live provider E2E is evidenced yet, so this entitlement remains planned_not_implemented."
     },
     {
       "id": "hosted_orchestrator_when_offered",
