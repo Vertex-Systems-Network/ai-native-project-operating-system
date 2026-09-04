@@ -37,6 +37,16 @@ Standard provider compatibility is part of the **core/capability-dependent ANPOS
 
 This matrix is a support/compatibility truth boundary, not a promise that every operation in the generic adapter interface is implemented for every provider. Premium provider adapters remain a future Pro-or-higher differentiator only after separate implementation, versioning, tests and evidence exist.
 
+### Onboarding and support truth
+
+`config/licensing/customer-onboarding-support.json` and `docs/commercial/customer-onboarding-support.md` define the Developer onboarding/support boundary.
+
+Developer source includes **self-service onboarding/product documentation** for entitlement refresh, certified release discovery, immutable archive delivery, provenance preservation and runtime-dependent provider troubleshooting. This onboarding documentation is product material; it is not a staffed support entitlement.
+
+Canonical Developer therefore does **not** include a guaranteed response time, guaranteed resolution time, 24/7 staffing, live implementation/debugging service, security-incident SLA or service credits by default. Any real staffed support offer requires an operator-approved channel, hours/time zone, response/escalation policy, privacy handling and customer-facing legal terms before sale.
+
+Team `commercial_support` and Enterprise priority/SLA claims remain external-contract-required. Numeric SLA commitments are not defined in canonical source.
+
 The following higher-tier labels are not yet independently productized enough to sell without qualification:
 
 - `premium_blueprints` — no dedicated premium blueprint content boundary currently exists;
@@ -86,7 +96,8 @@ Implemented source value:
 - entitlement-gated `GET /api/v1/releases/current` returning sanitized canonical source revision/tree and release evidence;
 - entitlement-gated `GET /api/v1/template/archive` serving the same exact verified release;
 - organization-seat enforcement when the paid purchaser is an organization;
-- non-destructive cancellation/expiry.
+- non-destructive cancellation/expiry;
+- tested self-service onboarding documentation with a fail-closed support boundary and no implicit SLA.
 
 Core compatibility available alongside every package is governed by `config/licensing/provider-compatibility-matrix.json`; it is not a Developer-only paid entitlement and must not be used to inflate Developer differentiation.
 
@@ -98,9 +109,9 @@ Still required before sale:
 - real paid Marketplace plan ID and approved monthly/annual pricing;
 - deployed current commercial-service identity and full `/api/ready`;
 - real paid purchase/change/cancel/trial and Developer release/archive E2E;
-- customer onboarding/support terms if offered.
+- if staffed support is offered, real monitored contact/escalation operations plus approved customer-facing support terms.
 
-Current state: **source value implemented, not yet sale-ready**. The remaining Developer blockers are mainly external commercial/infrastructure/legal/production evidence rather than a missing core update-channel subsystem.
+Current state: **source value implemented, not yet sale-ready**. The remaining Developer blockers are mainly external commercial/infrastructure/legal/production evidence rather than missing release-channel, provider-truth, or self-service-onboarding subsystems.
 
 ### ANPOS Pro — advanced automation and premium assets
 
@@ -130,7 +141,7 @@ Target deliverables:
 - customer-facing team administration/billing experience;
 - defined commercial support scope.
 
-Current state: **partially implemented**. Seat enforcement and organization entitlement mechanics exist in the commercial service; the complete production/customer experience and all Pro dependencies still need to be finished and verified.
+Current state: **partially implemented**. Seat enforcement and organization entitlement mechanics exist in the commercial service; the complete production/customer experience and all Pro dependencies still need to be finished and verified. A support entitlement remains inactive until real support operations/terms are approved.
 
 ### ANPOS Enterprise — controlled rollout and contracted service
 
@@ -154,7 +165,7 @@ Pricing below is a product-positioning target, not an authorized billing configu
 | Package | Suggested target | Annual target | Pricing logic |
 | --- | ---: | ---: | --- |
 | Community | $0 | $0 | Adoption + genuine Marketplace-integrated repository audit |
-| Developer | $19/month | $190/year | Verified private distribution + certified immutable release/update access |
+| Developer | $19/month | $190/year | Verified private distribution + certified immutable release/update access + self-service onboarding |
 | Pro | $39/month | $390/year | Developer + real premium blueprint/adapter layer once implemented |
 | Team | $29–39/user/month | annual discount | Pro + organization seats/admin/support when complete; per-unit where suitable |
 | Enterprise | Custom | Annual contract | Policy/control, deployment, procurement, SLA/support commitments |
@@ -163,11 +174,11 @@ ANPOS currently does not include bundled LLM inference/compute. Until hosted orc
 
 ## Package implementation order
 
-1. **Feature truth** — maintain `config/licensing/feature-catalog.json` plus the tested core `provider-compatibility-matrix.json`, and prevent unsupported package/provider claims.
+1. **Feature truth** — maintain `config/licensing/feature-catalog.json`, the tested core `provider-compatibility-matrix.json`, and the onboarding/support scope; prevent unsupported package/provider/support claims.
 2. **Community source product** — implemented; finish real Marketplace App/listing/production E2E and activation.
-3. **Developer source foundation** — implemented release/update distribution path and core provider-claim truth; finish private vendor repositories, legal/pricing, Marketplace configuration, deployment, and paid E2E.
+3. **Developer source foundation** — release/update distribution, provider-claim truth, and self-service onboarding/support boundary are implemented; finish private vendor repositories, legal/pricing, Marketplace configuration, deployment, and paid E2E.
 4. **Premium layer** — create actual premium blueprints/adapters with explicit manifests and tests; only then activate Pro differentiation.
-5. **Team product** — complete production seat/admin/billing UX and support policy.
+5. **Team product** — complete production seat/admin/billing UX and operationally approved support policy.
 6. **Enterprise product** — build enterprise-only control/deployment assets and contractual operating model.
 7. **Pricing activation** — approve real monthly/annual prices and map actual Marketplace plan IDs only after the applicable package is operational and current GitHub requirements have been rechecked.
 
@@ -178,8 +189,9 @@ ANPOS currently does not include bundled LLM inference/compute. Until hosted orc
 - Do not call all listed PM systems or AI agents bundled integrations; use the tested provider compatibility matrix and require a real compatible connection/invocation path.
 - Linear's dedicated synchronization blueprint is not evidence that a complete provider-specific execution adapter or hosted integration is bundled.
 - Standard provider compatibility is core/capability-dependent and must not be charged/advertised as `standard_provider_adapters`.
+- Self-service onboarding documentation is not a staffed Developer support entitlement and must not be marketed as an SLA.
 - Paid release delivery must use the exact handoff-verified private-template commit in `ANPOS_COMMERCIAL_RELEASE_REF`; mutable branches/tags are forbidden.
-- Do not represent source implementation as Marketplace activation, production deployment, pricing approval, or legal readiness.
+- Do not represent source implementation as Marketplace activation, production deployment, pricing approval, legal readiness, or staffed support readiness.
 - Do not represent the public canonical repository as open source unless an explicit approved license grants those rights; repository visibility is not itself a software license.
 - Do not publish Community until its real GitHub-integrated flow passes production E2E.
 - Do not publish Developer until the real private vendor source, paid Marketplace/configuration, legal/pricing, production identity/readiness, and release/archive E2E pass.
