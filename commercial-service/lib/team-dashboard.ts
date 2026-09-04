@@ -1,3 +1,4 @@
+import { db, ensureSchema } from "./db";
 import { organizationSeatCapacity } from "./plans";
 
 export const ORGANIZATION_TEAM_FEATURE = "organization_team_features";
@@ -44,6 +45,19 @@ function optionalIso(value: unknown): string | null {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export async function loadTeamEntitlementRecord(accountId: number): Promise<EntitlementRecord> {
+  if (!Number.isSafeInteger(accountId) || accountId <= 0) throw new Error("VALID_ACCOUNT_ID_REQUIRED");
+  await ensureSchema();
+  const result = await db().query(
+    `SELECT github_account_id,github_login,github_account_type,plan_id,marketplace_plan_id,seats,state,features,
+            billing_cycle,billing_updated_at,updated_at
+       FROM entitlements WHERE github_account_id=$1`,
+    [accountId],
+  );
+  if (!result.rowCount) throw new Error("ENTITLEMENT_NOT_FOUND");
+  return result.rows[0] as EntitlementRecord;
 }
 
 export function buildTeamDashboardSummary(entitlement: EntitlementRecord, seatRows: SeatRecord[]) {
