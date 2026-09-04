@@ -38,7 +38,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
     def query(self, url: str) -> dict[str, list[str]]:
         return urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
 
-    def test_marketplace_registration_is_public_and_vendor_permission_free(self) -> None:
+    def test_marketplace_registration_is_public_and_uses_narrow_community_audit_permissions(self) -> None:
         data = self.renderer.render(self.inputs)
         marketplace = data["github_apps"]["marketplace"]
         query = self.query(marketplace["registration_url"])
@@ -50,8 +50,14 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             query["webhook_url"],
             ["https://license.example.test/api/webhooks/github/marketplace"],
         )
+        self.assertEqual(query["single_file"], ["read"])
+        self.assertEqual(query["single_file_paths[]"], self.renderer.COMMUNITY_AUDIT_PATHS)
+        self.assertEqual(marketplace["repository_permissions"], {"metadata": "read", "single_file": "read"})
+        self.assertEqual(marketplace["single_file_paths"], self.renderer.COMMUNITY_AUDIT_PATHS)
+        self.assertFalse(marketplace["community_audit_reads_application_source"])
         self.assertNotIn("administration", query)
         self.assertNotIn("contents", query)
+        self.assertEqual(len(self.renderer.COMMUNITY_AUDIT_PATHS), 10)
 
     def test_vendor_registration_is_private_archive_only_by_default(self) -> None:
         data = self.renderer.render(self.inputs)
@@ -96,7 +102,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             "source_protocol_version": package["anpos"]["source_protocol_version"],
             "runtime_contract": package["anpos"]["runtime_contract"],
         }
-        self.assertEqual(data["schema_version"], 3)
+        self.assertEqual(data["schema_version"], 4)
         self.assertEqual(data["artifact_identity"], expected)
         self.assertEqual(expected["source_protocol_version"], protocol["version"])
         self.assertEqual(
