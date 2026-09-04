@@ -12,13 +12,14 @@ ERRORS: list[str] = []
 
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
-    "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/entitlements.ts",
+    "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts",
     "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/webhooks/github/marketplace/route.ts",
+    "app/api/auth/github/callback/route.ts", "app/setup/github/route.ts", "app/community/page.tsx", "app/community/CommunityClient.tsx",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts",
-    "app/api/v1/access/reconcile/route.ts", "app/api/v1/audit/repository/route.ts",
+    "app/api/v1/access/reconcile/route.ts", "app/api/v1/audit/repository/route.ts", "app/api/v1/audit/repositories/route.ts",
 ]
 
 
@@ -58,10 +59,12 @@ def main() -> int:
     for name in (
         "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
         "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+        "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
         "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
         "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
+        "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
     ):
         if name not in env_example:
             fail(f"commercial service environment contract missing {name}")
@@ -79,8 +82,11 @@ def main() -> int:
         "lib/env.ts",
         (
             "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+            "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+            "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
             "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
             "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
+            "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
         ),
         "commercial configuration",
     )
@@ -99,17 +105,50 @@ def main() -> int:
             "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
             'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "githubMarketplaceAppId", "githubVendorAppId",
             'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
-            "removeTemplateCollaborator", "codeload.github.com", "marketplaceRepositoryReadToken",
+            "removeTemplateCollaborator", "codeload.github.com", "verifyMarketplaceRepositoryAuditInstallation",
             "MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED", "MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED",
+            "/user/installations/", "listMarketplaceUserInstallationRepositories", "verifyMarketplaceUserInstallationAccess",
         ),
         "GitHub client",
+    )
+    require_markers(
+        "lib/session.ts",
+        (
+            "aes-256-gcm", "__Host-anpos_session", "__Host-anpos_oauth_state", "HttpOnly", "Secure", "SameSite=Lax",
+            "createOAuthFlowState", "codeChallenge", "code_verifier", "consumeOAuthFlowState", "createGithubSessionCookie",
+            "MAX_SESSION_TTL_SECONDS", "githubSessionFromRequest",
+        ),
+        "Community OAuth/session protection",
+    )
+    require_markers(
+        "lib/auth.ts",
+        ("githubSessionTokenFromRequest", "githubUserFromToken", "authenticatedGithubContext"),
+        "GitHub authentication",
+    )
+    require_markers(
+        "app/setup/github/route.ts",
+        (
+            "installation_id", "createOAuthFlowState", "https://github.com/login/oauth/authorize",
+            "code_challenge", "code_challenge_method", "S256", "Set-Cookie", "no-store",
+        ),
+        "Marketplace Setup OAuth handoff",
+    )
+    require_markers(
+        "app/api/auth/github/callback/route.ts",
+        (
+            "consumeOAuthFlowState", "https://github.com/login/oauth/access_token", "code_verifier",
+            "githubUserFromToken", "verifyMarketplaceUserInstallationAccess", "createGithubSessionCookie",
+            "does not persist GitHub refresh_token", "Set-Cookie",
+        ),
+        "Marketplace OAuth callback",
     )
     require_markers(
         "lib/repository-audit.ts",
         (
             "COMMUNITY_AUDIT_PATHS", "MAX_CONTROL_FILE_BYTES", "source_code_read: false",
             "not_persisted_by_repository_audit", "uninitialized_child", "active_child", "partial_or_malformed",
-            "marketplaceRepositoryReadToken", "repositoryMetadata", "control_files_present",
+            "verifyMarketplaceRepositoryAuditInstallation", "repositoryMetadata", "control_files_present",
+            "userToken",
         ),
         "Community repository audit engine",
     )
@@ -117,9 +156,23 @@ def main() -> int:
         "app/api/v1/audit/repository/route.ts",
         (
             "authenticatedGithubContext", "community_repository_audit", "10, 60", "auditRepository",
-            "MARKETPLACE_APP_NOT_INSTALLED_FOR_REPOSITORY", "Cache-Control", "no-store",
+            "MARKETPLACE_APP_NOT_INSTALLED_FOR_REPOSITORY", "githubSessionFromRequest", "installation_session_mismatch",
+            "Cache-Control", "no-store",
         ),
         "Community repository audit API",
+    )
+    require_markers(
+        "app/api/v1/audit/repositories/route.ts",
+        (
+            "githubSessionFromRequest", "installation_session_mismatch", "authenticatedGithubContext",
+            "listMarketplaceUserInstallationRepositories", "marketplace_installation_user_access_required", "no-store",
+        ),
+        "Community repository discovery API",
+    )
+    require_markers(
+        "app/community/CommunityClient.tsx",
+        ("Repository Readiness Audit", "/api/v1/audit/repositories", "/api/v1/audit/repository", "Application source read"),
+        "Community audit customer UI",
     )
     require_markers(
         "lib/crypto.ts",
@@ -191,7 +244,8 @@ def main() -> int:
         (
             "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
             "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
-            "legacy single-app credentials do not satisfy split configuration",
+            "legacy single-app credentials do not satisfy split configuration", "Community OAuth state uses PKCE",
+            "Community browser session is encrypted",
         ),
         "commercial security unit tests",
     )
