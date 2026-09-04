@@ -1,8 +1,8 @@
 # ANPOS Pro Premium Pack Boundary
 
-Status: **verification/distribution contract only — no premium payload is implemented in canonical public source**.
+Status: **verification contract + entitlement-gated distribution source implemented — no premium payload or production premium E2E is evidenced**.
 
-This document defines how a future private ANPOS Premium Pack must be structured and certified. It does not satisfy the `premium_blueprints` or `premium_provider_adapters` entitlements by itself and does not make ANPOS Pro sale-ready.
+This document defines how a future private ANPOS Premium Pack must be structured, certified, pinned and delivered. It does not satisfy the `premium_blueprints` or `premium_provider_adapters` entitlements by itself and does not make ANPOS Pro sale-ready.
 
 ## Why the boundary is separate
 
@@ -11,10 +11,10 @@ The public canonical repository contains the reusable ANPOS core protocol and co
 Therefore:
 
 - premium customer assets belong in a separate private premium repository or equivalent immutable private artifact;
-- canonical source contains only the schema, verifier, safety rules and entitlement/distribution contract;
+- canonical source contains only the schema, verifier, safety rules and entitlement/distribution runtime;
 - a private pack must be versioned, content-addressed and independently verifiable;
 - exact copies of canonical tracked files are rejected as premium payload;
-- a verified private pack is still not a live entitlement or production distribution flow.
+- source-side release/archive routes are not evidence that a private pack exists or is live in production.
 
 ## Manifest
 
@@ -61,7 +61,7 @@ Each private adapter must:
 
 A passing pack verifier proves integrity/declared mapping, not live provider compatibility. Live provider behavior still requires runtime evidence.
 
-## Verification
+## Offline verification
 
 Run from the canonical ANPOS checkout that is intended to certify the pack:
 
@@ -88,29 +88,55 @@ The verifier fails closed on:
 
 A successful receipt includes pack/version, file count, total bytes, manifest/content-set digests and the canonical verifier revision/tree when available.
 
+## Source-side distribution runtime
+
+Commercial service **0.3.9** adds conditional premium delivery plumbing while leaving Developer-only operation independent from premium configuration.
+
+When `ANPOS_MARKETPLACE_PLAN_MAP` contains `pro`, `team`, or `enterprise`, full `/api/ready` fails closed unless all of these real external values are configured:
+
+- `ANPOS_PRIVATE_PREMIUM_REPO` — a private premium repository distinct from the private commercial-template repository;
+- `ANPOS_PREMIUM_RELEASE_REF` — the exact 40-character immutable premium repository commit SHA;
+- `ANPOS_PREMIUM_MANIFEST_SHA256` — copied from the successful offline verifier receipt;
+- `ANPOS_PREMIUM_CONTENT_SET_SHA256` — copied from the same successful offline verifier receipt.
+
+A Developer-only paid mapping does **not** require these values.
+
+The runtime uses the separate private Vendor Distribution GitHub App with operation-scoped **Contents: read** access. It fetches `ANPOS-PREMIUM-MANIFEST.json` at the exact configured commit, checks the raw manifest SHA-256, parses the declared protocol/capability/provider/file/provenance contract, recomputes the declared content-set digest, and rejects any mismatch with the offline verifier receipt.
+
+Customer routes are:
+
+- `GET /api/v1/premium/releases/current` — billing-reconciled, identity-authenticated metadata for a customer holding both `premium_blueprints` and `premium_provider_adapters`; organization use also requires an active assigned seat;
+- `GET /api/v1/premium/archive` — repeats the premium release gate and returns a temporary GitHub archive redirect for the same exact immutable revision.
+
+The runtime deliberately does not claim to re-perform the offline verifier's filesystem checks over an archive. Instead, the offline verifier certifies the real private checkout, and the production runtime binds the exact immutable commit to the verifier's manifest/content-set digests. A source route, successful build, or valid configuration does not prove the private pack exists or contains useful premium assets.
+
 ## Private repository release flow
 
-The future operator flow should be:
+The operator flow is:
 
 1. implement genuinely premium private assets;
 2. build/update `ANPOS-PREMIUM-MANIFEST.json` with exact digests;
-3. run this verifier from the exact canonical ANPOS revision intended to support the pack;
-4. commit the verified private pack;
-5. bind distribution to that immutable private commit/artifact, never just a mutable branch name;
-6. require an active entitlement before returning premium release metadata/archive access;
-7. verify purchase/entitlement → premium release → archive/update E2E in production;
-8. only then change `premium_blueprints` / `premium_provider_adapters` product truth from planned to implemented as supported by evidence.
+3. run `scripts/verify_premium_pack.py` from the exact canonical ANPOS revision intended to support the pack;
+4. retain the successful JSON receipt;
+5. commit the verified private pack and record that exact private commit SHA;
+6. configure the distinct private repo, exact commit SHA, manifest SHA and content-set SHA from the retained receipt;
+7. ensure the Vendor Distribution App has only the required read access to the premium repository;
+8. activate a higher paid Marketplace mapping only after the premium configuration is real;
+9. verify `/api/ready`, purchase/entitlement → premium release metadata → archive E2E in production;
+10. only then change `premium_blueprints` / `premium_provider_adapters` product truth from planned to implemented as supported by evidence.
 
 ## Current readiness
 
-Current canonical truth remains:
+Current canonical source truth for this lane is:
 
-- premium contract/schema/verifier: **implemented**;
+- premium contract/schema/offline verifier: **implemented**;
+- entitlement-gated immutable premium distribution source: **implemented in commercial service 0.3.9**;
+- conditional higher-tier readiness configuration: **implemented in source**;
 - private premium repository: **not evidenced**;
-- premium blueprint payload: **not implemented**;
-- premium provider adapter payload: **not implemented**;
-- entitlement-gated premium distribution: **not implemented**;
+- premium blueprint payload: **not implemented/evidenced**;
+- premium provider adapter payload: **not implemented/evidenced**;
+- live entitlement-gated premium distribution: **not verified**;
 - Pro production E2E: **not verified**;
 - Pro sale-ready: **false**.
 
-The contract is preparation for a real paid layer, not the paid layer itself.
+The implemented source is preparation for a real paid layer, not proof that the paid layer exists in production.
