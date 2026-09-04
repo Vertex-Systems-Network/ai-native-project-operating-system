@@ -6,7 +6,7 @@
   "catalog_authority": "commercial_entitlement_service",
   "feature_catalog_ref": "config/licensing/feature-catalog.json",
   "package_architecture_ref": "docs/commercial/package-architecture.md",
-  "productization_status": "community_source_implemented_paid_package_productization_pending",
+  "productization_status": "community_and_developer_source_value_implemented_external_activation_and_higher_tiers_pending",
   "free_acquisition_plan": {
     "id": "community",
     "display_name": "ANPOS Community",
@@ -26,7 +26,7 @@
       "id": "developer",
       "display_name": "ANPOS Developer",
       "sale_status": "draft",
-      "commercial_readiness": "blocked_on_legal_private_value_update_channel_and_production_launch_gates",
+      "commercial_readiness": "source_value_implemented_blocked_on_external_marketplace_legal_pricing_private_vendor_and_production_e2e_gates",
       "billing_model": "operator_configurable",
       "marketplace_plan_id": null,
       "monthly_price_usd": null,
@@ -35,8 +35,7 @@
       "project_limit": null,
       "entitlements": [
         "private_template_access",
-        "protocol_update_channel",
-        "standard_provider_adapters"
+        "protocol_update_channel"
       ]
     },
     {
@@ -54,7 +53,6 @@
       "entitlements": [
         "private_template_access",
         "protocol_update_channel",
-        "standard_provider_adapters",
         "premium_blueprints",
         "premium_provider_adapters",
         "hosted_orchestrator_when_offered"
@@ -74,7 +72,6 @@
       "entitlements": [
         "private_template_access",
         "protocol_update_channel",
-        "standard_provider_adapters",
         "premium_blueprints",
         "premium_provider_adapters",
         "hosted_orchestrator_when_offered",
@@ -96,7 +93,6 @@
       "entitlements": [
         "private_template_access",
         "protocol_update_channel",
-        "standard_provider_adapters",
         "premium_blueprints",
         "premium_provider_adapters",
         "hosted_or_self_hosted_orchestrator_when_offered",
