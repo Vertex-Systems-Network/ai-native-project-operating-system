@@ -82,7 +82,7 @@ export async function verifyMarketplaceRepositoryAuditInstallation(
   owner: string,
   repo: string,
   requiredSingleFilePaths: readonly string[],
-): Promise<void> {
+): Promise<number> {
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner) || !/^[A-Za-z0-9._-]{1,100}$/.test(repo)) {
     throw new Error("INVALID_MARKETPLACE_REPOSITORY");
   }
@@ -118,6 +118,7 @@ export async function verifyMarketplaceRepositoryAuditInstallation(
   const grantedPaths = new Set((installation.single_file_paths ?? []).map((path) => String(path)));
   const missingPaths = requiredSingleFilePaths.filter((path) => !grantedPaths.has(path));
   if (missingPaths.length) throw new Error("MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED");
+  return Number(installation.id);
 }
 
 export async function listMarketplaceUserInstallationRepositories(
