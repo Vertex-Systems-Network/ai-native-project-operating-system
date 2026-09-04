@@ -66,13 +66,15 @@ class TeamProductizationTests(unittest.TestCase):
             "requireGithubOrganizationAdmin",
             "reconcileEntitlement",
             "ORGANIZATION_TEAM_FEATURE",
-            "getMarketplaceSubscription",
+            "loadTeamEntitlementRecord",
             "listSeats",
             '"Cache-Control": "no-store"',
         ]:
             self.assertIn(marker, source)
+        self.assertNotIn("getMarketplaceSubscription", source)
 
         dashboard = (ROOT / "commercial-service/lib/team-dashboard.ts").read_text(encoding="utf-8")
+        self.assertIn("SELECT github_account_id,github_login,github_account_type,plan_id,marketplace_plan_id,seats,state,features", dashboard)
         self.assertIn('billing_authority: "github_marketplace"', dashboard)
         self.assertIn("contractual_support_activated_by_source: false", dashboard)
 
