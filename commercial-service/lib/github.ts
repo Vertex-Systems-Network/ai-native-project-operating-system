@@ -1,5 +1,5 @@
 import { createPrivateKey, sign } from "node:crypto";
-import { serviceConfig } from "./env";
+import { marketplaceAppConfig, serviceConfig } from "./env";
 
 function b64url(value: string | Buffer): string {
   return Buffer.from(value).toString("base64url");
@@ -8,12 +8,18 @@ function b64url(value: string | Buffer): string {
 type GitHubAppRole = "marketplace" | "vendor";
 
 function githubAppJwt(role: GitHubAppRole): string {
-  const cfg = serviceConfig();
   const now = Math.floor(Date.now() / 1000);
-  const appId = role === "marketplace" ? cfg.githubMarketplaceAppId : cfg.githubVendorAppId;
-  const privateKeyPem = role === "marketplace"
-    ? cfg.githubMarketplaceAppPrivateKeyPem
-    : cfg.githubVendorAppPrivateKeyPem;
+  let appId: string;
+  let privateKeyPem: string;
+  if (role === "marketplace") {
+    const cfg = marketplaceAppConfig();
+    appId = cfg.githubMarketplaceAppId;
+    privateKeyPem = cfg.githubMarketplaceAppPrivateKeyPem;
+  } else {
+    const cfg = serviceConfig();
+    appId = cfg.githubVendorAppId;
+    privateKeyPem = cfg.githubVendorAppPrivateKeyPem;
+  }
   const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const payload = b64url(JSON.stringify({ iat: now - 60, exp: now + 8 * 60, iss: appId }));
   const signingInput = `${header}.${payload}`;
