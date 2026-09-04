@@ -40,7 +40,7 @@ The JSON output includes:
 
 `production_verifier_arguments` contains the exact `--require-ready`, `--expected-service-version`, and `--expected-protocol-version` values derived from the deployable artifact. Operators should not maintain a second handwritten copy of expected release numbers.
 
-After deployment, `/api/version` must match `artifact_identity` before `/api/ready` can count as launch evidence. A green `/api/health` alone is not sufficient.
+After deployment, `/api/version` must match `artifact_identity` before either Community or paid readiness can count as launch evidence. A green `/api/health` alone is not sufficient. `/api/ready/community` is the narrower free-first readiness gate; full `/api/ready` remains the paid/vendor runtime gate.
 
 ## Deterministic vendor-repository handoff
 
@@ -87,6 +87,11 @@ The Marketplace App registration URL is prefilled as:
 - webhook enabled;
 - webhook URL `<service-base-url>/api/webhooks/github/marketplace`;
 - `marketplace_purchase` event;
+- Setup URL `<service-base-url>/setup/github`;
+- OAuth callback `<service-base-url>/api/auth/github/callback`;
+- request-OAuth-on-install disabled so Setup starts the explicit PKCE flow;
+- Setup-on-update enabled;
+- `single_file: read` limited to exactly the ten approved ANPOS control files;
 - no vendor private-template repository permissions.
 
 The operator must review GitHub's registration form before creating the App. GitHub remains authoritative for the resulting App configuration.
@@ -107,11 +112,21 @@ The Vendor Distribution App registration URL is prefilled as:
 
 ## Required split runtime handoff
 
-Marketplace role:
+Marketplace / Community role:
 
 - `GITHUB_MARKETPLACE_APP_ID`
 - `GITHUB_MARKETPLACE_APP_PRIVATE_KEY`
+- `GITHUB_MARKETPLACE_CLIENT_ID`
+- `GITHUB_MARKETPLACE_CLIENT_SECRET`
 - `GITHUB_WEBHOOK_SECRET`
+- `ANPOS_PUBLIC_BASE_URL`
+- `ANPOS_SESSION_SECRET`
+- `DATABASE_URL`
+- `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`
+
+`ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID` must be the **real operator-approved free Marketplace plan ID after that plan exists**. It must remain separate from `ANPOS_MARKETPLACE_PLAN_MAP`; Community has zero paid entitlements and must not be smuggled into the paid mapping merely to make a listing look configured.
+
+With the Marketplace/Community values above and the required database migration present, `/api/ready/community` can become HTTP 200 without any Vendor App, entitlement-signing key, paid plan map, organization-seat configuration, or private-template repository. That narrower readiness result is evidence only for the Community runtime configuration. It is not paid/vendor launch evidence.
 
 Vendor Distribution role:
 
@@ -120,9 +135,8 @@ Vendor Distribution role:
 - `GITHUB_VENDOR_INSTALLATION_ID`
 - `ANPOS_PRIVATE_TEMPLATE_REPO`
 
-Other production service configuration:
+Additional paid/full commercial service configuration:
 
-- `DATABASE_URL`
 - `ANPOS_ENTITLEMENT_PRIVATE_KEY`
 - `ANPOS_ENTITLEMENT_KEY_ID`
 - `ANPOS_ENTITLEMENT_ISSUER`
@@ -130,24 +144,30 @@ Other production service configuration:
 - `ANPOS_MARKETPLACE_PLAN_MAP`
 - `ANPOS_ORG_SEAT_LIMITS`
 
+`ANPOS_MARKETPLACE_PLAN_MAP` remains paid-only and maps real Marketplace IDs only to `developer`, `pro`, `team`, or `enterprise`. Full `/api/ready` remains fail-closed until the paid/vendor configuration is complete.
+
 Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy the split-App contract.
 
 ## Required operator sequence
 
-1. Generate this handoff from the certified canonical revision that will supply the vendor export.
-2. Generate deterministic private vendor service/template exports from that same canonical revision.
-3. Verify both exports with `scripts/verify_vendor_handoff.py` using the generated service/template argument lists; retain successful JSON receipts.
-4. Create the private vendor repositories and populate them only from verified deterministic exports.
-5. Clone/check out each new private repository cleanly and run the same handoff verification again before accepting it as vendor source.
-6. Register the public Marketplace App from the generated prefilled URL and review every requested field/permission.
-7. Register the private Vendor Distribution App from its generated prefilled URL.
-8. Generate/store distinct App private keys and a strong webhook secret in the deployment secret store; never commit them.
-9. Install only the Vendor Distribution App on the vendor private template repository.
-10. Populate the production environment with real external values listed by the handoff.
-11. Deploy the exact service artifact represented by `artifact_identity` from the verified vendor-private service source or another verified immutable artifact.
-12. Verify `/api/version` equals `artifact_identity`.
-13. Run `scripts/verify_commercial_production.py` with `production_verifier_arguments` plus the required base URL and any separately supplied secret environment-variable names.
-14. Require `/api/ready` HTTP 200 plus real Marketplace E2E evidence before production launch authorization.
+1. Generate this handoff from the certified canonical revision that will supply the deployable service/vendor export.
+2. Verify `/api/version` for any candidate deployment against the exact `artifact_identity`; do not treat `/api/health` as artifact proof.
+3. Register the public Marketplace App from the generated prefilled URL and review every requested field/permission.
+4. Generate the Marketplace OAuth client secret and strong webhook secret; store credentials only in the deployment secret store.
+5. After the genuine free Marketplace plan exists, configure its real ID as `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`; keep it outside `ANPOS_MARKETPLACE_PLAN_MAP`.
+6. Configure the Community database, run the required migration, and require `/api/ready/community` HTTP 200.
+7. Exercise the real Setup URL → PKCE OAuth callback → installation-bound repository discovery → bounded read-only Community audit flow before claiming Community launch readiness.
+8. For paid/vendor distribution, generate deterministic private vendor service/template exports from the same certified canonical revision.
+9. Verify both exports with `scripts/verify_vendor_handoff.py` using the generated service/template argument lists; retain successful JSON receipts.
+10. Create the private vendor repositories and populate them only from verified deterministic exports.
+11. Clone/check out each new private repository cleanly and run the same handoff verification again before accepting it as vendor source.
+12. Register the private Vendor Distribution App from its generated prefilled URL.
+13. Generate/store a distinct Vendor App private key; never reuse Marketplace App identity/key material.
+14. Install only the Vendor Distribution App on the vendor private template repository.
+15. Populate the remaining paid/full production environment with real external values listed by the handoff.
+16. Deploy the exact service artifact represented by `artifact_identity` from a verified immutable source.
+17. Run `scripts/verify_commercial_production.py` with `production_verifier_arguments` plus the required base URL and separately supplied secret environment-variable names.
+18. Require full `/api/ready` HTTP 200 plus applicable paid Marketplace/vendor E2E evidence before paid production launch authorization.
 
 ## Safety boundary
 
@@ -155,6 +175,7 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 - Package/protocol metadata supplies expected artifact identity; do not replace it with copied release numbers in operator instructions.
 - Canonical Git revision/tree supplies export provenance; do not accept a private vendor checkout merely because its filenames look correct.
 - A successful handoff receipt proves exact deterministic export equality only; it is not evidence of GitHub ownership, repository privacy, App installation, Marketplace approval, or deployment.
+- Community readiness and full commercial readiness are intentionally separate. `/api/ready/community` must never be represented as proof that paid plans, Vendor App distribution, private template access, organization seats, or entitlement signing are ready.
 - Never reuse App IDs or private keys across Marketplace and Vendor Distribution roles.
 - Do not add Vendor `Administration: write` unless collaborator provisioning is explicitly approved.
 - Do not infer repository existence, Marketplace approval, publisher verification, installation count, prices, plan IDs, customer billing readiness, or launch authorization from renderer output.
