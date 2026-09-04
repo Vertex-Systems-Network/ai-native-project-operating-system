@@ -3,12 +3,16 @@ export type ServiceConfig = {
   githubWebhookSecret: string;
   githubMarketplaceAppId: string;
   githubMarketplaceAppPrivateKeyPem: string;
+  githubMarketplaceClientId: string;
+  githubMarketplaceClientSecret: string;
   githubVendorAppId: string;
   githubVendorAppPrivateKeyPem: string;
   entitlementPrivateKeyPem: string;
   entitlementKeyId: string;
   entitlementIssuer: string;
   operatorToken: string;
+  publicBaseUrl: string;
+  sessionSecret: string;
 };
 
 function value(name: string): string | null {
@@ -26,6 +30,8 @@ const REQUIRED = [
   "GITHUB_WEBHOOK_SECRET",
   "GITHUB_MARKETPLACE_APP_ID",
   "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+  "GITHUB_MARKETPLACE_CLIENT_ID",
+  "GITHUB_MARKETPLACE_CLIENT_SECRET",
   "GITHUB_VENDOR_APP_ID",
   "GITHUB_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
@@ -35,6 +41,8 @@ const REQUIRED = [
   "ANPOS_ORG_SEAT_LIMITS",
   "GITHUB_VENDOR_INSTALLATION_ID",
   "ANPOS_PRIVATE_TEMPLATE_REPO",
+  "ANPOS_PUBLIC_BASE_URL",
+  "ANPOS_SESSION_SECRET",
 ];
 
 export function missingConfig(): string[] {
@@ -48,6 +56,19 @@ function validatePrivateKeyMarker(name: string, problems: string[]): void {
   }
 }
 
+function validHttpsBaseUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:"
+      && !url.username
+      && !url.password
+      && !url.search
+      && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
 export function configurationProblems(): string[] {
   const problems = missingConfig().map((name) => `missing:${name}`);
   const databaseUrl = value("DATABASE_URL");
@@ -56,14 +77,25 @@ export function configurationProblems(): string[] {
   if (webhookSecret && webhookSecret.length < 32) problems.push("weak:GITHUB_WEBHOOK_SECRET");
   const operatorToken = value("ANPOS_OPERATOR_TOKEN");
   if (operatorToken && operatorToken.length < 32) problems.push("weak:ANPOS_OPERATOR_TOKEN");
+  const sessionSecret = value("ANPOS_SESSION_SECRET");
+  if (sessionSecret && sessionSecret.length < 32) problems.push("weak:ANPOS_SESSION_SECRET");
+  const marketplaceClientSecret = value("GITHUB_MARKETPLACE_CLIENT_SECRET");
+  if (marketplaceClientSecret && marketplaceClientSecret.length < 32) problems.push("weak:GITHUB_MARKETPLACE_CLIENT_SECRET");
 
   const marketplaceAppId = value("GITHUB_MARKETPLACE_APP_ID");
   if (marketplaceAppId && !/^\d+$/.test(marketplaceAppId)) problems.push("invalid:GITHUB_MARKETPLACE_APP_ID");
+  const marketplaceClientId = value("GITHUB_MARKETPLACE_CLIENT_ID");
+  if (marketplaceClientId && !/^[A-Za-z0-9._-]{10,100}$/.test(marketplaceClientId)) {
+    problems.push("invalid:GITHUB_MARKETPLACE_CLIENT_ID");
+  }
   const vendorAppId = value("GITHUB_VENDOR_APP_ID");
   if (vendorAppId && !/^\d+$/.test(vendorAppId)) problems.push("invalid:GITHUB_VENDOR_APP_ID");
   if (marketplaceAppId && vendorAppId && marketplaceAppId === vendorAppId) {
     problems.push("unsafe:GITHUB_APP_ROLE_SEPARATION");
   }
+
+  const publicBaseUrl = value("ANPOS_PUBLIC_BASE_URL");
+  if (publicBaseUrl && !validHttpsBaseUrl(publicBaseUrl)) problems.push("invalid:ANPOS_PUBLIC_BASE_URL");
 
   const installationId = value("GITHUB_VENDOR_INSTALLATION_ID");
   if (installationId && !/^\d+$/.test(installationId)) problems.push("invalid:GITHUB_VENDOR_INSTALLATION_ID");
@@ -107,11 +139,15 @@ export function serviceConfig(): ServiceConfig {
     githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")!,
     githubMarketplaceAppId: value("GITHUB_MARKETPLACE_APP_ID")!,
     githubMarketplaceAppPrivateKeyPem: pem("GITHUB_MARKETPLACE_APP_PRIVATE_KEY")!,
+    githubMarketplaceClientId: value("GITHUB_MARKETPLACE_CLIENT_ID")!,
+    githubMarketplaceClientSecret: value("GITHUB_MARKETPLACE_CLIENT_SECRET")!,
     githubVendorAppId: value("GITHUB_VENDOR_APP_ID")!,
     githubVendorAppPrivateKeyPem: pem("GITHUB_VENDOR_APP_PRIVATE_KEY")!,
     entitlementPrivateKeyPem: pem("ANPOS_ENTITLEMENT_PRIVATE_KEY")!,
     entitlementKeyId: value("ANPOS_ENTITLEMENT_KEY_ID")!,
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
     operatorToken: value("ANPOS_OPERATOR_TOKEN")!,
+    publicBaseUrl: value("ANPOS_PUBLIC_BASE_URL")!.replace(/\/$/, ""),
+    sessionSecret: value("ANPOS_SESSION_SECRET")!,
   };
 }
