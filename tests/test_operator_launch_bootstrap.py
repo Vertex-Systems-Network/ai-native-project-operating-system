@@ -100,6 +100,13 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertIn("GITHUB_VENDOR_APP_PRIVATE_KEY", vendor_keys)
         self.assertIn("ANPOS_PUBLIC_BASE_URL", service_keys)
         self.assertIn("ANPOS_SESSION_SECRET", service_keys)
+        self.assertIn("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", service_keys)
+        self.assertIn("ANPOS_MARKETPLACE_PLAN_MAP", service_keys)
+        self.assertNotEqual("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP")
+        sequence = "\n".join(data["operator_sequence"])
+        self.assertIn("/api/ready/community", sequence)
+        self.assertIn("keep Community outside ANPOS_MARKETPLACE_PLAN_MAP", sequence)
+        self.assertIn("full /api/ready", sequence)
         self.assertEqual(
             data["legacy_single_app_environment_keys_forbidden"],
             ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"],
