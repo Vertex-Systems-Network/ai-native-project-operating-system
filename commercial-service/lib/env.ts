@@ -16,6 +16,7 @@ export type ServiceConfig = MarketplaceAppConfig & {
   entitlementKeyId: string;
   entitlementIssuer: string;
   operatorToken: string;
+  commercialReleaseRef: string;
 };
 
 function value(name: string): string | null {
@@ -55,6 +56,7 @@ const FULL_REQUIRED = [
   "ANPOS_ORG_SEAT_LIMITS",
   "GITHUB_VENDOR_INSTALLATION_ID",
   "ANPOS_PRIVATE_TEMPLATE_REPO",
+  "ANPOS_COMMERCIAL_RELEASE_REF",
 ] as const;
 
 function missing(required: readonly string[]): string[] {
@@ -154,6 +156,8 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
     if (installationId && !/^\d+$/.test(installationId)) problems.push("invalid:GITHUB_VENDOR_INSTALLATION_ID");
     const repository = value("ANPOS_PRIVATE_TEMPLATE_REPO");
     if (repository && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) problems.push("invalid:ANPOS_PRIVATE_TEMPLATE_REPO");
+    const releaseRef = value("ANPOS_COMMERCIAL_RELEASE_REF");
+    if (releaseRef && !/^[0-9a-f]{40}$/.test(releaseRef)) problems.push("invalid:ANPOS_COMMERCIAL_RELEASE_REF");
     const keyId = value("ANPOS_ENTITLEMENT_KEY_ID");
     if (keyId && !/^[A-Za-z0-9._:-]{3,100}$/.test(keyId)) problems.push("invalid:ANPOS_ENTITLEMENT_KEY_ID");
     const issuer = value("ANPOS_ENTITLEMENT_ISSUER");
@@ -237,5 +241,6 @@ export function serviceConfig(): ServiceConfig {
     entitlementKeyId: value("ANPOS_ENTITLEMENT_KEY_ID")!,
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
     operatorToken: value("ANPOS_OPERATOR_TOKEN")!,
+    commercialReleaseRef: value("ANPOS_COMMERCIAL_RELEASE_REF")!,
   };
 }
