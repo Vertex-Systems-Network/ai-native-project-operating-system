@@ -4,7 +4,7 @@ Vendor-only deployable reference backend for ANPOS GitHub Marketplace billing, l
 
 ## Product-state boundary
 
-The Community Repository Readiness / Conformance Audit is implemented in source but is **not** proof of Marketplace activation. A live Community claim still requires a real public Marketplace App, production secrets/configuration, deployment, Marketplace Setup/OAuth E2E evidence, and explicit operator activation.
+The Community Repository Readiness / Conformance Audit is implemented in source but is **not** proof of Marketplace activation. A live Community claim still requires a real public Marketplace App, a real operator-approved free Marketplace plan ID, production Community configuration, deployment, Marketplace Setup/OAuth E2E evidence, and explicit operator activation.
 
 Paid Developer/Pro/Team/Enterprise plans remain draft product configuration until their separate commercial-readiness gates pass.
 
@@ -15,17 +15,18 @@ Paid Developer/Pro/Team/Enterprise plans remain draft product configuration unti
 - reconcile account subscription state against GitHub Marketplace REST using the customer-facing Marketplace GitHub App JWT;
 - persist a PostgreSQL entitlement, audit, rate-limit, seat, provisioning, and access-reconciliation ledger;
 - use explicit checksum-locked database migrations instead of request-path schema mutation;
-- issue short-lived Ed25519 signed entitlement envelopes;
-- issue format-v2 seat-bound signed entitlements for organization users so an organization token is not freely shareable between members;
+- issue short-lived Ed25519 signed entitlement envelopes for paid entitlements only;
+- issue format-v2 seat-bound signed entitlements for paid organization users so an organization token is not freely shareable between members;
 - expose public verification keys;
 - expose non-secret deployment identity so stale/wrong service artifacts cannot pass production verification merely because health is green;
-- allow authenticated customers to refresh current entitlement;
+- allow authenticated paid customers to refresh current entitlement;
 - let verified organization admins assign/list/revoke seats, with active-member verification and capacity enforcement;
 - provide operator reconciliation for missed/ambiguous webhook deliveries and failed collaborator revocations;
 - deliver the private template through a short-lived GitHub archive redirect using a separate vendor-only GitHub App;
 - optionally provision users as private-template collaborators when explicitly enabled on the vendor App only;
 - reference-count collaborator grants before revocation so another active purchase/seat is not accidentally removed;
 - implement the Community Marketplace Setup URL -> PKCE GitHub App OAuth -> encrypted short-lived browser session -> installation-bound repository discovery -> read-only readiness audit flow;
+- reconcile the real Community Marketplace plan as `plan_id=community` with zero paid entitlements, no signed license token, and no organization-seat requirement;
 - read only the ten approved ANPOS Community control files and never treat the free readiness audit as permission to inspect application source code;
 - never delete, encrypt, modify, or intentionally break already-generated customer projects because a commercial entitlement ends.
 
@@ -42,9 +43,17 @@ Community v1 uses the public Marketplace App as the consent boundary and a GitHu
 
 The approved Community audit files are documented in `docs/commercial/community-readiness-audit.md`. Audit results are not persisted by the repository-audit endpoint; application source is not read.
 
+### Community plan identity
+
+Community is deliberately outside the paid `ANPOS_MARKETPLACE_PLAN_MAP`. After the genuine free Marketplace plan exists, configure its real numeric ID as:
+
+- `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`
+
+The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `paid=false`. The same Marketplace plan ID cannot also appear in `ANPOS_MARKETPLACE_PLAN_MAP`, and `community` is not accepted as a paid-map target. Do not invent a placeholder production plan ID merely to make readiness pass.
+
 ## Two-App trust architecture
 
-Production uses two distinct GitHub App registrations and the service fails closed if their App IDs or private keys are reused.
+Production uses two distinct GitHub App registrations and the full commercial service fails closed if their App IDs or private keys are reused.
 
 ### Marketplace App — public/customer-facing
 
@@ -65,15 +74,19 @@ Marketplace Setup/OAuth configuration:
 - Setup on update enabled;
 - OAuth protected with PKCE and encrypted state.
 
-Runtime credentials/configuration:
+Community runtime credentials/configuration:
 
+- `DATABASE_URL`
+- `GITHUB_WEBHOOK_SECRET`
 - `GITHUB_MARKETPLACE_APP_ID`
 - `GITHUB_MARKETPLACE_APP_PRIVATE_KEY`
 - `GITHUB_MARKETPLACE_CLIENT_ID`
 - `GITHUB_MARKETPLACE_CLIENT_SECRET`
-- `GITHUB_WEBHOOK_SECRET`
 - `ANPOS_PUBLIC_BASE_URL`
 - `ANPOS_SESSION_SECRET`
+- `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`
+
+These values are sufficient for the Community configuration boundary; they intentionally do not include Vendor App credentials, entitlement-signing keys, paid plan mapping, organization-seat policy, or a private-template repository.
 
 ### Vendor Distribution App — private/vendor-only
 
@@ -93,11 +106,18 @@ Minimum permissions:
 
 This split prevents a customer-facing Marketplace installation from inheriting vendor repository administration capability and prevents a compromise of the Marketplace App credential from automatically granting access to the private template repository.
 
-## Deployment identity
+## Readiness and deployment identity
 
 `GET /api/version` is public and intentionally secret-free. It reports the commercial-service package version, the ANPOS source protocol version embedded into the exported artifact, and the runtime-contract identifier. The response is `Cache-Control: no-store` and does not read deployment secrets.
 
 Production verification must not treat `/api/health` alone as proof that the intended artifact is deployed. `scripts/verify_commercial_production.py --require-ready` requires both `--expected-service-version` and `--expected-protocol-version`; it checks `/api/version` before readiness so a healthy but stale/wrong artifact fails certification.
+
+There are two readiness scopes:
+
+- `GET /api/ready/community` — verifies only the Community/free-first configuration boundary: Marketplace App/OAuth configuration, webhook secret, real Community plan ID, required database migration/schema, and database connectivity. It does **not** require Vendor App, paid entitlement signing, paid plan mapping, organization seats, or private-template distribution.
+- `GET /api/ready` — verifies the full paid/vendor commercial configuration, including split-App role/key separation, entitlement signing, paid plan/seat policy, migrations/schema, and database readiness.
+
+A green `/api/ready/community` is not evidence that paid plans or vendor distribution are ready. A green full `/api/ready` does not replace the required real Marketplace E2E checks.
 
 Generate exact expected values and GitHub App registration settings from the canonical vendor/operator handoff instead of copying release numbers or URLs manually:
 
@@ -140,32 +160,38 @@ The migrator takes a PostgreSQL advisory lock, applies ordered migrations transa
 
 ## Deploy
 
-1. Create a durable PostgreSQL database.
-2. Configure environment variables from `.env.example` in the deployment platform secret store. Never commit real values.
-3. Run `npm run migrate` against the target database.
-4. Create a **public Marketplace GitHub App** under the intended publisher organization using the generated registration URL; review Setup URL, callback URL, single-file paths, webhook, and visibility before saving.
-5. Generate the Marketplace App OAuth client secret in GitHub and store it only in the deployment secret manager.
-6. Create a separate **private Vendor Distribution GitHub App** under the vendor organization.
-7. Map real paid Marketplace plan IDs in `ANPOS_MARKETPLACE_PLAN_MAP` only when those plans actually exist; do not invent them to make Community look launched.
-8. Set real organization capacity policy in `ANPOS_ORG_SEAT_LIMITS` before paid organization sales.
-9. Install only the Vendor App on the vendor private-template repository with **Contents: read**. Add **Administration: write** only if collaborator provisioning is deliberately enabled.
-10. Set the Marketplace App webhook URL to `/api/webhooks/github/marketplace` and use the same secret as `GITHUB_WEBHOOK_SECRET`.
-11. Verify `/api/health`, exact `/api/version` identity, and applicable readiness gates.
-12. Exercise the real Community Setup -> OAuth -> repository discovery -> audit flow before activating Community.
-13. Exercise purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation before enabling paid sales.
+### Community free-first
+
+1. Create/configure the public Marketplace GitHub App using the generated registration URL; verify Setup URL, callback URL, exact ten-file permission scope, webhook, and public visibility.
+2. Generate the Marketplace App OAuth client secret and a strong webhook secret; store them only in the deployment secret manager.
+3. Create a durable PostgreSQL database, configure `DATABASE_URL`, and run `npm run migrate`.
+4. After the genuine free Marketplace plan exists, set its real ID in `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`. Keep Community outside `ANPOS_MARKETPLACE_PLAN_MAP`.
+5. Configure `ANPOS_PUBLIC_BASE_URL` and a high-entropy `ANPOS_SESSION_SECRET`.
+6. Deploy the exact certified service artifact and verify `/api/version` identity.
+7. Require `/api/ready/community` HTTP 200.
+8. Exercise the real Setup -> PKCE OAuth -> installation-bound repository discovery -> bounded audit flow before activating Community.
+
+### Paid/vendor extension
+
+1. Create the separate private Vendor Distribution GitHub App.
+2. Create/populate the verified private commercial-template source and install only the Vendor App with **Contents: read**; add **Administration: write** only if collaborator provisioning is deliberately enabled.
+3. Configure entitlement signing, operator token, Vendor App credentials, paid `ANPOS_MARKETPLACE_PLAN_MAP`, and `ANPOS_ORG_SEAT_LIMITS` using real approved values.
+4. Require exact `/api/version`, full `/api/ready`, and authenticated production verification.
+5. Exercise paid purchase, plan-change, cancellation, duplicate delivery, failed-delivery retry, archive delivery, seat assignment/revocation, and access-reconciliation before enabling paid sales.
 
 ## API
 
-- `GET /api/health` — process liveness; does not imply artifact identity or billing readiness.
+- `GET /api/health` — process liveness; does not imply artifact identity or readiness.
 - `GET /api/version` — public, secret-free service/protocol/runtime-contract identity for deployment attestation.
-- `GET /api/ready` — full commercial configuration, split GitHub App key types/role separation, plan/seat policy, migration/schema, and database readiness.
+- `GET /api/ready/community` — Community-only configuration/database readiness; deliberately independent of paid/vendor secrets.
+- `GET /api/ready` — full commercial configuration, split GitHub App key types/role separation, paid plan/seat policy, migration/schema, and database readiness.
 - `POST /api/webhooks/github/marketplace` — GitHub Marketplace webhook receiver.
 - `GET /setup/github` — Marketplace Setup entrypoint; starts PKCE GitHub App OAuth from an untrusted setup installation ID.
 - `GET /api/auth/github/callback` — OAuth callback; verifies user + installation and creates encrypted short-lived browser session.
 - `GET /api/v1/audit/repositories` — list repositories available to the authenticated user for the selected Marketplace installation.
 - `POST /api/v1/audit/repository` — run the bounded ten-control-file Community readiness audit; no paid entitlement required.
-- `GET /api/v1/keys` — public entitlement verification key.
-- `GET /api/v1/entitlements/current` — refresh entitlement after GitHub identity verification; send `X-ANPOS-Account-Id`. Organization callers need an active assigned seat to receive a signed consumption token.
+- `GET /api/v1/keys` — public entitlement verification key for paid portable claims.
+- `GET /api/v1/entitlements/current` — refresh a paid entitlement after GitHub identity verification; send `X-ANPOS-Account-Id`. Organization callers need an active assigned seat to receive a signed consumption token.
 - `GET /api/v1/template/archive` — recommended short-lived private-template archive delivery.
 - `GET /api/v1/seats` — organization-admin seat list.
 - `POST /api/v1/seats` — organization-admin seat assignment by GitHub username.
@@ -178,11 +204,15 @@ The migrator takes a PostgreSQL advisory lock, applies ordered migrations transa
 
 Organization membership alone is not a paid seat. An organization admin must explicitly assign an active organization member. Seat capacity is taken from GitHub Marketplace `unit_count` when present; otherwise the operator-defined `ANPOS_ORG_SEAT_LIMITS` mapping is required and the service fails closed if capacity cannot be determined.
 
-Organization consumption entitlements use signed envelope format v2, containing both the canonical organization `subject` and the assigned GitHub user `principal`.
+Community organization installations do not receive paid seat entitlements merely because the Marketplace account type is `Organization`.
+
+Organization paid-consumption entitlements use signed envelope format v2, containing both the canonical organization `subject` and the assigned GitHub user `principal`.
 
 ## Expiry and revocation boundary
 
-Cancellation, expiry, or seat revocation may stop future entitlement refresh, private archives, hosted capabilities, premium updates, support, and vendor-template access. They must not remotely modify, delete, encrypt, or intentionally break repositories/code already generated for the customer.
+Cancellation, expiry, or seat revocation may stop future paid entitlement refresh, private archives, hosted capabilities, premium updates, support, and vendor-template access. They must not remotely modify, delete, encrypt, or intentionally break repositories/code already generated for the customer.
+
+A paid-to-Community transition removes paid feature claims and queues any necessary vendor-template collaborator cleanup without turning ordinary Community use into a Vendor App dependency.
 
 ## Commercial boundary
 
