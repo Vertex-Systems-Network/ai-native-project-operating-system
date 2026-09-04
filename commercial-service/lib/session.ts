@@ -5,7 +5,7 @@ import {
   randomBytes,
   timingSafeEqual,
 } from "node:crypto";
-import { serviceConfig } from "./env";
+import { marketplaceAppConfig } from "./env";
 
 export const SESSION_COOKIE_NAME = "__Host-anpos_session";
 export const OAUTH_STATE_COOKIE_NAME = "__Host-anpos_oauth_state";
@@ -32,7 +32,7 @@ export type GithubBrowserSession = {
 };
 
 function encryptionKey(): Buffer {
-  return createHash("sha256").update(serviceConfig().sessionSecret, "utf8").digest();
+  return createHash("sha256").update(marketplaceAppConfig().sessionSecret, "utf8").digest();
 }
 
 function seal(value: object): string {
