@@ -142,6 +142,7 @@
     "production_readiness_requires_expected_artifact_identity": true,
     "rate_limiting_required": true,
     "bounded_request_bodies_required": true,
+    "structured_audit_logging_required": true,
     "structured_audit_logging_required_for_commercial_mutations": true,
     "sensitive_fields_redacted_from_logs": true,
     "request_ids_required": true,
