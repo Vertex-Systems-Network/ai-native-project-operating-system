@@ -1,7 +1,14 @@
 import { authenticatedGithubContext } from "@/lib/auth";
+import { verifyMarketplaceRepositoryAuditInstallation } from "@/lib/github";
 import { inputErrorResponse, readJsonBody, requestIdFrom } from "@/lib/http";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { auditRepository, RepositoryAuditError } from "@/lib/repository-audit";
+import {
+  auditRepository,
+  COMMUNITY_AUDIT_PATHS,
+  normalizeRepositorySlug,
+  RepositoryAuditError,
+} from "@/lib/repository-audit";
+import { githubSessionFromRequest } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -56,6 +63,23 @@ export async function POST(request: Request) {
     body = await readJsonBody<AuditRequestBody>(request, 4096);
   } catch (error) {
     return inputErrorResponse(error) ?? Response.json({ ok: false, error: "invalid_request" }, { status: 400 });
+  }
+
+  const browserSession = githubSessionFromRequest(request);
+  if (browserSession) {
+    try {
+      const normalized = normalizeRepositorySlug(body.repository);
+      const [owner, repo] = normalized.split("/", 2);
+      const installationId = await verifyMarketplaceRepositoryAuditInstallation(owner, repo, COMMUNITY_AUDIT_PATHS);
+      if (installationId !== browserSession.installation_id) {
+        return Response.json(
+          { ok: false, error: "installation_session_mismatch", request_id: requestId },
+          { status: 403, headers: { "Cache-Control": "no-store" } },
+        );
+      }
+    } catch (error) {
+      return auditErrorResponse(error, requestId);
+    }
   }
 
   let decision;
