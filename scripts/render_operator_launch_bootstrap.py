@@ -70,6 +70,7 @@ SERVICE_ENV = [
     "ANPOS_OPERATOR_TOKEN",
     "ANPOS_MARKETPLACE_PLAN_MAP",
     "ANPOS_ORG_SEAT_LIMITS",
+    "ANPOS_COMMERCIAL_RELEASE_REF",
 ]
 LEGACY_SINGLE_APP_ENV = ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"]
 
@@ -355,6 +356,7 @@ def render(
             "Generate deterministic private vendor service and template exports from the certified canonical revision.",
             "Verify both exports with scripts/verify_vendor_handoff.py using vendor_repository_handoff arguments before accepting or pushing/deploying them; retain the successful JSON receipts as provenance evidence.",
             "Create the private vendor repositories and populate them only from verified deterministic exports; verify a clean checkout again after the initial push.",
+            "After the verified private template push, set ANPOS_COMMERCIAL_RELEASE_REF to that repository's exact 40-character commit SHA; never use main, a branch, or a mutable tag for paid delivery.",
             "Register the public Marketplace App using the prefilled URL; verify the Setup URL, OAuth callback, setup-on-update behavior, and Community single-file permission set before saving the App.",
             "Keep request OAuth on install disabled. Marketplace purchase/setup redirects land on /setup/github, which starts the explicit PKCE GitHub App OAuth flow.",
             "Generate the Marketplace App client secret in GitHub, store it only in the deployment secret manager, and configure GITHUB_MARKETPLACE_CLIENT_ID/GITHUB_MARKETPLACE_CLIENT_SECRET plus ANPOS_PUBLIC_BASE_URL/ANPOS_SESSION_SECRET.",
@@ -368,6 +370,7 @@ def render(
             f"Deploy the exact {identity['service']} {identity['service_version']} artifact and require /api/version to report source protocol {identity['source_protocol_version']} and runtime contract {identity['runtime_contract']}.",
             "Run scripts/verify_commercial_production.py with the generated production_verifier_arguments; exact artifact identity must pass before /api/ready can count as paid-runtime evidence.",
             "Exercise the Marketplace Setup URL -> PKCE OAuth callback -> authorized repository discovery -> read-only Community audit flow using a real installation before claiming Community launch readiness.",
+            "Exercise GET /api/v1/releases/current and GET /api/v1/template/archive against the exact ANPOS_COMMERCIAL_RELEASE_REF and verify the returned canonical source revision/tree matches retained vendor-handoff evidence before claiming Developer delivery readiness.",
             "Require full /api/ready plus applicable paid/vendor E2E evidence before paid launch authorization.",
         ],
         "safety": [
@@ -380,6 +383,7 @@ def render(
             "Setup redirect installation IDs are untrusted until OAuth completes and the authenticated GitHub user is verified against that installation.",
             "Community v1 uses encrypted short-lived HttpOnly sessions and deliberately does not persist GitHub refresh tokens.",
             "Community Marketplace identity must use the real ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID and must never be smuggled into the paid ANPOS_MARKETPLACE_PLAN_MAP.",
+            "Paid update/archive delivery must use the exact ANPOS_COMMERCIAL_RELEASE_REF commit whose deterministic EXPORT-MANIFEST and private-repository checkout have been verified; mutable refs are forbidden.",
             "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
             "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
             "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, or production readiness from this output.",
