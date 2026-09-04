@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { requireGithubAccountAccess } from "@/lib/auth";
 import { getEntitlement, reconcileEntitlement } from "@/lib/entitlements";
-import { templateArchiveRedirect } from "@/lib/github";
+import { templateArchiveRedirect, templateReleaseManifest } from "@/lib/github";
 import { requestIdFrom } from "@/lib/http";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { requireActiveSeat } from "@/lib/seats";
@@ -34,10 +34,20 @@ export async function GET(request: Request) {
     }
     if (refreshed.github_account_type === "Organization") await requireActiveSeat(accountId, user.id);
 
-    const archive = await templateArchiveRedirect(process.env.ANPOS_TEMPLATE_REF ?? "main");
+    const release = await templateReleaseManifest();
+    const archive = await templateArchiveRedirect();
+    if (archive.release_ref !== release.release_ref) throw new Error("COMMERCIAL_RELEASE_REF_MISMATCH");
+
     await db().query(
       "INSERT INTO commercial_audit_log(request_id,event_type,github_account_id,metadata) VALUES ($1,'template_archive_issued',$2,$3::jsonb)",
-      [requestId, accountId, JSON.stringify({ github_user_id: user.id, github_login: user.login, repository: archive.repository })],
+      [requestId, accountId, JSON.stringify({
+        github_user_id: user.id,
+        github_login: user.login,
+        repository: archive.repository,
+        release_ref: archive.release_ref,
+        canonical_source_revision: release.source_revision,
+        canonical_source_tree: release.source_tree,
+      })],
     );
     return new Response(null, {
       status: 307,
