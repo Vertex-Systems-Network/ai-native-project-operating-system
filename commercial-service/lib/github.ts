@@ -59,6 +59,14 @@ type MarketplaceRepositoryInstallation = {
   single_file_paths?: string[] | null;
 };
 
+export type MarketplaceUserRepository = {
+  id: number;
+  full_name: string;
+  private: boolean;
+  archived: boolean;
+  default_branch: string;
+};
+
 export async function getMarketplaceSubscription(accountId: number): Promise<MarketplaceSubscription | null> {
   const response = await fetch(`https://api.github.com/marketplace_listing/accounts/${accountId}`, {
     headers: githubHeaders(githubAppJwt("marketplace")),
@@ -110,6 +118,50 @@ export async function verifyMarketplaceRepositoryAuditInstallation(
   const grantedPaths = new Set((installation.single_file_paths ?? []).map((path) => String(path)));
   const missingPaths = requiredSingleFilePaths.filter((path) => !grantedPaths.has(path));
   if (missingPaths.length) throw new Error("MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED");
+}
+
+export async function listMarketplaceUserInstallationRepositories(
+  userToken: string,
+  installationId: number,
+  page = 1,
+  perPage = 100,
+): Promise<{ total_count: number; repositories: MarketplaceUserRepository[] }> {
+  if (!userToken || userToken.length > 4096) throw new Error("UNAUTHORIZED_GITHUB");
+  if (!Number.isSafeInteger(installationId) || installationId <= 0) throw new Error("INVALID_INSTALLATION_ID");
+  if (!Number.isSafeInteger(page) || page < 1 || page > 10_000) throw new Error("INVALID_PAGE");
+  if (!Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new Error("INVALID_PER_PAGE");
+  const response = await fetch(
+    `https://api.github.com/user/installations/${installationId}/repositories?per_page=${perPage}&page=${page}`,
+    {
+      headers: githubHeaders(userToken),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if ([401, 403, 404].includes(response.status)) throw new Error("MARKETPLACE_INSTALLATION_USER_ACCESS_REQUIRED");
+  if (!response.ok) throw new Error(`MARKETPLACE_USER_REPOSITORIES_FAILED_${response.status}`);
+  const body = await response.json() as { total_count?: number; repositories?: Array<Record<string, unknown>> };
+  const repositories = Array.isArray(body.repositories) ? body.repositories : [];
+  return {
+    total_count: Number.isSafeInteger(body.total_count) ? Number(body.total_count) : repositories.length,
+    repositories: repositories.flatMap((repo) => {
+      const id = Number(repo.id);
+      const fullName = typeof repo.full_name === "string" ? repo.full_name : "";
+      const defaultBranch = typeof repo.default_branch === "string" ? repo.default_branch : "";
+      if (!Number.isSafeInteger(id) || id <= 0 || !fullName || !defaultBranch) return [];
+      return [{
+        id,
+        full_name: fullName,
+        private: repo.private === true,
+        archived: repo.archived === true,
+        default_branch: defaultBranch,
+      }];
+    }),
+  };
+}
+
+export async function verifyMarketplaceUserInstallationAccess(userToken: string, installationId: number): Promise<void> {
+  await listMarketplaceUserInstallationRepositories(userToken, installationId, 1, 1);
 }
 
 async function vendorInstallationToken(operation: "archive" | "collaborator"): Promise<string> {
