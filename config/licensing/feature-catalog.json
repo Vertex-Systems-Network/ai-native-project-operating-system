@@ -125,12 +125,14 @@
       "id": "provider_compatibility_contracts",
       "availability": "capability_dependent",
       "evidence": [
+        "config/licensing/provider-compatibility-matrix.json",
         "config/integrations/project-management.json",
         "config/integrations/linear-sync.json",
         "config/integrations/sync-authority.json",
-        "config/ai/agent-catalog.json"
+        "config/ai/agent-catalog.json",
+        "tests/test_provider_compatibility_matrix.py"
       ],
-      "notes": "Standard PM/AI provider compatibility and host-dependent attachment contracts are core ANPOS behavior, not a paid entitlement. Dedicated premium adapters may be sold only when separately implemented and evidenced."
+      "notes": "Standard PM/AI provider compatibility and host-dependent attachment contracts are core ANPOS behavior, not a paid entitlement. The compatibility matrix distinguishes Linear's dedicated synchronization blueprint from generic contract-only providers and keeps every live connection/provider-specific execution claim runtime-evidence-dependent. Dedicated premium adapters may be sold only when separately implemented, versioned, tested, and evidenced."
     },
     {
       "id": "quality_and_security_governance",
