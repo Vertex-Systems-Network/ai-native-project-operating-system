@@ -258,18 +258,24 @@ class TemplatePolicyTests(unittest.TestCase):
         self.assertEqual(catalog.get("selected_agents"), [])
         self.assertEqual(catalog.get("available_agents"), [])
 
-    def test_source_has_only_guarded_source_certification_workflow(self):
+    def test_source_template_has_only_optional_guarded_source_certification_workflow(self):
+        instance = json.loads((ROOT / "config/protocol/instance.json").read_text())
+        if instance.get("instance_status") != "template_source":
+            self.skipTest("source-template workflow invariant does not apply after child bootstrap")
         workflow_dir = ROOT / ".github" / "workflows"
         active = sorted(
             [p.name for p in workflow_dir.glob("*.yml")] +
             [p.name for p in workflow_dir.glob("*.yaml")]
         ) if workflow_dir.exists() else []
-        self.assertEqual(active, ["source-continuous-certification.yml"])
-        source = (workflow_dir / "source-continuous-certification.yml").read_text()
-        self.assertIn(
-            "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'",
-            source,
-        )
+        self.assertIn(active, ([], ["source-continuous-certification.yml"]))
+        if active:
+            source = (workflow_dir / "source-continuous-certification.yml").read_text()
+            self.assertIn(
+                "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'",
+                source,
+            )
+            self.assertNotIn("contents: write", source)
+            self.assertNotIn("persist-credentials: true", source)
 
     def test_worker_handoff_template_has_network_and_pm_scope(self):
         queue = json.loads((ROOT / "config/coordination/agent-work-queue.json").read_text())

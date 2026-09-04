@@ -320,8 +320,20 @@ def validate_template_boundary() -> None:
             fail(f"template source: {path} must remain template_blueprint/child_project_only")
 
     active = ROOT / ".github" / "workflows"
-    if active.exists() and any(active.glob("*.y*ml")):
-        fail("template source: child runtime workflows must not exist in active .github/workflows")
+    active_workflows = sorted(
+        [path.name for path in active.glob("*.yml")] +
+        [path.name for path in active.glob("*.yaml")]
+    ) if active.exists() else []
+    allowed_source_workflows = ["source-continuous-certification.yml"]
+    if active_workflows not in ([], allowed_source_workflows):
+        fail("template source: only guarded source-continuous-certification.yml may exist in active .github/workflows")
+    source_ci = active / "source-continuous-certification.yml"
+    if source_ci.is_file():
+        source_ci_text = source_ci.read_text(encoding="utf-8")
+        if "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'" not in source_ci_text:
+            fail("template source: source continuous certification workflow must be repository-guarded")
+        if "contents: write" in source_ci_text or "persist-credentials: true" in source_ci_text:
+            fail("template source: source continuous certification workflow must remain read-only")
     if (ROOT / ".github" / "dependabot.yml").exists():
         fail("template source: child Dependabot config must not be active")
 
