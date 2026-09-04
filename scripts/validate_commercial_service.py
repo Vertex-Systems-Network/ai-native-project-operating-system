@@ -15,7 +15,9 @@ REQUIRED = [
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts",
     "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts",
-    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/webhooks/github/marketplace/route.ts",
+    "tests/community-launch.test.ts",
+    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts",
+    "app/api/webhooks/github/marketplace/route.ts",
     "app/api/auth/github/callback/route.ts", "app/setup/github/route.ts", "app/community/page.tsx", "app/community/CommunityClient.tsx",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts",
@@ -60,6 +62,7 @@ def main() -> int:
         "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
         "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
         "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+        "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
         "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
         "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
@@ -72,6 +75,8 @@ def main() -> int:
         fail("commercial service environment contract must not advertise legacy single-App credentials")
     if "ANPOS_COLLABORATOR_PROVISIONING_ENABLED=false" not in env_example:
         fail("collaborator provisioning must be off by default in the environment example")
+    if "Keep Community outside ANPOS_MARKETPLACE_PLAN_MAP" not in env_example:
+        fail("environment example must keep Community identity outside the paid Marketplace plan map")
 
     all_source = "\n".join(path.read_text(encoding="utf-8") for path in SERVICE.rglob("*.ts") if path.is_file())
     for forbidden in ("BEGIN PRIVATE KEY-----\\nMII", "ghp_", "github_pat_", "postgresql://postgres:"):
@@ -83,12 +88,21 @@ def main() -> int:
         (
             "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
             "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
-            "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
+            "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
+            "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
             "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
             "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
             "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
         ),
         "commercial configuration",
+    )
+    require_markers(
+        "lib/plans.ts",
+        (
+            "communityMarketplacePlanId", "resolveMarketplacePlan", 'planId: "community"', "paid: false",
+            "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "marketplacePlanMap", "marketplaceId === communityId",
+        ),
+        "Marketplace plan resolution",
     )
     require_markers(
         "app/api/webhooks/github/marketplace/route.ts",
@@ -103,7 +117,8 @@ def main() -> int:
         "lib/github.ts",
         (
             "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
-            'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "githubMarketplaceAppId", "githubVendorAppId",
+            'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "marketplaceAppConfig", "serviceConfig",
+            "githubMarketplaceAppId", "githubVendorAppId",
             'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
             "removeTemplateCollaborator", "codeload.github.com", "verifyMarketplaceRepositoryAuditInstallation",
             "MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED", "MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED",
@@ -114,11 +129,16 @@ def main() -> int:
     require_markers(
         "lib/session.ts",
         (
-            "aes-256-gcm", "__Host-anpos_session", "__Host-anpos_oauth_state", "HttpOnly", "Secure", "SameSite=Lax",
+            "marketplaceAppConfig", "aes-256-gcm", "__Host-anpos_session", "__Host-anpos_oauth_state", "HttpOnly", "Secure", "SameSite=Lax",
             "createOAuthFlowState", "codeChallenge", "code_verifier", "consumeOAuthFlowState", "createGithubSessionCookie",
             "MAX_SESSION_TTL_SECONDS", "githubSessionFromRequest",
         ),
         "Community OAuth/session protection",
+    )
+    require_markers(
+        "lib/crypto.ts",
+        ("webhookConfig", "timingSafeEqual", "Ed25519", "base64url", "principal?", "claims.principal ? 2 : 1"),
+        "entitlement/webhook cryptography",
     )
     require_markers(
         "lib/auth.ts",
@@ -128,7 +148,7 @@ def main() -> int:
     require_markers(
         "app/setup/github/route.ts",
         (
-            "installation_id", "createOAuthFlowState", "https://github.com/login/oauth/authorize",
+            "marketplaceAppConfig", "installation_id", "createOAuthFlowState", "https://github.com/login/oauth/authorize",
             "code_challenge", "code_challenge_method", "S256", "Set-Cookie", "no-store",
         ),
         "Marketplace Setup OAuth handoff",
@@ -136,7 +156,7 @@ def main() -> int:
     require_markers(
         "app/api/auth/github/callback/route.ts",
         (
-            "consumeOAuthFlowState", "https://github.com/login/oauth/access_token", "code_verifier",
+            "marketplaceAppConfig", "consumeOAuthFlowState", "https://github.com/login/oauth/access_token", "code_verifier",
             "githubUserFromToken", "verifyMarketplaceUserInstallationAccess", "createGithubSessionCookie",
             "does not persist GitHub refresh_token", "Set-Cookie",
         ),
@@ -175,21 +195,16 @@ def main() -> int:
         "Community audit customer UI",
     )
     require_markers(
-        "lib/crypto.ts",
-        ("timingSafeEqual", "Ed25519", "base64url", "principal?", "claims.principal ? 2 : 1"),
-        "entitlement cryptography",
-    )
-    require_markers(
         "lib/entitlements.ts",
         (
-            "marketplacePlanMap", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:",
-            'accountType === "Organization"', "signed_entitlement: envelope", "revokeAllTemplateGrantsForSource",
+            "resolveMarketplacePlan", "resolvedPlan.paid", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:",
+            'accountType === "Organization"', "signed_entitlement: envelope", "revokeAllTemplateGrantsForSource", "revoked > 0",
         ),
         "entitlement engine",
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("commercial_schema_migrations", "001_baseline.sql", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "001_baseline.sql", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -231,13 +246,21 @@ def main() -> int:
         "template access revocation",
     )
     require_markers(
+        "app/api/ready/community/route.ts",
+        (
+            "communityLaunchConfigurationProblems", "marketplaceAppConfig", "communityMarketplacePlanId",
+            "github_marketplace_app_key_must_be_rsa", 'mode: "community"', "ensureSchema", 'db().query("SELECT 1")',
+        ),
+        "Community readiness gate",
+    )
+    require_markers(
         "app/api/ready/route.ts",
         (
             "configurationProblems", "githubMarketplaceAppPrivateKeyPem", "githubVendorAppPrivateKeyPem",
             "github_marketplace_app_key_must_be_rsa", "github_vendor_app_key_must_be_rsa",
             '"ed25519"', "organizationSeatCapacity", "ensureSchema",
         ),
-        "readiness gate",
+        "full commercial readiness gate",
     )
     require_markers(
         "tests/security.test.ts",
@@ -248,6 +271,16 @@ def main() -> int:
             "Community browser session is encrypted",
         ),
         "commercial security unit tests",
+    )
+    require_markers(
+        "tests/community-launch.test.ts",
+        (
+            "Community launch config is independent from paid and vendor secrets",
+            "Community Marketplace identity stays outside paid plan mapping",
+            "Community Marketplace plan identity fails closed when malformed",
+            "missing:GITHUB_VENDOR_APP_ID", "paid: false",
+        ),
+        "Community launch unit tests",
     )
     require_markers(
         "tests/repository-audit.test.ts",
