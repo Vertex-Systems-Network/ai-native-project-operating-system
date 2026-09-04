@@ -18,8 +18,14 @@ class CommercialFeatureCatalogTests(unittest.TestCase):
 
         community = self.catalog["free_acquisition_plan"]
         self.assertEqual(community["id"], "community")
-        self.assertEqual(community["status"], "proposed_not_active")
-        self.assertEqual(community["implementation_status"], "planned_not_implemented")
+        self.assertEqual(community["status"], "implemented_source_not_active")
+        self.assertEqual(
+            community["implementation_status"],
+            "implemented_source_pending_real_marketplace_e2e_and_operator_activation",
+        )
+        self.assertEqual(community["capabilities"], ["community_repository_readiness_audit"])
+        self.assertIsNone(community["marketplace_plan_id"])
+        self.assertEqual(community["entitlements"], [])
         self.assertNotIn("community", plan_ids)
 
     def test_every_paid_entitlement_has_feature_truth(self) -> None:
@@ -31,6 +37,17 @@ class CommercialFeatureCatalogTests(unittest.TestCase):
             for entitlement in plan["entitlements"]:
                 self.assertIn(entitlement, by_id, f"{plan['id']} entitlement {entitlement} lacks feature truth")
                 self.assertTrue(by_id[entitlement].get("evidence"), f"{entitlement} must include evidence")
+
+    def test_community_capability_is_implemented_source_but_not_external_launch_evidence(self) -> None:
+        capabilities = {row["id"]: row for row in self.features["core_product_capabilities"]}
+        community = capabilities["community_repository_readiness_audit"]
+        self.assertEqual(community["availability"], "implemented_source_pending_external_activation")
+        evidence = set(community["evidence"])
+        self.assertIn("commercial-service/app/setup/github/route.ts", evidence)
+        self.assertIn("commercial-service/app/api/auth/github/callback/route.ts", evidence)
+        self.assertIn("commercial-service/app/api/v1/audit/repository/route.ts", evidence)
+        self.assertIn("commercial-service/app/community/CommunityClient.tsx", evidence)
+        self.assertIn("externally unlaunched", community["notes"])
 
     def test_draft_packages_expose_current_blockers(self) -> None:
         plans = {plan["id"]: plan for plan in self.catalog["plans"]}

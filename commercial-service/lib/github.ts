@@ -52,6 +52,21 @@ export type MarketplaceSubscription = {
   };
 };
 
+type MarketplaceRepositoryInstallation = {
+  id?: number;
+  suspended_at?: string | null;
+  permissions?: Record<string, string>;
+  single_file_paths?: string[] | null;
+};
+
+export type MarketplaceUserRepository = {
+  id: number;
+  full_name: string;
+  private: boolean;
+  archived: boolean;
+  default_branch: string;
+};
+
 export async function getMarketplaceSubscription(accountId: number): Promise<MarketplaceSubscription | null> {
   const response = await fetch(`https://api.github.com/marketplace_listing/accounts/${accountId}`, {
     headers: githubHeaders(githubAppJwt("marketplace")),
@@ -61,6 +76,93 @@ export async function getMarketplaceSubscription(accountId: number): Promise<Mar
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`GitHub Marketplace reconciliation failed: ${response.status}`);
   return response.json() as Promise<MarketplaceSubscription>;
+}
+
+export async function verifyMarketplaceRepositoryAuditInstallation(
+  owner: string,
+  repo: string,
+  requiredSingleFilePaths: readonly string[],
+): Promise<number> {
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner) || !/^[A-Za-z0-9._-]{1,100}$/.test(repo)) {
+    throw new Error("INVALID_MARKETPLACE_REPOSITORY");
+  }
+  if (!requiredSingleFilePaths.length || requiredSingleFilePaths.length > 10) {
+    throw new Error("INVALID_MARKETPLACE_AUDIT_PATHS");
+  }
+  for (const path of requiredSingleFilePaths) {
+    if (!path || path.length > 255 || path.startsWith("/") || path.includes("..") || /[\r\n]/.test(path)) {
+      throw new Error("INVALID_MARKETPLACE_AUDIT_PATHS");
+    }
+  }
+
+  const installationResponse = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/installation`,
+    {
+      headers: githubHeaders(githubAppJwt("marketplace")),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (installationResponse.status === 404) throw new Error("MARKETPLACE_APP_NOT_INSTALLED_FOR_REPOSITORY");
+  if (!installationResponse.ok) throw new Error(`MARKETPLACE_APP_INSTALLATION_LOOKUP_FAILED_${installationResponse.status}`);
+  const installation = await installationResponse.json() as MarketplaceRepositoryInstallation;
+  if (!Number.isSafeInteger(installation.id) || Number(installation.id) <= 0) {
+    throw new Error("MARKETPLACE_APP_INSTALLATION_INVALID");
+  }
+  if (installation.suspended_at) throw new Error("MARKETPLACE_APP_INSTALLATION_SUSPENDED");
+
+  const singleFilePermission = installation.permissions?.single_file;
+  if (!singleFilePermission || !["read", "write"].includes(singleFilePermission)) {
+    throw new Error("MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED");
+  }
+  const grantedPaths = new Set((installation.single_file_paths ?? []).map((path) => String(path)));
+  const missingPaths = requiredSingleFilePaths.filter((path) => !grantedPaths.has(path));
+  if (missingPaths.length) throw new Error("MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED");
+  return Number(installation.id);
+}
+
+export async function listMarketplaceUserInstallationRepositories(
+  userToken: string,
+  installationId: number,
+  page = 1,
+  perPage = 100,
+): Promise<{ total_count: number; repositories: MarketplaceUserRepository[] }> {
+  if (!userToken || userToken.length > 4096) throw new Error("UNAUTHORIZED_GITHUB");
+  if (!Number.isSafeInteger(installationId) || installationId <= 0) throw new Error("INVALID_INSTALLATION_ID");
+  if (!Number.isSafeInteger(page) || page < 1 || page > 10_000) throw new Error("INVALID_PAGE");
+  if (!Number.isSafeInteger(perPage) || perPage < 1 || perPage > 100) throw new Error("INVALID_PER_PAGE");
+  const response = await fetch(
+    `https://api.github.com/user/installations/${installationId}/repositories?per_page=${perPage}&page=${page}`,
+    {
+      headers: githubHeaders(userToken),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if ([401, 403, 404].includes(response.status)) throw new Error("MARKETPLACE_INSTALLATION_USER_ACCESS_REQUIRED");
+  if (!response.ok) throw new Error(`MARKETPLACE_USER_REPOSITORIES_FAILED_${response.status}`);
+  const body = await response.json() as { total_count?: number; repositories?: Array<Record<string, unknown>> };
+  const repositories = Array.isArray(body.repositories) ? body.repositories : [];
+  return {
+    total_count: Number.isSafeInteger(body.total_count) ? Number(body.total_count) : repositories.length,
+    repositories: repositories.flatMap((repo) => {
+      const id = Number(repo.id);
+      const fullName = typeof repo.full_name === "string" ? repo.full_name : "";
+      const defaultBranch = typeof repo.default_branch === "string" ? repo.default_branch : "";
+      if (!Number.isSafeInteger(id) || id <= 0 || !fullName || !defaultBranch) return [];
+      return [{
+        id,
+        full_name: fullName,
+        private: repo.private === true,
+        archived: repo.archived === true,
+        default_branch: defaultBranch,
+      }];
+    }),
+  };
+}
+
+export async function verifyMarketplaceUserInstallationAccess(userToken: string, installationId: number): Promise<void> {
+  await listMarketplaceUserInstallationRepositories(userToken, installationId, 1, 1);
 }
 
 async function vendorInstallationToken(operation: "archive" | "collaborator"): Promise<string> {

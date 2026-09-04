@@ -168,8 +168,8 @@ def main() -> int:
 
     data = render()
     if data:
-        if data.get("schema_version") != 3:
-            fail("operator launch renderer output must be schema_version 3")
+        if data.get("schema_version") != 5:
+            fail("operator launch renderer output must be schema_version 5")
         if data.get("status") != "operator_actions_required" or data.get("launch_authorized") is not False:
             fail("operator launch renderer must remain fail-closed and non-authoritative")
         if data.get("artifact_identity") != expected_identity:

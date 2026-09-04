@@ -1,19 +1,14 @@
 {
-  "schema_version": 2,
+  "schema_version": 4,
   "status": "inactive_blueprint",
-  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service.",
+  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service plus the source-implemented, externally unlaunched Community repository-readiness product surface.",
   "endpoints": [
     {
       "method": "GET",
       "path": "/version",
       "authentication": "public_read",
       "purpose": "Expose non-secret service/artifact identity so deployment verification can reject stale or wrong commercial artifacts.",
-      "required_fields": [
-        "service",
-        "service_version",
-        "source_protocol_version",
-        "runtime_contract"
-      ],
+      "required_fields": ["service", "service_version", "source_protocol_version", "runtime_contract"],
       "must_not_return_secrets": true,
       "cache_control": "no-store"
     },
@@ -24,6 +19,65 @@
       "idempotency": "X-GitHub-Delivery with payload-hash binding and retryable delivery state",
       "purpose": "Process verified marketplace_purchase events",
       "must_not_return_secrets": true
+    },
+    {
+      "method": "GET",
+      "path": "/setup/github",
+      "authentication": "marketplace_setup_redirect_then_explicit_github_app_oauth",
+      "purpose": "Receive the GitHub Marketplace Setup URL redirect, treat installation_id as untrusted input, create encrypted short-lived OAuth state and PKCE verifier, then redirect to GitHub App OAuth authorization.",
+      "request_oauth_on_install": false,
+      "pkce_required": true,
+      "state_cookie": "HttpOnly Secure SameSite=Lax encrypted max_10_minutes",
+      "must_not_trust_installation_id_before_oauth": true,
+      "cache_control": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/github/callback",
+      "authentication": "github_app_oauth_code_plus_pkce_plus_encrypted_state",
+      "purpose": "Exchange the OAuth code, verify the authenticated GitHub user and their access to the Setup installation, then create an encrypted short-lived browser session.",
+      "session_cookie": "HttpOnly Secure SameSite=Lax encrypted max_8_hours",
+      "refresh_token_persisted": false,
+      "installation_user_access_verification_required": true,
+      "cache_control": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit/repositories",
+      "authentication": "verified_github_user_access_token_or_encrypted_browser_session",
+      "purpose": "List repositories available to the authenticated GitHub user through the selected Marketplace App installation.",
+      "installation_session_match_required_for_browser_session": true,
+      "response_is_sanitized_repository_metadata_only": true,
+      "cache_control": "no-store"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/audit/repository",
+      "authentication": "verified_github_user_access_token_or_encrypted_browser_session_plus_marketplace_app_installation_permission_verification_on_target_repository",
+      "purpose": "Provide the ANPOS Community read-only Repository Readiness / Conformance Audit without requiring a paid entitlement.",
+      "requires_active_paid_entitlement": false,
+      "request": {"repository": "owner/name or https://github.com/owner/name"},
+      "marketplace_app_repository_permissions": {"metadata": "read", "single_file": "read"},
+      "approved_single_file_paths": [
+        ".ai/manifest.json",
+        "config/protocol/instance.json",
+        "config/protocol/version.json",
+        "config/quality/quality-policy.json",
+        "config/security/control-plane-policy.json",
+        "config/github/ruleset-policy.json",
+        "config/design/design-assurance.json",
+        "config/data/data-governance.json",
+        "config/release/release-policy.json",
+        "config/operations/operations-policy.json"
+      ],
+      "application_source_code_read": false,
+      "installation_permission_set_verified_before_reads": true,
+      "reads_performed_with_authenticated_github_user_token": true,
+      "installation_identity_must_match_browser_session": true,
+      "requesting_user_repository_access_verification_required": true,
+      "rate_limit": "10 requests per 60 seconds per authenticated GitHub user",
+      "result_persistence": "not_persisted_by_repository_audit",
+      "cache_control": "no-store"
     },
     {
       "method": "GET",
@@ -89,10 +143,18 @@
     "rate_limiting_required": true,
     "bounded_request_bodies_required": true,
     "structured_audit_logging_required": true,
+    "structured_audit_logging_required_for_commercial_mutations": true,
     "sensitive_fields_redacted_from_logs": true,
     "request_ids_required": true,
     "timeouts_and_bounded_retries_required": true,
-    "least_privilege_github_app_tokens_required": true,
+    "least_privilege_github_app_permissions_required": true,
+    "community_repository_audit_must_not_read_application_source": true,
+    "community_repository_audit_requires_user_and_installation_authorization": true,
+    "community_repository_reads_must_be_user_token_bound": true,
+    "community_browser_session_must_be_encrypted_http_only_secure_and_short_lived": true,
+    "community_oauth_refresh_token_must_not_be_persisted_in_v1": true,
+    "marketplace_setup_installation_id_is_untrusted_until_user_verification": true,
+    "source_implementation_is_not_marketplace_activation_evidence": true,
     "no_payment_card_storage_when_processor_handles_payment": true,
     "no_remote_kill_switch_for_generated_customer_projects": true,
     "vendor_template_access_may_be_revoked_without_modifying_generated_customer_projects": true
