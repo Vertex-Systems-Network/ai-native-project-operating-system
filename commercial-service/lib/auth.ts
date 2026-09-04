@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { serviceConfig } from "./env";
+import { githubSessionTokenFromRequest } from "./session";
 
 function equalSecret(a: string, b: string): boolean {
   const left = Buffer.from(a);
@@ -7,9 +8,10 @@ function equalSecret(a: string, b: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-function bearerToken(request: Request): string {
+function githubToken(request: Request): string {
   const auth = request.headers.get("authorization") ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const token = bearer || githubSessionTokenFromRequest(request) || "";
   if (!token || token.length > 4096) throw new Error("UNAUTHORIZED_GITHUB");
   return token;
 }
@@ -42,12 +44,18 @@ async function githubGet(path: string, token: string) {
   });
 }
 
-export async function authenticatedGithubContext(request: Request): Promise<GitHubAuthContext> {
-  const token = bearerToken(request);
+export async function githubUserFromToken(token: string): Promise<GitHubUser> {
+  if (!token || token.length > 4096) throw new Error("UNAUTHORIZED_GITHUB");
   const userResponse = await githubGet("/user", token);
   if (!userResponse.ok) throw new Error("UNAUTHORIZED_GITHUB");
   const user = await userResponse.json() as GitHubUser;
   if (!Number.isSafeInteger(user.id) || user.id <= 0 || !user.login) throw new Error("UNAUTHORIZED_GITHUB");
+  return user;
+}
+
+export async function authenticatedGithubContext(request: Request): Promise<GitHubAuthContext> {
+  const token = githubToken(request);
+  const user = await githubUserFromToken(token);
   return { user, token };
 }
 
