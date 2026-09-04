@@ -1,0 +1,95 @@
+name: ANPOS 1.3.13 Operator Bootstrap Draft
+
+on:
+  push:
+    branches:
+      - ops/operator-bootstrap-draft-1313
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact canonical source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 18eb6eab7cf24bcbbf7c715bcec061e28430995d
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert canonical revision and tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "18eb6eab7cf24bcbbf7c715bcec061e28430995d"
+          test "$(git rev-parse 'HEAD^{tree}')" = "853319b4dfaeb6054abdd6f920c6a81d4f10bed3"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Install validation dependency
+        run: python -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+
+      - name: Validate canonical operator bootstrap tooling
+        run: python scripts/validate_operator_launch_bootstrap.py
+
+      - name: Render secret-safe operator bootstrap draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/anpos-operator-bootstrap-draft-1.3.13.json"
+          python scripts/render_operator_launch_bootstrap.py \
+            --organization Vertex-Systems-Network \
+            --service-base-url https://anpos-commercial-service.vercel.app \
+            --homepage-url https://github.com/Vertex-Systems-Network/ai-native-project-operating-system \
+            > "$out"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ['RUNNER_TEMP']) / 'anpos-operator-bootstrap-draft-1.3.13.json'
+          data = json.loads(p.read_text())
+          assert data['schema_version'] == 3
+          assert data['launch_authorized'] is False
+          assert data['artifact_identity'] == {
+              'service': 'anpos-commercial-service',
+              'service_version': '0.3.6',
+              'source_protocol_version': '1.3.13',
+              'runtime_contract': 'split-github-app-v1',
+          }
+          vendor = data['vendor_repository_handoff']
+          assert vendor['canonical_source_revision'] == '18eb6eab7cf24bcbbf7c715bcec061e28430995d'
+          assert vendor['canonical_source_tree'] == '853319b4dfaeb6054abdd6f920c6a81d4f10bed3'
+          assert data['production_verifier_arguments'] == [
+              '--require-ready',
+              '--expected-service-version', '0.3.6',
+              '--expected-protocol-version', '1.3.13',
+          ]
+          serialized = json.dumps(data).lower()
+          for forbidden in ('-----begin private key-----', 'ghp_', 'github_pat_'):
+              assert forbidden not in serialized
+          PY
+          printf '%s\n' \
+            'This is a secret-safe DRAFT handoff generated from canonical ANPOS 1.3.13 / commercial service 0.3.6.' \
+            'Organization: Vertex-Systems-Network' \
+            'Service base URL: https://anpos-commercial-service.vercel.app' \
+            'Homepage candidate: https://github.com/Vertex-Systems-Network/ai-native-project-operating-system' \
+            '' \
+            'The homepage value is a current public candidate, not a recorded product-owner approval.' \
+            'This packet does NOT create either GitHub App, does NOT create repositories, does NOT contain private keys/webhook secrets, and does NOT authorize launch.' \
+            > "$RUNNER_TEMP/OPERATOR-NOTE.txt"
+          sha256sum "$out" > "$RUNNER_TEMP/anpos-operator-bootstrap-draft-1.3.13.json.sha256"
+
+      - name: Upload operator bootstrap draft
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: anpos-operator-bootstrap-draft-1.3.13
+          path: |
+            ${{ runner.temp }}/anpos-operator-bootstrap-draft-1.3.13.json
+            ${{ runner.temp }}/anpos-operator-bootstrap-draft-1.3.13.json.sha256
+            ${{ runner.temp }}/OPERATOR-NOTE.txt
+          if-no-files-found: error
+          retention-days: 1
