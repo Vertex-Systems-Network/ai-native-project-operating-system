@@ -21,6 +21,13 @@ export type ServiceConfig = MarketplaceAppConfig & {
   commercialReleaseRef: string;
 };
 
+export type PremiumDistributionConfig = {
+  privatePremiumRepo: string;
+  premiumReleaseRef: string;
+  premiumManifestSha256: string;
+  premiumContentSetSha256: string;
+};
+
 function value(name: string): string | null {
   const raw = process.env[name];
   return raw && raw.trim() ? raw.trim() : null;
@@ -61,12 +68,21 @@ const FULL_REQUIRED = [
   "ANPOS_COMMERCIAL_RELEASE_REF",
 ] as const;
 
+const PREMIUM_DISTRIBUTION_REQUIRED = [
+  "ANPOS_PRIVATE_PREMIUM_REPO",
+  "ANPOS_PREMIUM_RELEASE_REF",
+  "ANPOS_PREMIUM_MANIFEST_SHA256",
+  "ANPOS_PREMIUM_CONTENT_SET_SHA256",
+] as const;
+
 function missing(required: readonly string[]): string[] {
   return required.filter((name) => !value(name)).map((name) => `missing:${name}`);
 }
 
 export function missingConfig(): string[] {
-  return missing(FULL_REQUIRED).map((problem) => problem.slice("missing:".length));
+  return configurationProblems()
+    .filter((problem) => problem.startsWith("missing:"))
+    .map((problem) => problem.slice("missing:".length));
 }
 
 function validatePrivateKeyMarker(name: string, problems: string[]): void {
@@ -189,6 +205,33 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
   return [...new Set(problems)];
 }
 
+function premiumPaidPlanConfigured(): boolean {
+  const raw = value("ANPOS_MARKETPLACE_PLAN_MAP");
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+    return Object.values(parsed as Record<string, unknown>).some((planId) => ["pro", "team", "enterprise"].includes(String(planId)));
+  } catch {
+    return false;
+  }
+}
+
+export function premiumDistributionConfigurationProblems(): string[] {
+  const problems = missing(PREMIUM_DISTRIBUTION_REQUIRED);
+  const repository = value("ANPOS_PRIVATE_PREMIUM_REPO");
+  if (repository && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) problems.push("invalid:ANPOS_PRIVATE_PREMIUM_REPO");
+  const templateRepository = value("ANPOS_PRIVATE_TEMPLATE_REPO");
+  if (repository && templateRepository && repository === templateRepository) problems.push("unsafe:ANPOS_PREMIUM_REPOSITORY_MUST_BE_DISTINCT");
+  const releaseRef = value("ANPOS_PREMIUM_RELEASE_REF");
+  if (releaseRef && !/^[0-9a-f]{40}$/.test(releaseRef)) problems.push("invalid:ANPOS_PREMIUM_RELEASE_REF");
+  for (const name of ["ANPOS_PREMIUM_MANIFEST_SHA256", "ANPOS_PREMIUM_CONTENT_SET_SHA256"] as const) {
+    const digest = value(name);
+    if (digest && !/^[0-9a-f]{64}$/.test(digest)) problems.push(`invalid:${name}`);
+  }
+  return [...new Set(problems)];
+}
+
 export function marketplaceAppConfigurationProblems(): string[] {
   return commonProblems(MARKETPLACE_APP_REQUIRED, false);
 }
@@ -198,7 +241,9 @@ export function communityLaunchConfigurationProblems(): string[] {
 }
 
 export function configurationProblems(): string[] {
-  return commonProblems(FULL_REQUIRED, true);
+  const problems = commonProblems(FULL_REQUIRED, true);
+  if (premiumPaidPlanConfigured()) problems.push(...premiumDistributionConfigurationProblems());
+  return [...new Set(problems)];
 }
 
 export function databaseConfig(): { databaseUrl: string } {
@@ -246,5 +291,16 @@ export function serviceConfig(): ServiceConfig {
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
     operatorToken: value("ANPOS_OPERATOR_TOKEN")!,
     commercialReleaseRef: value("ANPOS_COMMERCIAL_RELEASE_REF")!,
+  };
+}
+
+export function premiumDistributionConfig(): PremiumDistributionConfig {
+  const problems = premiumDistributionConfigurationProblems();
+  if (problems.length) throw new Error(`Premium distribution is not configured: ${problems.join(", ")}`);
+  return {
+    privatePremiumRepo: value("ANPOS_PRIVATE_PREMIUM_REPO")!,
+    premiumReleaseRef: value("ANPOS_PREMIUM_RELEASE_REF")!,
+    premiumManifestSha256: value("ANPOS_PREMIUM_MANIFEST_SHA256")!,
+    premiumContentSetSha256: value("ANPOS_PREMIUM_CONTENT_SET_SHA256")!,
   };
 }
