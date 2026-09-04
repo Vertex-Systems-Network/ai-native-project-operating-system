@@ -1,7 +1,7 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "status": "inactive_blueprint",
-  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service plus the source-implemented, externally unlaunched Community repository-readiness product surface.",
+  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service plus the source-implemented, externally unlaunched Community repository-readiness product surface and conditional higher-tier premium-pack distribution.",
   "endpoints": [
     {
       "method": "GET",
@@ -116,6 +116,30 @@
       "deterministic_export_manifest_verified_before_redirect": true
     },
     {
+      "method": "GET",
+      "path": "/v1/premium/releases/current",
+      "authentication": "verified_github_user_access_token_plus_active_premium_entitlements_and_org_seat_when_applicable",
+      "purpose": "Return sanitized metadata for the exact private Premium Pack release after Marketplace reconciliation and verifier-receipt digest binding.",
+      "requires_entitlements": ["premium_blueprints", "premium_provider_adapters"],
+      "premium_release_ref": "exact_40_character_git_commit_sha_only",
+      "manifest": "ANPOS-PREMIUM-MANIFEST.json",
+      "offline_verifier": "scripts/verify_premium_pack.py",
+      "manifest_sha256_must_match_verifier_receipt": true,
+      "content_set_sha256_must_match_verifier_receipt": true,
+      "returns_private_repository_name": false,
+      "cache_control": "private, no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/premium/archive",
+      "authentication": "verified_github_user_access_token_plus_active_premium_entitlements_and_org_seat_when_applicable",
+      "purpose": "Issue a short-lived GitHub archive redirect for the same exact immutable Premium Pack revision after manifest and verifier-receipt digest checks.",
+      "requires_entitlements": ["premium_blueprints", "premium_provider_adapters"],
+      "immutable_premium_release_ref_required": true,
+      "premium_manifest_verified_before_redirect": true,
+      "recommended_distribution_path": true
+    },
+    {
       "method": "GET_POST_DELETE",
       "path": "/v1/seats",
       "authentication": "verified_active_github_organization_admin",
@@ -157,6 +181,11 @@
     "paid_release_ref_must_be_immutable_commit_sha": true,
     "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery": true,
     "paid_release_manifest_must_bind_canonical_source_revision_and_tree": true,
+    "premium_release_ref_must_be_immutable_commit_sha": true,
+    "premium_release_manifest_must_match_offline_verifier_receipt_digests": true,
+    "premium_distribution_configuration_required_when_higher_paid_tier_is_activated": true,
+    "premium_repository_must_be_distinct_from_private_template_repository": true,
+    "premium_source_distribution_plumbing_is_not_premium_payload_or_sale_readiness": true,
     "rate_limiting_required": true,
     "bounded_request_bodies_required": true,
     "structured_audit_logging_required": true,
