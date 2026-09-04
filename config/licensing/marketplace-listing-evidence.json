@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "pending_external_assets_and_urls",
+  "scope": "github_marketplace_listing_submission",
+  "requirements_authority": "blueprints/commercial/github-marketplace-compliance.json",
+  "evidence_items": {
+    "homepage": {"status": "pending", "url": null, "verified_at": null},
+    "privacy_policy": {"status": "pending", "url": null, "verified_at": null},
+    "support": {"status": "pending", "url_or_email": null, "verified_at": null},
+    "terms": {"status": "pending", "url": null, "verified_at": null},
+    "publisher_contact": {"status": "pending", "evidence_reference": null, "verified_at": null},
+    "logo": {"status": "pending", "artifact_reference": null, "sha256": null},
+    "feature_card": {"status": "pending", "artifact_reference": null, "sha256": null},
+    "screenshots": {"status": "pending", "artifact_references": [], "sha256": []},
+    "public_app_installability": {"status": "pending", "evidence_reference": null, "verified_at": null},
+    "marketplace_webhook": {"status": "pending", "evidence_reference": null, "verified_at": null}
+  },
+  "submission_gate": {
+    "listing_evidence_complete": false,
+    "rule": "Do not submit or describe the Marketplace listing as ready until every required external URL/contact/artwork/installability/webhook evidence item is verified. Repository drafts and placeholders are not publication evidence."
+  }
+}
