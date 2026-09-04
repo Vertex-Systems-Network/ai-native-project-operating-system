@@ -1,5 +1,7 @@
-import { createPrivateKey, sign } from "node:crypto";
-import { marketplaceAppConfig, serviceConfig } from "./env";
+import { createHash, createPrivateKey, sign } from "node:crypto";
+import packageJson from "@/package.json";
+import { marketplaceAppConfig, premiumDistributionConfig, serviceConfig } from "./env";
+import { parsePremiumReleaseManifest, type VerifiedPremiumRelease } from "./premium-releases";
 import { parseTemplateReleaseManifest, type VerifiedTemplateRelease } from "./releases";
 
 function b64url(value: string | Buffer): string {
@@ -35,10 +37,28 @@ const githubHeaders = (token: string) => ({
   "User-Agent": "ANPOS-Commercial-Service/1.0",
 });
 
+function privateRepository(full: string): { full: string; owner: string; repo: string } {
+  const [owner, repo, ...rest] = full.split("/");
+  if (!owner || !repo || rest.length) throw new Error("INVALID_VENDOR_REPOSITORY");
+  return { full, owner, repo };
+}
+
 function privateTemplateRepository(): { full: string; owner: string; repo: string } {
-  const repository = serviceConfig().privateTemplateRepo;
-  const [owner, repo] = repository.split("/", 2);
-  return { full: repository, owner, repo };
+  return privateRepository(serviceConfig().privateTemplateRepo);
+}
+
+function privatePremiumRepository(): { full: string; owner: string; repo: string } {
+  return privateRepository(premiumDistributionConfig().privatePremiumRepo);
+}
+
+const serviceIdentity = packageJson as {
+  anpos?: { source_protocol_version?: string };
+};
+
+function sourceProtocolVersion(): string {
+  const value = serviceIdentity.anpos?.source_protocol_version;
+  if (!value) throw new Error("SOURCE_PROTOCOL_VERSION_UNAVAILABLE");
+  return value;
 }
 
 export type MarketplaceSubscription = {
@@ -169,10 +189,12 @@ export async function verifyMarketplaceUserInstallationAccess(userToken: string,
   await listMarketplaceUserInstallationRepositories(userToken, installationId, 1, 1);
 }
 
-async function vendorInstallationToken(operation: "archive" | "collaborator"): Promise<string> {
+async function vendorInstallationToken(
+  repository: { full: string; owner: string; repo: string },
+  operation: "archive" | "collaborator",
+): Promise<string> {
   const cfg = serviceConfig();
   const installationId = cfg.githubVendorInstallationId;
-  const repository = privateTemplateRepository();
   const permissions = operation === "collaborator"
     ? { administration: "write" }
     : { contents: "read" };
@@ -197,7 +219,7 @@ export type CommercialReleaseMetadata = VerifiedTemplateRelease & {
 export async function templateReleaseManifest(): Promise<CommercialReleaseMetadata> {
   const cfg = serviceConfig();
   const repository = privateTemplateRepository();
-  const token = await vendorInstallationToken("archive");
+  const token = await vendorInstallationToken(repository, "archive");
   const response = await fetch(
     `https://api.github.com/repos/${repository.owner}/${repository.repo}/contents/EXPORT-MANIFEST.json?ref=${cfg.commercialReleaseRef}`,
     {
@@ -227,7 +249,7 @@ export async function templateReleaseManifest(): Promise<CommercialReleaseMetada
 export async function templateArchiveRedirect(): Promise<{ repository: string; release_ref: string; location: string }> {
   const cfg = serviceConfig();
   const repository = privateTemplateRepository();
-  const token = await vendorInstallationToken("archive");
+  const token = await vendorInstallationToken(repository, "archive");
   const response = await fetch(
     `https://api.github.com/repos/${repository.owner}/${repository.repo}/zipball/${cfg.commercialReleaseRef}`,
     {
@@ -247,9 +269,72 @@ export async function templateArchiveRedirect(): Promise<{ repository: string; r
   return { repository: repository.full, release_ref: cfg.commercialReleaseRef, location };
 }
 
+export type PremiumReleaseMetadata = VerifiedPremiumRelease & {
+  repository: string;
+  release_ref: string;
+  manifest_sha256: string;
+};
+
+export async function premiumReleaseManifest(): Promise<PremiumReleaseMetadata> {
+  const cfg = premiumDistributionConfig();
+  const repository = privatePremiumRepository();
+  const token = await vendorInstallationToken(repository, "archive");
+  const response = await fetch(
+    `https://api.github.com/repos/${repository.owner}/${repository.repo}/contents/ANPOS-PREMIUM-MANIFEST.json?ref=${cfg.premiumReleaseRef}`,
+    {
+      headers: { ...githubHeaders(token), Accept: "application/vnd.github.raw+json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!response.ok) throw new Error(`Premium release manifest failed: ${response.status}`);
+  const declaredLength = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > 2 * 1024 * 1024) throw new Error("PREMIUM_RELEASE_MANIFEST_TOO_LARGE");
+  const raw = Buffer.from(await response.arrayBuffer());
+  if (!raw.length || raw.length > 2 * 1024 * 1024) throw new Error("PREMIUM_RELEASE_MANIFEST_TOO_LARGE");
+  const manifestSha256 = createHash("sha256").update(raw).digest("hex");
+  if (manifestSha256 !== cfg.premiumManifestSha256) throw new Error("PREMIUM_RELEASE_MANIFEST_DIGEST_MISMATCH");
+
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw.toString("utf8")); }
+  catch { throw new Error("INVALID_PREMIUM_RELEASE_MANIFEST_JSON"); }
+  const manifest = parsePremiumReleaseManifest(parsed, sourceProtocolVersion());
+  if (manifest.content_set_sha256 !== cfg.premiumContentSetSha256) throw new Error("PREMIUM_RELEASE_CONTENT_SET_DIGEST_MISMATCH");
+
+  return {
+    ...manifest,
+    repository: repository.full,
+    release_ref: cfg.premiumReleaseRef,
+    manifest_sha256: manifestSha256,
+  };
+}
+
+export async function premiumArchiveRedirect(): Promise<{ repository: string; release_ref: string; location: string }> {
+  const cfg = premiumDistributionConfig();
+  const repository = privatePremiumRepository();
+  const token = await vendorInstallationToken(repository, "archive");
+  const response = await fetch(
+    `https://api.github.com/repos/${repository.owner}/${repository.repo}/zipball/${cfg.premiumReleaseRef}`,
+    {
+      headers: githubHeaders(token),
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (response.status !== 302) throw new Error(`Premium archive redirect failed: ${response.status}`);
+  const location = response.headers.get("location");
+  if (!location) throw new Error("Premium archive redirect missing");
+  const destination = new URL(location);
+  if (destination.protocol !== "https:" || destination.hostname !== "codeload.github.com") {
+    throw new Error("Unexpected premium archive redirect host");
+  }
+  return { repository: repository.full, release_ref: cfg.premiumReleaseRef, location };
+}
+
 export async function inviteTemplateCollaborator(username: string): Promise<{ repository: string; status: number }> {
   const repository = privateTemplateRepository();
-  const token = await vendorInstallationToken("collaborator");
+  const token = await vendorInstallationToken(repository, "collaborator");
   const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.repo}/collaborators/${encodeURIComponent(username)}`, {
     method: "PUT",
     headers: { ...githubHeaders(token), "Content-Type": "application/json" },
@@ -263,7 +348,7 @@ export async function inviteTemplateCollaborator(username: string): Promise<{ re
 
 export async function removeTemplateCollaborator(username: string): Promise<{ repository: string; status: number }> {
   const repository = privateTemplateRepository();
-  const token = await vendorInstallationToken("collaborator");
+  const token = await vendorInstallationToken(repository, "collaborator");
   const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.repo}/collaborators/${encodeURIComponent(username)}`, {
     method: "DELETE",
     headers: githubHeaders(token),
