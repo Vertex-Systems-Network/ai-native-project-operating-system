@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         Location: authorize.toString(),
         "Set-Cookie": flow.stateCookie,
         "Cache-Control": "no-store",
-        Referrer-Policy: "no-referrer",
+        "Referrer-Policy": "no-referrer",
       },
     });
   } catch {
