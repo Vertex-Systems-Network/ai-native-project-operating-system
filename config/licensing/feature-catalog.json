@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "status": "template_blueprint",
+  "activation_scope": "commercial_distribution_only",
+  "purpose": "Machine-readable commercial feature truth for ANPOS. This catalog separates implemented protocol/runtime capabilities from partial, planned, capability-dependent, and contract-only promises so packages cannot be marketed as operational without evidence.",
+  "availability_states": [
+    "implemented_protocol",
+    "implemented_commercial_runtime",
+    "partial_implementation",
+    "capability_dependent",
+    "operator_configuration_required",
+    "planned_not_implemented",
+    "external_contract_required"
+  ],
+  "commercial_readiness_rule": "An entitlement may appear in a draft package before it is operational, but it must not be represented as launch-ready customer value until its availability state and evidence support that claim. Planned, partial, capability-dependent, or contract-only features require explicit qualification at sale time.",
+  "entitlements": [
+    {
+      "id": "private_template_access",
+      "availability": "implemented_commercial_runtime",
+      "commercial_differentiator_status": "insufficient_alone",
+      "evidence": [
+        "commercial-service/app/api/v1/template/archive/route.ts",
+        "commercial-service/README.md",
+        "scripts/export_vendor_repositories.py",
+        "config/licensing/vendor-source-boundary.json"
+      ],
+      "notes": "Archive-first private-template delivery is implemented. The current commercial-template export is derived from the canonical ANPOS source with vendor-only paths removed, so private access alone is not yet a strong premium-content differentiator."
+    },
+    {
+      "id": "protocol_update_channel",
+      "availability": "partial_implementation",
+      "commercial_differentiator_status": "needs_distribution_service_definition",
+      "evidence": [
+        "blueprints/github/workflows/protocol-update-watch.yml",
+        "CONTINUOUS-IMPROVEMENT.md",
+        "COMMERCIAL-LICENSING.md"
+      ],
+      "notes": "Protocol update policy and watch workflow exist. A distinct paid update-channel delivery surface and customer entitlement experience are not yet implemented as a commercial service."
+    },
+    {
+      "id": "standard_provider_adapters",
+      "availability": "partial_implementation",
+      "commercial_differentiator_status": "provider_contract_defined_runtime_attachment_varies",
+      "evidence": [
+        "config/integrations/project-management.json",
+        "config/integrations/linear-sync.json",
+        "config/integrations/sync-authority.json",
+        "config/ai/agent-catalog.json"
+      ],
+      "notes": "ANPOS defines provider-agnostic PM and AI selection contracts and a Linear-specific state blueprint. Actual attachable integrations depend on the host/runtime and are not all shipped as dedicated ANPOS-operated adapters."
+    },
+    {
+      "id": "premium_blueprints",
+      "availability": "planned_not_implemented",
+      "commercial_differentiator_status": "blocked",
+      "evidence": [
+        "config/licensing/product-catalog.json"
+      ],
+      "notes": "The entitlement exists in draft packages, but no dedicated premium blueprint content boundary is currently present in the canonical repository."
+    },
+    {
+      "id": "premium_provider_adapters",
+      "availability": "planned_not_implemented",
+      "commercial_differentiator_status": "blocked",
+      "evidence": [
+        "config/licensing/product-catalog.json"
+      ],
+      "notes": "The entitlement exists in draft packages, but dedicated premium provider adapters are not currently implemented as a separately deliverable commercial layer."
+    },
+    {
+      "id": "hosted_orchestrator_when_offered",
+      "availability": "planned_not_implemented",
+      "commercial_differentiator_status": "blocked_until_hosted_service_exists",
+      "evidence": [
+        "ORCHESTRATOR.md",
+        "MULTI-AGENT-ORCHESTRATION.md",
+        "config/licensing/product-catalog.json"
+      ],
+      "notes": "Repository-side orchestration protocol exists. No ANPOS-operated hosted orchestrator service is currently implemented or launch-certified."
+    },
+    {
+      "id": "organization_team_features",
+      "availability": "partial_implementation",
+      "commercial_differentiator_status": "runtime_core_exists_customer_experience_incomplete",
+      "evidence": [
+        "commercial-service/app/api/v1/seats/route.ts",
+        "commercial-service/lib/plans.ts",
+        "commercial-service/README.md"
+      ],
+      "notes": "Organization seat assignment, revocation, membership verification, capacity enforcement, and principal-bound entitlements are implemented in the commercial service. A complete customer-facing team administration and billing experience still requires production validation."
+    },
+    {
+      "id": "commercial_support",
+      "availability": "external_contract_required",
+      "commercial_differentiator_status": "operator_service_commitment",
+      "evidence": [
+        "COMMERCIAL-LICENSING.md",
+        "blueprints/commercial/legal-pack.template.md"
+      ],
+      "notes": "Support scope, channels, response targets, exclusions, and refund/cancellation commitments are operator-controlled commercial terms and are not created by repository code."
+    },
+    {
+      "id": "hosted_or_self_hosted_orchestrator_when_offered",
+      "availability": "planned_not_implemented",
+      "commercial_differentiator_status": "blocked_until_productized",
+      "evidence": [
+        "ORCHESTRATOR.md",
+        "MULTI-AGENT-ORCHESTRATION.md",
+        "config/licensing/product-catalog.json"
+      ],
+      "notes": "The orchestration protocol is present, but neither a vendor-hosted service nor an enterprise self-hosting distribution/support package is currently productized."
+    },
+    {
+      "id": "enterprise_policy_controls",
+      "availability": "partial_implementation",
+      "commercial_differentiator_status": "core_policy_foundation_exists_enterprise_surface_not_productized",
+      "evidence": [
+        "config/security/control-plane-policy.json",
+        "config/github/ruleset-policy.json",
+        "config/data/data-governance.json",
+        "config/release/release-policy.json",
+        "config/operations/operations-policy.json"
+      ],
+      "notes": "ANPOS has strong policy foundations, but an enterprise-only policy pack, administration surface, organization rollout model, and contractual support boundary are not yet separately implemented."
+    },
+    {
+      "id": "priority_support_or_sla_when_contracted",
+      "availability": "external_contract_required",
+      "commercial_differentiator_status": "operator_contract_only",
+      "evidence": [
+        "COMMERCIAL-LICENSING.md",
+        "blueprints/commercial/legal-pack.template.md"
+      ],
+      "notes": "Priority support or SLA exists only when the operator deliberately offers and contracts it."
+    }
+  ],
+  "core_product_capabilities": [
+    {
+      "id": "project_research_and_planning",
+      "availability": "implemented_protocol",
+      "evidence": ["START-HERE.md", "PROJECT-INITIALIZATION.md", "DEVELOPMENT-LIFECYCLE.md"]
+    },
+    {
+      "id": "selectable_project_management",
+      "availability": "capability_dependent",
+      "evidence": ["config/integrations/project-management.json", "PROJECT-MANAGEMENT.md"]
+    },
+    {
+      "id": "selectable_multi_agent_execution",
+      "availability": "capability_dependent",
+      "evidence": ["config/ai/agent-catalog.json", "MULTI-AGENT-ORCHESTRATION.md", "ORCHESTRATOR.md", "SUPERVISOR.md"]
+    },
+    {
+      "id": "quality_and_security_governance",
+      "availability": "implemented_protocol",
+      "evidence": ["config/quality/quality-policy.json", "config/security/control-plane-policy.json", "blueprints/github/workflows/repository-quality.yml"]
+    },
+    {
+      "id": "design_assurance",
+      "availability": "implemented_protocol",
+      "evidence": ["config/design/design-assurance.json", "DESIGN-DATA-OPERATIONS.md"]
+    },
+    {
+      "id": "release_and_operations_governance",
+      "availability": "implemented_protocol",
+      "evidence": ["config/release/release-policy.json", "config/operations/operations-policy.json", "PRODUCTION-ASSURANCE.md"]
+    },
+    {
+      "id": "continuous_improvement",
+      "availability": "implemented_protocol",
+      "evidence": ["CONTINUOUS-IMPROVEMENT.md", "config/maintenance/innovation-scout.json", "config/maintenance/technology-watch.json"]
+    },
+    {
+      "id": "commercial_entitlement_and_distribution_runtime",
+      "availability": "implemented_commercial_runtime",
+      "evidence": ["commercial-service/README.md", "COMMERCIAL-LICENSING.md"]
+    }
+  ]
+}
