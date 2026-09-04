@@ -12,6 +12,8 @@ export type ServiceConfig = MarketplaceAppConfig & {
   githubWebhookSecret: string;
   githubVendorAppId: string;
   githubVendorAppPrivateKeyPem: string;
+  githubVendorInstallationId: string;
+  privateTemplateRepo: string;
   entitlementPrivateKeyPem: string;
   entitlementKeyId: string;
   entitlementIssuer: string;
@@ -237,6 +239,8 @@ export function serviceConfig(): ServiceConfig {
     githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")!,
     githubVendorAppId: value("GITHUB_VENDOR_APP_ID")!,
     githubVendorAppPrivateKeyPem: pem("GITHUB_VENDOR_APP_PRIVATE_KEY")!,
+    githubVendorInstallationId: value("GITHUB_VENDOR_INSTALLATION_ID")!,
+    privateTemplateRepo: value("ANPOS_PRIVATE_TEMPLATE_REPO")!,
     entitlementPrivateKeyPem: pem("ANPOS_ENTITLEMENT_PRIVATE_KEY")!,
     entitlementKeyId: value("ANPOS_ENTITLEMENT_KEY_ID")!,
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
