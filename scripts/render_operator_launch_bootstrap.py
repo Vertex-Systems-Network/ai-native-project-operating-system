@@ -32,6 +32,8 @@ SERVICE_REPOSITORY_NAME = "anpos-commercial-service"
 TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"
 EXPORT_MANIFEST_NAME = "EXPORT-MANIFEST.json"
 VENDOR_HANDOFF_VERIFIER = "scripts/verify_vendor_handoff.py"
+PREMIUM_PACK_MANIFEST_NAME = "ANPOS-PREMIUM-MANIFEST.json"
+PREMIUM_PACK_VERIFIER = "scripts/verify_premium_pack.py"
 
 COMMUNITY_AUDIT_PATHS = [
     ".ai/manifest.json",
@@ -71,6 +73,12 @@ SERVICE_ENV = [
     "ANPOS_MARKETPLACE_PLAN_MAP",
     "ANPOS_ORG_SEAT_LIMITS",
     "ANPOS_COMMERCIAL_RELEASE_REF",
+]
+PREMIUM_ENV = [
+    "ANPOS_PRIVATE_PREMIUM_REPO",
+    "ANPOS_PREMIUM_RELEASE_REF",
+    "ANPOS_PREMIUM_MANIFEST_SHA256",
+    "ANPOS_PREMIUM_CONTENT_SET_SHA256",
 ]
 LEGACY_SINGLE_APP_ENV = ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"]
 
@@ -236,7 +244,7 @@ def marketplace_registration_url(inputs: Inputs) -> str:
 def vendor_registration_url(inputs: Inputs) -> str:
     params = [
         ("name", inputs.vendor_app_name),
-        ("description", "ANPOS private vendor template distribution application"),
+        ("description", "ANPOS private vendor template and premium distribution application"),
         ("url", inputs.homepage_url),
         ("public", "false"),
         ("webhook_active", "false"),
@@ -323,6 +331,18 @@ def render(
             "template_verification_arguments": template_handoff_arguments,
             "verification_rule": "Run the verifier from the canonical checkout at canonical_source_revision against each exported directory or clean private-repository checkout before accepting/pushing/deploying it.",
         },
+        "premium_distribution_handoff": {
+            "conditional": True,
+            "condition": "required_if_ANPOS_MARKETPLACE_PLAN_MAP_contains_pro_team_or_enterprise",
+            "manifest_name": PREMIUM_PACK_MANIFEST_NAME,
+            "verifier": PREMIUM_PACK_VERIFIER,
+            "environment_keys": list(PREMIUM_ENV),
+            "private_repository_must_be_distinct_from_template_repository": True,
+            "release_ref_must_be_exact_40_character_commit_sha": True,
+            "manifest_sha256_must_come_from_successful_offline_verifier_receipt": True,
+            "content_set_sha256_must_come_from_successful_offline_verifier_receipt": True,
+            "source_contract_or_runtime_is_not_premium_payload_or_sale_readiness": True,
+        },
         "github_apps": {
             "marketplace": {
                 "role": "customer_marketplace_app",
@@ -351,6 +371,7 @@ def render(
             },
         },
         "service_environment_keys": SERVICE_ENV,
+        "conditional_premium_environment_keys": PREMIUM_ENV,
         "legacy_single_app_environment_keys_forbidden": LEGACY_SINGLE_APP_ENV,
         "operator_sequence": [
             "Generate deterministic private vendor service and template exports from the certified canonical revision.",
@@ -365,16 +386,18 @@ def render(
             "For free-first launch, require /api/ready/community HTTP 200 plus real Setup URL -> OAuth -> installation-bound repository discovery -> audit E2E evidence; this does not prove paid/vendor readiness.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",
-            "Install only the Vendor Distribution App on the private commercial-template repository.",
+            "Install the Vendor Distribution App with Contents read on the verified private commercial-template repository; if a higher paid tier is activated, also install it on the distinct private premium repository.",
+            "Before mapping pro, team, or enterprise in ANPOS_MARKETPLACE_PLAN_MAP, create a distinct private premium repository, verify its exact immutable revision with scripts/verify_premium_pack.py, and configure ANPOS_PRIVATE_PREMIUM_REPO, ANPOS_PREMIUM_RELEASE_REF, ANPOS_PREMIUM_MANIFEST_SHA256, and ANPOS_PREMIUM_CONTENT_SET_SHA256 from the successful verifier receipt.",
             f"Populate the {identity['service']} {identity['service_version']} production environment contract with real external values.",
             f"Deploy the exact {identity['service']} {identity['service_version']} artifact and require /api/version to report source protocol {identity['source_protocol_version']} and runtime contract {identity['runtime_contract']}.",
             "Run scripts/verify_commercial_production.py with the generated production_verifier_arguments; exact artifact identity must pass before /api/ready can count as paid-runtime evidence.",
             "Exercise the Marketplace Setup URL -> PKCE OAuth callback -> authorized repository discovery -> read-only Community audit flow using a real installation before claiming Community launch readiness.",
             "Exercise GET /api/v1/releases/current and GET /api/v1/template/archive against the exact ANPOS_COMMERCIAL_RELEASE_REF and verify the returned canonical source revision/tree matches retained vendor-handoff evidence before claiming Developer delivery readiness.",
-            "Require full /api/ready plus applicable paid/vendor E2E evidence before paid launch authorization.",
+            "For Pro or a higher tier, exercise GET /api/v1/premium/releases/current and GET /api/v1/premium/archive against the exact verifier-bound premium revision before claiming premium distribution readiness.",
+            "Require full /api/ready plus applicable paid/vendor/premium E2E evidence before paid launch authorization.",
         ],
         "safety": [
-            "This output contains no credentials and is not proof that either GitHub App or private vendor repository exists.",
+            "This output contains no credentials and is not proof that either GitHub App or any private vendor/premium repository exists.",
             "Registration URLs are prefilled operator aids; GitHub remains the authority for the final App configuration.",
             "Artifact identity is read from committed deployable package metadata and checked against canonical protocol metadata; do not replace it with hand-maintained expected versions.",
             "Vendor export identity is read from canonical Git commit/tree identity; handoff verification reconstructs expected bytes from committed canonical blobs and rejects extra, missing, dirty, tampered, stale, or wrong-mode vendor checkouts.",
@@ -384,9 +407,10 @@ def render(
             "Community v1 uses encrypted short-lived HttpOnly sessions and deliberately does not persist GitHub refresh tokens.",
             "Community Marketplace identity must use the real ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID and must never be smuggled into the paid ANPOS_MARKETPLACE_PLAN_MAP.",
             "Paid update/archive delivery must use the exact ANPOS_COMMERCIAL_RELEASE_REF commit whose deterministic EXPORT-MANIFEST and private-repository checkout have been verified; mutable refs are forbidden.",
+            "Pro/Team/Enterprise activation requires a distinct private premium repository, exact premium commit SHA, and manifest/content-set digests from a successful offline premium verifier receipt; a source contract or route is not premium payload or sale readiness.",
             "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
             "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
-            "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, or production readiness from this output.",
+            "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, premium payload existence, or production readiness from this output.",
         ],
     }
 

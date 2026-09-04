@@ -45,28 +45,40 @@
     {
       "id": "premium_blueprints",
       "availability": "planned_not_implemented",
-      "commercial_differentiator_status": "contract_defined_payload_not_implemented",
+      "commercial_differentiator_status": "contract_and_distribution_runtime_source_implemented_payload_not_implemented",
       "evidence": [
         "config/licensing/product-catalog.json",
         "config/licensing/premium-pack-contract.json",
         "schemas/premium-pack-manifest.schema.json",
         "scripts/verify_premium_pack.py",
-        "docs/commercial/premium-pack-boundary.md"
+        "docs/commercial/premium-pack-boundary.md",
+        "commercial-service/lib/premium-releases.ts",
+        "commercial-service/lib/github.ts",
+        "commercial-service/app/api/v1/premium/releases/current/route.ts",
+        "commercial-service/app/api/v1/premium/archive/route.ts",
+        "commercial-service/tests/premium-release-channel.test.ts",
+        "commercial-service/tests/premium-config.test.ts"
       ],
-      "notes": "Canonical source now defines the private Premium Pack manifest, verification, provenance and immutable-distribution boundary. No private premium repository or premium blueprint payload is evidenced yet, so this entitlement remains planned_not_implemented and must not be marketed as active customer value."
+      "notes": "Canonical source defines the private Premium Pack manifest/verifier and entitlement-gated immutable release/archive plumbing. Higher paid plan activation fails closed without a distinct private premium repository, exact commit SHA, and offline-verifier manifest/content-set digests. No real private premium repository or premium blueprint payload is evidenced and no production premium E2E has passed, so this entitlement remains planned_not_implemented and must not be marketed as active customer value."
     },
     {
       "id": "premium_provider_adapters",
       "availability": "planned_not_implemented",
-      "commercial_differentiator_status": "contract_defined_payload_not_implemented",
+      "commercial_differentiator_status": "contract_and_distribution_runtime_source_implemented_payload_not_implemented",
       "evidence": [
         "config/licensing/product-catalog.json",
         "config/licensing/premium-pack-contract.json",
         "schemas/premium-pack-manifest.schema.json",
         "scripts/verify_premium_pack.py",
-        "docs/commercial/premium-pack-boundary.md"
+        "docs/commercial/premium-pack-boundary.md",
+        "commercial-service/lib/premium-releases.ts",
+        "commercial-service/lib/github.ts",
+        "commercial-service/app/api/v1/premium/releases/current/route.ts",
+        "commercial-service/app/api/v1/premium/archive/route.ts",
+        "commercial-service/tests/premium-release-channel.test.ts",
+        "commercial-service/tests/premium-config.test.ts"
       ],
-      "notes": "Canonical source now defines provider-specific premium adapter manifest and verification requirements, including provider/API evidence, capability mapping, no-secret provenance and no partnership/certification claim by default. No private premium provider adapter payload or live provider E2E is evidenced yet, so this entitlement remains planned_not_implemented."
+      "notes": "Canonical source defines provider-specific premium adapter verification plus entitlement-gated immutable premium distribution, including provider/API evidence, capability mapping, no-secret provenance and no partnership/certification claim by default. No real private premium provider adapter payload or live provider/production E2E is evidenced, so this entitlement remains planned_not_implemented."
     },
     {
       "id": "hosted_orchestrator_when_offered",
@@ -90,7 +102,7 @@
         "commercial-service/tests/team-dashboard.test.ts",
         "docs/commercial/team-administration.md"
       ],
-      "notes": "Organization seat assignment/revocation, active-member verification, capacity enforcement, principal-bound entitlements, authenticated organization-admin summary, seat usage/capacity display, and customer-facing assign/revoke UI are implemented in source. Availability remains partial: no real Team Marketplace plan/pricing is activated, production organization E2E is not verified, Marketplace purchase/plan-change/cancellation UX evidence is incomplete, Pro premium dependencies remain unimplemented, and commercial support/SLA is still an external operator contract."
+      "notes": "Organization seat assignment/revocation, active-member verification, capacity enforcement, principal-bound entitlements, authenticated organization-admin summary, seat usage/capacity display, and customer-facing assign/revoke UI are implemented in source. Availability remains partial: no real Team Marketplace plan/pricing is activated, production organization E2E is not verified, Marketplace purchase/plan-change/cancellation UX evidence is incomplete, Pro premium dependencies remain unimplemented because real premium payload/provider assets and production E2E are still absent, and commercial support/SLA is still an external operator contract."
     },
     {
       "id": "commercial_support",

@@ -143,7 +143,7 @@ def verify(
         raise VerificationError("PREMIUM_REPOSITORY_DIRECTORY_REQUIRED")
 
     contract = load_json(CONTRACT_PATH)
-    if contract.get("status") != "contract_only_no_premium_payload_in_canonical_source":
+    if contract.get("status") != "contract_and_distribution_source_no_premium_payload":
         raise VerificationError("PREMIUM_CONTRACT_STATUS_UNEXPECTED")
     if contract.get("manifest_name") != MANIFEST_NAME:
         raise VerificationError("PREMIUM_CONTRACT_MANIFEST_NAME_MISMATCH")
