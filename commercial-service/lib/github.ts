@@ -70,11 +70,11 @@ export async function getMarketplaceSubscription(accountId: number): Promise<Mar
   return response.json() as Promise<MarketplaceSubscription>;
 }
 
-export async function marketplaceRepositoryReadToken(
+export async function verifyMarketplaceRepositoryAuditInstallation(
   owner: string,
   repo: string,
   requiredSingleFilePaths: readonly string[],
-): Promise<string> {
+): Promise<void> {
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner) || !/^[A-Za-z0-9._-]{1,100}$/.test(repo)) {
     throw new Error("INVALID_MARKETPLACE_REPOSITORY");
   }
@@ -110,18 +110,6 @@ export async function marketplaceRepositoryReadToken(
   const grantedPaths = new Set((installation.single_file_paths ?? []).map((path) => String(path)));
   const missingPaths = requiredSingleFilePaths.filter((path) => !grantedPaths.has(path));
   if (missingPaths.length) throw new Error("MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED");
-
-  const tokenResponse = await fetch(`https://api.github.com/app/installations/${installation.id}/access_tokens`, {
-    method: "POST",
-    headers: { ...githubHeaders(githubAppJwt("marketplace")), "Content-Type": "application/json" },
-    body: JSON.stringify({ repositories: [repo] }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!tokenResponse.ok) throw new Error(`MARKETPLACE_AUDIT_INSTALLATION_TOKEN_FAILED_${tokenResponse.status}`);
-  const body = await tokenResponse.json() as { token?: string };
-  if (!body.token) throw new Error("MARKETPLACE_AUDIT_INSTALLATION_TOKEN_MISSING");
-  return body.token;
 }
 
 async function vendorInstallationToken(operation: "archive" | "collaborator"): Promise<string> {
