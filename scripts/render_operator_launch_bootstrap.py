@@ -33,6 +33,19 @@ TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"
 EXPORT_MANIFEST_NAME = "EXPORT-MANIFEST.json"
 VENDOR_HANDOFF_VERIFIER = "scripts/verify_vendor_handoff.py"
 
+COMMUNITY_AUDIT_PATHS = [
+    ".ai/manifest.json",
+    "config/protocol/instance.json",
+    "config/protocol/version.json",
+    "config/quality/quality-policy.json",
+    "config/security/control-plane-policy.json",
+    "config/github/ruleset-policy.json",
+    "config/design/design-assurance.json",
+    "config/data/data-governance.json",
+    "config/release/release-policy.json",
+    "config/operations/operations-policy.json",
+]
+
 MARKETPLACE_APP_ENV = [
     "GITHUB_MARKETPLACE_APP_ID",
     "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
@@ -203,7 +216,9 @@ def marketplace_registration_url(inputs: Inputs) -> str:
         ("webhook_url", webhook_url),
         ("events[]", "marketplace_purchase"),
         ("request_oauth_on_install", "false"),
+        ("single_file", "read"),
     ]
+    params.extend(("single_file_paths[]", path) for path in COMMUNITY_AUDIT_PATHS)
     return registration_url(inputs.organization, params)
 
 
@@ -275,7 +290,7 @@ def render(
     ]
 
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "status": "operator_actions_required",
         "launch_authorized": False,
         "organization": inputs.organization,
@@ -301,7 +316,9 @@ def render(
                 "registration_url": marketplace_registration_url(inputs),
                 "webhook_url": inputs.service_base_url + "/api/webhooks/github/marketplace",
                 "events": ["marketplace_purchase"],
-                "repository_permissions": {},
+                "repository_permissions": {"metadata": "read", "single_file": "read"},
+                "single_file_paths": list(COMMUNITY_AUDIT_PATHS),
+                "community_audit_reads_application_source": False,
                 "environment_keys": MARKETPLACE_APP_ENV,
             },
             "vendor_distribution": {
@@ -320,7 +337,7 @@ def render(
             "Generate deterministic private vendor service and template exports from the certified canonical revision.",
             "Verify both exports with scripts/verify_vendor_handoff.py using vendor_repository_handoff arguments before accepting or pushing them; retain the successful JSON receipts as provenance evidence.",
             "Create the private vendor repositories and populate them only from verified deterministic exports; verify a clean checkout again after the initial push.",
-            "Register the public Marketplace App using the prefilled URL; review every field before submission.",
+            "Register the public Marketplace App using the prefilled URL; verify its Community audit permission remains single-file read for exactly the approved ANPOS control paths and is not broadened to application source-code access.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",
             "Install only the Vendor Distribution App on the private commercial-template repository.",
@@ -335,6 +352,7 @@ def render(
             "Artifact identity is read from committed deployable package metadata and checked against canonical protocol metadata; do not replace it with hand-maintained expected versions.",
             "Vendor export identity is read from canonical Git commit/tree identity; handoff verification reconstructs expected bytes from committed canonical blobs and rejects extra, missing, dirty, tampered, stale, or wrong-mode vendor checkouts.",
             "A handoff verification receipt proves byte equality to the approved deterministic export; it does not prove GitHub repository ownership, visibility, App installation, Marketplace approval, or production deployment.",
+            "Community audit permission is deliberately limited to ten ANPOS control files and must not be represented as permission to inspect application source code.",
             "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
             "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
             "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, or production readiness from this output.",
