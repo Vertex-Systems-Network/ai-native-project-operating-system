@@ -1,0 +1,110 @@
+name: ANPOS 1.3.13 Vendor Export Package
+
+on:
+  push:
+    branches:
+      - ops/vendor-export-package-1313
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact canonical source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 18eb6eab7cf24bcbbf7c715bcec061e28430995d
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert canonical revision and tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "18eb6eab7cf24bcbbf7c715bcec061e28430995d"
+          test "$(git rev-parse 'HEAD^{tree}')" = "853319b4dfaeb6054abdd6f920c6a81d4f10bed3"
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored=matching)"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Export certified vendor repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/anpos-vendor-1313"
+          mkdir -p "$RUNNER_TEMP/anpos-vendor-1313"
+          python scripts/export_vendor_repositories.py --output "$RUNNER_TEMP/anpos-vendor-1313"
+
+      - name: Verify exact service and template handoffs
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/anpos-vendor-1313"
+          python scripts/verify_vendor_handoff.py \
+            --repository "$root/anpos-commercial-service" \
+            --expected-mode service \
+            --expected-source-revision 18eb6eab7cf24bcbbf7c715bcec061e28430995d \
+            --expected-source-tree 853319b4dfaeb6054abdd6f920c6a81d4f10bed3 \
+            --expected-service-version 0.3.6 \
+            --expected-protocol-version 1.3.13 \
+            --expected-runtime-contract split-github-app-v1 \
+            > "$root/service-verification-receipt.json"
+          python scripts/verify_vendor_handoff.py \
+            --repository "$root/anpos-commercial-template" \
+            --expected-mode template \
+            --expected-source-revision 18eb6eab7cf24bcbbf7c715bcec061e28430995d \
+            --expected-source-tree 853319b4dfaeb6054abdd6f920c6a81d4f10bed3 \
+            > "$root/template-verification-receipt.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'anpos-vendor-1313'
+          service = json.loads((root / 'service-verification-receipt.json').read_text())
+          template = json.loads((root / 'template-verification-receipt.json').read_text())
+          assert service['ok'] is True
+          assert template['ok'] is True
+          assert service['verification'] == 'exact_deterministic_vendor_export'
+          assert template['verification'] == 'exact_deterministic_vendor_export'
+          assert service['canonical_source_revision'] == '18eb6eab7cf24bcbbf7c715bcec061e28430995d'
+          assert template['canonical_source_revision'] == '18eb6eab7cf24bcbbf7c715bcec061e28430995d'
+          assert service['canonical_source_tree'] == '853319b4dfaeb6054abdd6f920c6a81d4f10bed3'
+          assert template['canonical_source_tree'] == '853319b4dfaeb6054abdd6f920c6a81d4f10bed3'
+          assert service['artifact_identity'] == {
+              'service': 'anpos-commercial-service',
+              'service_version': '0.3.6',
+              'source_protocol_version': '1.3.13',
+              'runtime_contract': 'split-github-app-v1',
+          }
+          assert template['artifact_identity'] is None
+          PY
+
+      - name: Create deterministic handoff archive and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/anpos-vendor-1313"
+          archive="$RUNNER_TEMP/anpos-vendor-1.3.13-0.3.6.tar.gz"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -C "$root" -cf - \
+            anpos-commercial-service \
+            anpos-commercial-template \
+            service-verification-receipt.json \
+            template-verification-receipt.json \
+            | gzip -n > "$archive"
+          sha256sum "$archive" > "$RUNNER_TEMP/anpos-vendor-1.3.13-0.3.6.tar.gz.sha256"
+          cat "$RUNNER_TEMP/anpos-vendor-1.3.13-0.3.6.tar.gz.sha256"
+
+      - name: Upload verified vendor handoff package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: anpos-vendor-1.3.13-0.3.6
+          path: |
+            ${{ runner.temp }}/anpos-vendor-1.3.13-0.3.6.tar.gz
+            ${{ runner.temp }}/anpos-vendor-1.3.13-0.3.6.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
