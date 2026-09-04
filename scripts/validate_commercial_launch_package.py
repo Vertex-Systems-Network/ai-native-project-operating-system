@@ -87,10 +87,19 @@ def main() -> int:
     marketplace_defaults = marketplace_app.get("required_defaults") or {}
     if marketplace_defaults.get("public") is not True:
         fail("customer-facing Marketplace App blueprint must require public visibility")
-    if marketplace_defaults.get("webhook_active") is not True:
-        fail("Marketplace App blueprint must require an active webhook")
-    if "marketplace_purchase" not in (marketplace_app.get("event_subscriptions") or []):
-        fail("Marketplace App blueprint must subscribe to marketplace_purchase")
+    if marketplace_defaults.get("webhook_active") is not False:
+        fail("Marketplace App blueprint must keep the ordinary GitHub App webhook disabled for Marketplace purchase handling")
+    if marketplace_app.get("event_subscriptions") != []:
+        fail("Marketplace App blueprint must not model marketplace_purchase as a normal GitHub App event subscription")
+    listing_webhook = marketplace_app.get("marketplace_listing_webhook") or {}
+    if listing_webhook.get("configuration_surface") != "github_marketplace_listing_webhook":
+        fail("Marketplace App blueprint must identify the separate Marketplace listing webhook surface")
+    if listing_webhook.get("required") is not True or listing_webhook.get("event") != "marketplace_purchase":
+        fail("Marketplace listing webhook must require marketplace_purchase")
+    if listing_webhook.get("url_path") != "/api/webhooks/github/marketplace":
+        fail("Marketplace listing webhook must target the canonical commercial webhook route")
+    if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":
+        fail("Marketplace listing webhook must bind the canonical webhook secret environment key")
     marketplace_text = json.dumps(marketplace_app, sort_keys=True)
     if "administration:write_for_private_template_distribution" not in marketplace_text:
         fail("Marketplace App blueprint must explicitly forbid vendor Administration scope")

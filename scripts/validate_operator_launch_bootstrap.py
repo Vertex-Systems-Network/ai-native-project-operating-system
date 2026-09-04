@@ -147,6 +147,7 @@ def main() -> int:
         "PROTOCOL_PATH",
         "launch_authorized",
         "marketplace_purchase",
+        "marketplace_listing_webhook",
         "/api/v1/releases/current",
         "/api/v1/template/archive",
         "administration",
@@ -172,8 +173,8 @@ def main() -> int:
 
     data = render()
     if data:
-        if data.get("schema_version") != 5:
-            fail("operator launch renderer output must be schema_version 5")
+        if data.get("schema_version") != 6:
+            fail("operator launch renderer output must be schema_version 6")
         if data.get("status") != "operator_actions_required" or data.get("launch_authorized") is not False:
             fail("operator launch renderer must remain fail-closed and non-authoritative")
         if data.get("artifact_identity") != expected_identity:
@@ -262,12 +263,17 @@ def main() -> int:
             fail("operator launch renderer must preserve public Marketplace/private Vendor App split")
         mq = parse_query(str(marketplace.get("registration_url") or ""))
         vq = parse_query(str(vendor.get("registration_url") or ""))
-        if mq.get("public") != ["true"] or mq.get("webhook_active") != ["true"]:
-            fail("Marketplace registration URL must prefill public visibility and active webhook")
-        if mq.get("events[]") != ["marketplace_purchase"]:
-            fail("Marketplace registration URL must subscribe to marketplace_purchase")
-        if mq.get("webhook_url") != ["https://license.example.test/api/webhooks/github/marketplace"]:
-            fail("Marketplace registration URL must target the commercial Marketplace webhook")
+        if mq.get("public") != ["true"] or mq.get("webhook_active") != ["false"]:
+            fail("Marketplace registration URL must prefill public visibility with the ordinary GitHub App webhook disabled")
+        if "events[]" in mq or "webhook_url" in mq:
+            fail("Marketplace registration URL must not model marketplace_purchase as a normal GitHub App webhook")
+        listing_webhook = marketplace.get("marketplace_listing_webhook") or {}
+        if listing_webhook.get("configuration_surface") != "github_marketplace_listing_webhook":
+            fail("operator handoff must identify the separate Marketplace listing webhook surface")
+        if listing_webhook.get("event") != "marketplace_purchase" or listing_webhook.get("url") != "https://license.example.test/api/webhooks/github/marketplace":
+            fail("operator handoff Marketplace listing webhook is invalid")
+        if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":
+            fail("operator handoff must bind the Marketplace listing webhook secret environment key")
         if "administration" in mq or "contents" in mq:
             fail("Marketplace registration URL must not request vendor template repository permissions")
         if vq.get("public") != ["false"] or vq.get("webhook_active") != ["false"]:
@@ -326,6 +332,7 @@ def main() -> int:
         "`scripts/verify_vendor_handoff.py`",
         "JSON receipt",
         "public Marketplace App",
+        "Marketplace listing webhook",
         "private Vendor Distribution App",
         "GITHUB_MARKETPLACE_APP_ID",
         "GITHUB_VENDOR_APP_ID",

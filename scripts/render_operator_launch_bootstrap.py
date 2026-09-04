@@ -220,7 +220,6 @@ def registration_url(organization: str, params: list[tuple[str, str]]) -> str:
 
 
 def marketplace_registration_url(inputs: Inputs) -> str:
-    webhook_url = inputs.service_base_url + "/api/webhooks/github/marketplace"
     callback_url = inputs.service_base_url + "/api/auth/github/callback"
     setup_url = inputs.service_base_url + "/setup/github"
     params = [
@@ -228,9 +227,7 @@ def marketplace_registration_url(inputs: Inputs) -> str:
         ("description", "ANPOS customer-facing GitHub Marketplace application"),
         ("url", inputs.homepage_url),
         ("public", "true"),
-        ("webhook_active", "true"),
-        ("webhook_url", webhook_url),
-        ("events[]", "marketplace_purchase"),
+        ("webhook_active", "false"),
         ("request_oauth_on_install", "false"),
         ("callback_urls[]", callback_url),
         ("setup_url", setup_url),
@@ -312,7 +309,7 @@ def render(
     setup_url = inputs.service_base_url + "/setup/github"
 
     return {
-        "schema_version": 5,
+        "schema_version": 6,
         "status": "operator_actions_required",
         "launch_authorized": False,
         "organization": inputs.organization,
@@ -348,12 +345,19 @@ def render(
                 "role": "customer_marketplace_app",
                 "public": True,
                 "registration_url": marketplace_registration_url(inputs),
-                "webhook_url": inputs.service_base_url + "/api/webhooks/github/marketplace",
+                "github_app_webhook_active": False,
                 "callback_url": callback_url,
                 "setup_url": setup_url,
                 "request_oauth_on_install": False,
                 "setup_on_update": True,
-                "events": ["marketplace_purchase"],
+                "events": [],
+                "marketplace_listing_webhook": {
+                    "configuration_surface": "github_marketplace_listing_webhook",
+                    "required": True,
+                    "event": "marketplace_purchase",
+                    "url": inputs.service_base_url + "/api/webhooks/github/marketplace",
+                    "secret_environment_key": "GITHUB_WEBHOOK_SECRET",
+                },
                 "repository_permissions": {"metadata": "read", "single_file": "read"},
                 "single_file_paths": list(COMMUNITY_AUDIT_PATHS),
                 "community_audit_reads_application_source": False,
@@ -379,6 +383,7 @@ def render(
             "Create the private vendor repositories and populate them only from verified deterministic exports; verify a clean checkout again after the initial push.",
             "After the verified private template push, set ANPOS_COMMERCIAL_RELEASE_REF to that repository's exact 40-character commit SHA; never use main, a branch, or a mutable tag for paid delivery.",
             "Register the public Marketplace App using the prefilled URL; verify the Setup URL, OAuth callback, setup-on-update behavior, and Community single-file permission set before saving the App.",
+            "After creating the draft GitHub Marketplace listing, configure its separate Marketplace listing webhook at /api/webhooks/github/marketplace, subscribe to marketplace_purchase there, and store its strong secret as GITHUB_WEBHOOK_SECRET. Do not add marketplace_purchase to normal GitHub App event subscriptions.",
             "Keep request OAuth on install disabled. Marketplace purchase/setup redirects land on /setup/github, which starts the explicit PKCE GitHub App OAuth flow.",
             "Generate the Marketplace App client secret in GitHub, store it only in the deployment secret manager, and configure GITHUB_MARKETPLACE_CLIENT_ID/GITHUB_MARKETPLACE_CLIENT_SECRET plus ANPOS_PUBLIC_BASE_URL/ANPOS_SESSION_SECRET.",
             "Configure ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID only with the real operator-approved free Marketplace plan ID after that plan exists; keep Community outside ANPOS_MARKETPLACE_PLAN_MAP, which remains paid-only.",
