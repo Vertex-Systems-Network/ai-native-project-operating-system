@@ -102,9 +102,8 @@ The Marketplace App registration URL is prefilled as:
 
 - organization-owned registration page;
 - `public=true`;
-- webhook enabled;
-- webhook URL `<service-base-url>/api/webhooks/github/marketplace`;
-- `marketplace_purchase` event;
+- ordinary GitHub App webhook disabled for Marketplace purchase handling;
+- no `marketplace_purchase` normal GitHub App event subscription;
 - Setup URL `<service-base-url>/setup/github`;
 - OAuth callback `<service-base-url>/api/auth/github/callback`;
 - request-OAuth-on-install disabled so Setup starts the explicit PKCE flow;
@@ -113,6 +112,10 @@ The Marketplace App registration URL is prefilled as:
 - no vendor private-template repository permissions.
 
 The operator must review GitHub's registration form before creating the App. GitHub remains authoritative for the resulting App configuration.
+
+### Marketplace listing webhook
+
+`marketplace_purchase` is configured separately from the GitHub App registration. After a draft GitHub Marketplace listing exists, open the listing's **Webhook** settings and configure `<service-base-url>/api/webhooks/github/marketplace` with a strong secret stored as `GITHUB_WEBHOOK_SECRET`. Subscribe/process `marketplace_purchase` on that Marketplace listing webhook surface. Do **not** represent the purchase event as a normal GitHub App event subscription.
 
 ## Generated Vendor Distribution App registration
 
@@ -172,7 +175,7 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 1. Generate this handoff from the certified canonical revision that will supply the deployable service/vendor export.
 2. Verify `/api/version` for any candidate deployment against the exact `artifact_identity`; do not treat `/api/health` as artifact proof.
 3. Register the public Marketplace App from the generated prefilled URL and review every requested field/permission.
-4. Generate the Marketplace OAuth client secret and strong webhook secret; store credentials only in the deployment secret store.
+4. Generate the Marketplace OAuth client secret; after the draft Marketplace listing exists, configure its separate Marketplace listing webhook and strong `GITHUB_WEBHOOK_SECRET`; store credentials only in the deployment secret store.
 5. After the genuine free Marketplace plan exists, configure its real ID as `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`; keep it outside `ANPOS_MARKETPLACE_PLAN_MAP`.
 6. Configure the Community database, run the required migration, and require `/api/ready/community` HTTP 200.
 7. Exercise the real Setup URL → PKCE OAuth callback → installation-bound repository discovery → bounded read-only Community audit flow before claiming Community launch readiness.

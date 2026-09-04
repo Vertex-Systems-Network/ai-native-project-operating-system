@@ -44,11 +44,20 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         query = self.query(marketplace["registration_url"])
         self.assertTrue(marketplace["public"])
         self.assertEqual(query["public"], ["true"])
-        self.assertEqual(query["webhook_active"], ["true"])
-        self.assertEqual(query["events[]"], ["marketplace_purchase"])
+        self.assertEqual(query["webhook_active"], ["false"])
+        self.assertNotIn("events[]", query)
+        self.assertNotIn("webhook_url", query)
+        self.assertFalse(marketplace["github_app_webhook_active"])
+        self.assertEqual(marketplace["events"], [])
         self.assertEqual(
-            query["webhook_url"],
-            ["https://license.example.test/api/webhooks/github/marketplace"],
+            marketplace["marketplace_listing_webhook"],
+            {
+                "configuration_surface": "github_marketplace_listing_webhook",
+                "required": True,
+                "event": "marketplace_purchase",
+                "url": "https://license.example.test/api/webhooks/github/marketplace",
+                "secret_environment_key": "GITHUB_WEBHOOK_SECRET",
+            },
         )
         self.assertEqual(query["request_oauth_on_install"], ["false"])
         self.assertEqual(query["callback_urls[]"], ["https://license.example.test/api/auth/github/callback"])
@@ -106,6 +115,8 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertNotEqual("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP")
         sequence = "\n".join(data["operator_sequence"])
         self.assertIn("/api/ready/community", sequence)
+        self.assertIn("Marketplace listing webhook", sequence)
+        self.assertIn("marketplace_purchase", sequence)
         self.assertIn("keep Community outside ANPOS_MARKETPLACE_PLAN_MAP", sequence)
         self.assertIn("ANPOS_COMMERCIAL_RELEASE_REF", sequence)
         self.assertIn("exact 40-character commit SHA", sequence)
@@ -130,7 +141,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             "source_protocol_version": package["anpos"]["source_protocol_version"],
             "runtime_contract": package["anpos"]["runtime_contract"],
         }
-        self.assertEqual(data["schema_version"], 5)
+        self.assertEqual(data["schema_version"], 6)
         self.assertEqual(data["artifact_identity"], expected)
         self.assertEqual(expected["source_protocol_version"], protocol["version"])
         self.assertEqual(

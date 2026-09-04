@@ -103,8 +103,14 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         vendor = json.loads((ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json").read_text(encoding="utf-8"))
         self.assertEqual(marketplace["role"], "customer_marketplace_app")
         self.assertTrue(marketplace["required_defaults"]["public"])
-        self.assertTrue(marketplace["required_defaults"]["webhook_active"])
-        self.assertIn("marketplace_purchase", marketplace["event_subscriptions"])
+        self.assertFalse(marketplace["required_defaults"]["webhook_active"])
+        self.assertEqual(marketplace["event_subscriptions"], [])
+        listing_webhook = marketplace["marketplace_listing_webhook"]
+        self.assertEqual(listing_webhook["configuration_surface"], "github_marketplace_listing_webhook")
+        self.assertTrue(listing_webhook["required"])
+        self.assertEqual(listing_webhook["event"], "marketplace_purchase")
+        self.assertEqual(listing_webhook["url_path"], "/api/webhooks/github/marketplace")
+        self.assertEqual(listing_webhook["secret_environment_key"], "GITHUB_WEBHOOK_SECRET")
         self.assertIn("administration:write_for_private_template_distribution", marketplace["forbidden_vendor_permissions"])
 
         self.assertEqual(vendor["role"], "vendor_distribution_app")
