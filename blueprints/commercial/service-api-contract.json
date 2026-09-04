@@ -1,19 +1,14 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "inactive_blueprint",
-  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service.",
+  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service plus the free Community repository-readiness product surface.",
   "endpoints": [
     {
       "method": "GET",
       "path": "/version",
       "authentication": "public_read",
       "purpose": "Expose non-secret service/artifact identity so deployment verification can reject stale or wrong commercial artifacts.",
-      "required_fields": [
-        "service",
-        "service_version",
-        "source_protocol_version",
-        "runtime_contract"
-      ],
+      "required_fields": ["service", "service_version", "source_protocol_version", "runtime_contract"],
       "must_not_return_secrets": true,
       "cache_control": "no-store"
     },
@@ -24,6 +19,33 @@
       "idempotency": "X-GitHub-Delivery with payload-hash binding and retryable delivery state",
       "purpose": "Process verified marketplace_purchase events",
       "must_not_return_secrets": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/audit/repository",
+      "authentication": "verified_github_user_access_token_plus_marketplace_app_installation_on_target_repository",
+      "purpose": "Provide the ANPOS Community read-only Repository Readiness / Conformance Audit without requiring a paid entitlement.",
+      "requires_active_paid_entitlement": false,
+      "request": {"repository": "owner/name or https://github.com/owner/name"},
+      "marketplace_app_repository_permissions": {"metadata": "read", "single_file": "read"},
+      "approved_single_file_paths": [
+        ".ai/manifest.json",
+        "config/protocol/instance.json",
+        "config/protocol/version.json",
+        "config/quality/quality-policy.json",
+        "config/security/control-plane-policy.json",
+        "config/github/ruleset-policy.json",
+        "config/design/design-assurance.json",
+        "config/data/data-governance.json",
+        "config/release/release-policy.json",
+        "config/operations/operations-policy.json"
+      ],
+      "application_source_code_read": false,
+      "repository_scoped_installation_token_required": true,
+      "requesting_user_repository_access_verification_required": true,
+      "rate_limit": "10 requests per 60 seconds per authenticated GitHub user",
+      "result_persistence": "not_persisted_by_repository_audit",
+      "cache_control": "no-store"
     },
     {
       "method": "GET",
@@ -93,6 +115,8 @@
     "request_ids_required": true,
     "timeouts_and_bounded_retries_required": true,
     "least_privilege_github_app_tokens_required": true,
+    "community_repository_audit_must_not_read_application_source": true,
+    "community_repository_audit_requires_user_and_installation_authorization": true,
     "no_payment_card_storage_when_processor_handles_payment": true,
     "no_remote_kill_switch_for_generated_customer_projects": true,
     "vendor_template_access_may_be_revoked_without_modifying_generated_customer_projects": true
