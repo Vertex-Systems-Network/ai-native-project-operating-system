@@ -13,12 +13,12 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts",
-    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts",
+    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/webhooks/github/marketplace/route.ts",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts",
-    "app/api/v1/access/reconcile/route.ts",
+    "app/api/v1/access/reconcile/route.ts", "app/api/v1/audit/repository/route.ts",
 ]
 
 
@@ -99,9 +99,27 @@ def main() -> int:
             "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
             'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "githubMarketplaceAppId", "githubVendorAppId",
             'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
-            "removeTemplateCollaborator", "codeload.github.com",
+            "removeTemplateCollaborator", "codeload.github.com", "marketplaceRepositoryReadToken",
+            "MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED", "MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED",
         ),
         "GitHub client",
+    )
+    require_markers(
+        "lib/repository-audit.ts",
+        (
+            "COMMUNITY_AUDIT_PATHS", "MAX_CONTROL_FILE_BYTES", "source_code_read: false",
+            "not_persisted_by_repository_audit", "uninitialized_child", "active_child", "partial_or_malformed",
+            "marketplaceRepositoryReadToken", "repositoryMetadata", "control_files_present",
+        ),
+        "Community repository audit engine",
+    )
+    require_markers(
+        "app/api/v1/audit/repository/route.ts",
+        (
+            "authenticatedGithubContext", "community_repository_audit", "10, 60", "auditRepository",
+            "MARKETPLACE_APP_NOT_INSTALLED_FOR_REPOSITORY", "Cache-Control", "no-store",
+        ),
+        "Community repository audit API",
     )
     require_markers(
         "lib/crypto.ts",
@@ -177,6 +195,14 @@ def main() -> int:
         ),
         "commercial security unit tests",
     )
+    require_markers(
+        "tests/repository-audit.test.ts",
+        (
+            "exactly ten ANPOS control files", "baseline_present", "uninitialized_child",
+            "canonical_source", "needs_repair", "not_anpos",
+        ),
+        "Community repository audit unit tests",
+    )
 
     entitlement_schema = json.loads((ROOT / "schemas/license-entitlement.schema.json").read_text(encoding="utf-8"))
     schema_text = json.dumps(entitlement_schema, sort_keys=True)
@@ -185,10 +211,14 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 2:
-        fail("commercial service API contract must be schema_version 2")
+    if api_contract.get("schema_version") != 3:
+        fail("commercial service API contract must be schema_version 3")
     contract_text = json.dumps(api_contract, sort_keys=True)
-    for marker in ("/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "organization_consumption_requires_explicit_seat_principal"):
+    for marker in (
+        "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository",
+        "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
+        '"single_file": "read"', "not_persisted_by_repository_audit",
+    ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
 
