@@ -1,5 +1,5 @@
 import { Pool, type PoolClient } from "pg";
-import { serviceConfig } from "./env";
+import { databaseConfig } from "./env";
 
 const REQUIRED_MIGRATION = "001_baseline.sql";
 let pool: Pool | null = null;
@@ -8,7 +8,7 @@ let schemaReady = false;
 export function db(): Pool {
   if (!pool) {
     pool = new Pool({
-      connectionString: serviceConfig().databaseUrl,
+      connectionString: databaseConfig().databaseUrl,
       max: 5,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 5_000,
