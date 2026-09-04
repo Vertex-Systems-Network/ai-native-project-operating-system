@@ -102,7 +102,7 @@
         "commercial-service/tests/team-dashboard.test.ts",
         "docs/commercial/team-administration.md"
       ],
-      "notes": "Organization seat assignment/revocation, active-member verification, capacity enforcement, principal-bound entitlements, authenticated organization-admin summary, seat usage/capacity display, and customer-facing assign/revoke UI are implemented in source. Availability remains partial: no real Team Marketplace plan/pricing is activated, production organization E2E is not verified, Marketplace purchase/plan-change/cancellation UX evidence is incomplete, Pro premium payload dependencies remain unimplemented, and commercial support/SLA is still an external operator contract."
+      "notes": "Organization seat assignment/revocation, active-member verification, capacity enforcement, principal-bound entitlements, authenticated organization-admin summary, seat usage/capacity display, and customer-facing assign/revoke UI are implemented in source. Availability remains partial: no real Team Marketplace plan/pricing is activated, production organization E2E is not verified, Marketplace purchase/plan-change/cancellation UX evidence is incomplete, Pro premium dependencies remain unimplemented because real premium payload/provider assets and production E2E are still absent, and commercial support/SLA is still an external operator contract."
     },
     {
       "id": "commercial_support",
