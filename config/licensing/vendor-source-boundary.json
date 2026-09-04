@@ -30,7 +30,10 @@
     "tests/test_vendor_handoff.py",
     "tests/test_commercial_launch_package.py",
     "tests/test_marketplace_staged_launch.py",
-    "tests/test_operator_launch_bootstrap.py"
+    "tests/test_operator_launch_bootstrap.py",
+    ".github/workflows/source-continuous-certification.yml",
+    "scripts/validate_source_continuous_certification.py",
+    "tests/test_source_continuous_certification.py"
   ],
   "rules": [
     "Canonical source may retain these paths as inert vendor/operator assets.",

@@ -8,11 +8,12 @@ Machine-readable blueprint: `config/github/ruleset-policy.json`.
 
 For `Vertex-Systems-Network/ai-native-project-operating-system`:
 
-- Rules policy is an inactive reusable blueprint;
-- missing child rules on the canonical source are not project-governance drift;
+- Rules policy is an inactive reusable child-project blueprint;
+- missing child rules on the canonical source are not child-project governance drift;
 - do not silently apply child merge/ruleset settings to the source;
 - `blueprints/github/workflows/governance-audit.yml` stays inactive on the source;
-- source repository settings are maintained separately from the child-project flow.
+- the canonical source may retain exactly one source-maintenance workflow, `.github/workflows/source-continuous-certification.yml`, which is repository-guarded, read-only and stripped from customer/vendor-template outputs;
+- source branch protection/rulesets, review requirements, bypass actors and required-check enforcement are repository settings maintained and verified separately from child-project policy and from CI workflow presence.
 
 ## Child setup and consent
 
