@@ -1,5 +1,5 @@
 import { createHash, createHmac, createPrivateKey, createPublicKey, randomUUID, sign, timingSafeEqual } from "node:crypto";
-import { serviceConfig } from "./env";
+import { serviceConfig, webhookConfig } from "./env";
 
 export function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
@@ -7,7 +7,7 @@ export function sha256(value: string | Buffer): string {
 
 export function verifyGithubWebhook(rawBody: Buffer, signatureHeader: string | null): boolean {
   if (!signatureHeader?.startsWith("sha256=")) return false;
-  const expected = Buffer.from(createHmac("sha256", serviceConfig().githubWebhookSecret).update(rawBody).digest("hex"), "hex");
+  const expected = Buffer.from(createHmac("sha256", webhookConfig().githubWebhookSecret).update(rawBody).digest("hex"), "hex");
   const suppliedHex = signatureHeader.slice("sha256=".length);
   if (!/^[0-9a-f]{64}$/i.test(suppliedHex)) return false;
   const supplied = Buffer.from(suppliedHex, "hex");
