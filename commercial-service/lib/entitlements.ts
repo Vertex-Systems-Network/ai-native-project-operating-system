@@ -4,7 +4,7 @@ import { getMarketplaceSubscription } from "./github";
 import { signEntitlement } from "./crypto";
 import { db, ensureSchema, transaction } from "./db";
 import { serviceConfig } from "./env";
-import { marketplacePlanMap, PLAN_FEATURES } from "./plans";
+import { resolveMarketplacePlan } from "./plans";
 import { requireActiveSeat } from "./seats";
 import { processPendingTemplateAccessJobs, revokeAllTemplateGrantsForSource } from "./template-access";
 
@@ -73,18 +73,19 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
     }
 
     const marketplacePlanId = subscription.marketplace_purchase.plan.id;
-    const planId = marketplacePlanMap()[String(marketplacePlanId)];
-    if (!planId) throw new Error(`Marketplace plan ${marketplacePlanId} is not mapped`);
+    // resolveMarketplacePlan delegates paid IDs through marketplacePlanMap while keeping Community outside that paid map.
+    const resolvedPlan = resolveMarketplacePlan(marketplacePlanId);
+    const planId = resolvedPlan.planId;
+    const features = resolvedPlan.features;
 
     const now = new Date();
     const licenseId = existing.rows[0]?.license_id ?? randomUUID();
     const seats = subscription.marketplace_purchase.unit_count ?? null;
     const state: "trial" | "active" = subscription.marketplace_purchase.on_free_trial ? "trial" : "active";
     const accountType = subscription.type as "User" | "Organization";
-    const features = PLAN_FEATURES[planId];
     const issuedAt = now.toISOString();
     const envelopeExpiresAt = tokenExpiry(now);
-    const envelope = accountType === "Organization" ? null : signEntitlement({
+    const envelope = !resolvedPlan.paid || accountType === "Organization" ? null : signEntitlement({
       issuer: serviceConfig().entitlementIssuer,
       subject: { github_account_id: subscription.id, github_account_type: accountType, github_login: subscription.login },
       license_id: licenseId,
@@ -117,6 +118,7 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
       marketplace_plan_id: marketplacePlanId,
       state,
       account_type: accountType,
+      paid: resolvedPlan.paid,
     });
     return {
       state,
@@ -127,13 +129,13 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
       seats,
       entitlements: features,
       signed_entitlement: envelope,
-      seat_assignment_required: accountType === "Organization",
+      seat_assignment_required: resolvedPlan.paid && accountType === "Organization",
     };
   });
 
   if (result.state === "cancelled" || !result.entitlements.includes("private_template_access")) {
-    await revokeAllTemplateGrantsForSource(accountId, requestId);
-    await processPendingTemplateAccessJobs(10, requestId).catch(() => []);
+    const revoked = await revokeAllTemplateGrantsForSource(accountId, requestId);
+    if (revoked > 0) await processPendingTemplateAccessJobs(10, requestId).catch(() => []);
   }
   return result;
 }

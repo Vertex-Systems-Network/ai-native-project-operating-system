@@ -1,4 +1,4 @@
-import { serviceConfig } from "@/lib/env";
+import { marketplaceAppConfig } from "@/lib/env";
 import { createOAuthFlowState } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const cfg = serviceConfig();
+    const cfg = marketplaceAppConfig();
     const flow = createOAuthFlowState(installationId);
     const callbackUrl = `${cfg.publicBaseUrl}/api/auth/github/callback`;
     const authorize = new URL("https://github.com/login/oauth/authorize");

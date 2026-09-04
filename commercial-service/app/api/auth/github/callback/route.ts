@@ -1,5 +1,5 @@
 import { githubUserFromToken } from "@/lib/auth";
-import { serviceConfig } from "@/lib/env";
+import { marketplaceAppConfig } from "@/lib/env";
 import { verifyMarketplaceUserInstallationAccess } from "@/lib/github";
 import {
   clearCookie,
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const cfg = serviceConfig();
+    const cfg = marketplaceAppConfig();
     const callbackUrl = `${cfg.publicBaseUrl}/api/auth/github/callback`;
     const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
