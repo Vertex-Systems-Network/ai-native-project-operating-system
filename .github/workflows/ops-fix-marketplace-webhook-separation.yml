@@ -1,0 +1,146 @@
+name: Fix Marketplace webhook separation
+on:
+  push:
+    branches:
+      - commercial/marketplace-webhook-separation
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: commercial/marketplace-webhook-separation
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Apply current GitHub Marketplace webhook separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('.')
+
+          # Public Marketplace App blueprint: the GitHub App webhook is not the
+          # Marketplace listing purchase webhook. Keep App webhook disabled and
+          # model the listing webhook explicitly.
+          p = root / 'blueprints/commercial/github-marketplace-app-manifest.example.json'
+          data = json.loads(p.read_text())
+          data['schema_version'] = 4
+          data['required_defaults']['webhook_active'] = False
+          data['event_subscriptions'] = []
+          data['marketplace_listing_webhook'] = {
+              'configuration_surface': 'github_marketplace_listing_webhook',
+              'required': True,
+              'event': 'marketplace_purchase',
+              'url_path': '/api/webhooks/github/marketplace',
+              'secret_environment_key': 'GITHUB_WEBHOOK_SECRET',
+              'rule': 'Configure this webhook from the GitHub Marketplace listing Webhook page after the draft listing exists. Do not model marketplace_purchase as a normal GitHub App event subscription.'
+          }
+          reqs = data.get('security_requirements') or []
+          reqs = [r for r in reqs if 'strong Marketplace webhook secret' not in r]
+          reqs.insert(2, 'Configure the marketplace_purchase webhook from the GitHub Marketplace listing Webhook page, point it at /api/webhooks/github/marketplace, use a strong secret, and verify signatures before processing payloads. Do not subscribe to marketplace_purchase as a normal GitHub App webhook event.')
+          data['security_requirements'] = reqs
+          p.write_text(json.dumps(data, indent=2) + '\n')
+
+          # Renderer registration URL: disable the ordinary App webhook and do
+          # not prefill marketplace_purchase or the Marketplace listing webhook.
+          p = root / 'scripts/render_operator_launch_bootstrap.py'
+          s = p.read_text()
+          old = '''def marketplace_registration_url(inputs: Inputs) -> str:\n    webhook_url = inputs.service_base_url + "/api/webhooks/github/marketplace"\n    callback_url = inputs.service_base_url + "/api/auth/github/callback"\n    setup_url = inputs.service_base_url + "/setup/github"\n    params = [\n        ("name", inputs.marketplace_app_name),\n        ("description", "ANPOS customer-facing GitHub Marketplace application"),\n        ("url", inputs.homepage_url),\n        ("public", "true"),\n        ("webhook_active", "true"),\n        ("webhook_url", webhook_url),\n        ("events[]", "marketplace_purchase"),\n        ("request_oauth_on_install", "false"),\n'''
+          new = '''def marketplace_registration_url(inputs: Inputs) -> str:\n    callback_url = inputs.service_base_url + "/api/auth/github/callback"\n    setup_url = inputs.service_base_url + "/setup/github"\n    params = [\n        ("name", inputs.marketplace_app_name),\n        ("description", "ANPOS customer-facing GitHub Marketplace application"),\n        ("url", inputs.homepage_url),\n        ("public", "true"),\n        ("webhook_active", "false"),\n        ("request_oauth_on_install", "false"),\n'''
+          assert old in s, 'marketplace_registration_url source shape changed'
+          s = s.replace(old, new)
+          s = s.replace('"schema_version": 5,', '"schema_version": 6,', 1)
+          old = '''                "registration_url": marketplace_registration_url(inputs),\n                "webhook_url": inputs.service_base_url + "/api/webhooks/github/marketplace",\n                "callback_url": callback_url,\n                "setup_url": setup_url,\n                "request_oauth_on_install": False,\n                "setup_on_update": True,\n                "events": ["marketplace_purchase"],\n'''
+          new = '''                "registration_url": marketplace_registration_url(inputs),\n                "github_app_webhook_active": False,\n                "callback_url": callback_url,\n                "setup_url": setup_url,\n                "request_oauth_on_install": False,\n                "setup_on_update": True,\n                "events": [],\n                "marketplace_listing_webhook": {\n                    "configuration_surface": "github_marketplace_listing_webhook",\n                    "required": True,\n                    "event": "marketplace_purchase",\n                    "url": inputs.service_base_url + "/api/webhooks/github/marketplace",\n                    "secret_environment_key": "GITHUB_WEBHOOK_SECRET",\n                },\n'''
+          assert old in s, 'renderer marketplace output shape changed'
+          s = s.replace(old, new)
+          needle = '            "Register the public Marketplace App using the prefilled URL; verify the Setup URL, OAuth callback, setup-on-update behavior, and Community single-file permission set before saving the App.",\n'
+          insert = needle + '            "After creating the draft GitHub Marketplace listing, configure its separate Marketplace listing webhook at /api/webhooks/github/marketplace, subscribe to marketplace_purchase there, and store its strong secret as GITHUB_WEBHOOK_SECRET. Do not add marketplace_purchase to normal GitHub App event subscriptions.",\n'
+          assert needle in s, 'operator sequence registration marker changed'
+          s = s.replace(needle, insert, 1)
+          p.write_text(s)
+
+          # Operator renderer unit test.
+          p = root / 'tests/test_operator_launch_bootstrap.py'
+          s = p.read_text()
+          old = '''        self.assertEqual(query["webhook_active"], ["true"])\n        self.assertEqual(query["events[]"], ["marketplace_purchase"])\n        self.assertEqual(\n            query["webhook_url"],\n            ["https://license.example.test/api/webhooks/github/marketplace"],\n        )\n'''
+          new = '''        self.assertEqual(query["webhook_active"], ["false"])\n        self.assertNotIn("events[]", query)\n        self.assertNotIn("webhook_url", query)\n        self.assertFalse(marketplace["github_app_webhook_active"])\n        self.assertEqual(marketplace["events"], [])\n        self.assertEqual(\n            marketplace["marketplace_listing_webhook"],\n            {\n                "configuration_surface": "github_marketplace_listing_webhook",\n                "required": True,\n                "event": "marketplace_purchase",\n                "url": "https://license.example.test/api/webhooks/github/marketplace",\n                "secret_environment_key": "GITHUB_WEBHOOK_SECRET",\n            },\n        )\n'''
+          assert old in s, 'operator test webhook assertions changed'
+          s = s.replace(old, new)
+          s = s.replace('self.assertEqual(data["schema_version"], 5)', 'self.assertEqual(data["schema_version"], 6)')
+          seqneedle = '        self.assertIn("/api/ready/community", sequence)\n'
+          seqnew = seqneedle + '        self.assertIn("Marketplace listing webhook", sequence)\n        self.assertIn("marketplace_purchase", sequence)\n'
+          assert seqneedle in s
+          s = s.replace(seqneedle, seqnew, 1)
+          p.write_text(s)
+
+          # Commercial launch tests now enforce the correct two-surface model.
+          p = root / 'tests/test_commercial_launch_package.py'
+          s = p.read_text()
+          old = '''        self.assertTrue(marketplace["required_defaults"]["webhook_active"])\n        self.assertIn("marketplace_purchase", marketplace["event_subscriptions"])\n'''
+          new = '''        self.assertFalse(marketplace["required_defaults"]["webhook_active"])\n        self.assertEqual(marketplace["event_subscriptions"], [])\n        listing_webhook = marketplace["marketplace_listing_webhook"]\n        self.assertEqual(listing_webhook["configuration_surface"], "github_marketplace_listing_webhook")\n        self.assertTrue(listing_webhook["required"])\n        self.assertEqual(listing_webhook["event"], "marketplace_purchase")\n        self.assertEqual(listing_webhook["url_path"], "/api/webhooks/github/marketplace")\n        self.assertEqual(listing_webhook["secret_environment_key"], "GITHUB_WEBHOOK_SECRET")\n'''
+          assert old in s, 'commercial launch test webhook assertions changed'
+          p.write_text(s.replace(old, new))
+
+          # Static commercial launch validator.
+          p = root / 'scripts/validate_commercial_launch_package.py'
+          s = p.read_text()
+          old = '''    if marketplace_defaults.get("webhook_active") is not True:\n        fail("Marketplace App blueprint must require an active webhook")\n    if "marketplace_purchase" not in (marketplace_app.get("event_subscriptions") or []):\n        fail("Marketplace App blueprint must subscribe to marketplace_purchase")\n'''
+          new = '''    if marketplace_defaults.get("webhook_active") is not False:\n        fail("Marketplace App blueprint must keep the ordinary GitHub App webhook disabled for Marketplace purchase handling")\n    if marketplace_app.get("event_subscriptions") != []:\n        fail("Marketplace App blueprint must not model marketplace_purchase as a normal GitHub App event subscription")\n    listing_webhook = marketplace_app.get("marketplace_listing_webhook") or {}\n    if listing_webhook.get("configuration_surface") != "github_marketplace_listing_webhook":\n        fail("Marketplace App blueprint must identify the separate Marketplace listing webhook surface")\n    if listing_webhook.get("required") is not True or listing_webhook.get("event") != "marketplace_purchase":\n        fail("Marketplace listing webhook must require marketplace_purchase")\n    if listing_webhook.get("url_path") != "/api/webhooks/github/marketplace":\n        fail("Marketplace listing webhook must target the canonical commercial webhook route")\n    if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":\n        fail("Marketplace listing webhook must bind the canonical webhook secret environment key")\n'''
+          assert old in s, 'commercial launch validator webhook checks changed'
+          p.write_text(s.replace(old, new))
+
+          # Static operator bootstrap validator.
+          p = root / 'scripts/validate_operator_launch_bootstrap.py'
+          s = p.read_text()
+          s = s.replace('if data.get("schema_version") != 5:\n            fail("operator launch renderer output must be schema_version 5")', 'if data.get("schema_version") != 6:\n            fail("operator launch renderer output must be schema_version 6")')
+          old = '''        if mq.get("public") != ["true"] or mq.get("webhook_active") != ["true"]:\n            fail("Marketplace registration URL must prefill public visibility and active webhook")\n        if mq.get("events[]") != ["marketplace_purchase"]:\n            fail("Marketplace registration URL must subscribe to marketplace_purchase")\n        if mq.get("webhook_url") != ["https://license.example.test/api/webhooks/github/marketplace"]:\n            fail("Marketplace registration URL must target the commercial Marketplace webhook")\n'''
+          new = '''        if mq.get("public") != ["true"] or mq.get("webhook_active") != ["false"]:\n            fail("Marketplace registration URL must prefill public visibility with the ordinary GitHub App webhook disabled")\n        if "events[]" in mq or "webhook_url" in mq:\n            fail("Marketplace registration URL must not model marketplace_purchase as a normal GitHub App webhook")\n        listing_webhook = marketplace.get("marketplace_listing_webhook") or {}\n        if listing_webhook.get("configuration_surface") != "github_marketplace_listing_webhook":\n            fail("operator handoff must identify the separate Marketplace listing webhook surface")\n        if listing_webhook.get("event") != "marketplace_purchase" or listing_webhook.get("url") != "https://license.example.test/api/webhooks/github/marketplace":\n            fail("operator handoff Marketplace listing webhook is invalid")\n        if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":\n            fail("operator handoff must bind the Marketplace listing webhook secret environment key")\n'''
+          assert old in s, 'operator validator webhook checks changed'
+          s = s.replace(old, new)
+          marker = '        "marketplace_purchase",\n'
+          if '        "marketplace_listing_webhook",\n' not in s:
+              s = s.replace(marker, marker + '        "marketplace_listing_webhook",\n', 1)
+          docmarker = '        "public Marketplace App",\n'
+          if '        "Marketplace listing webhook",\n' not in s:
+              s = s.replace(docmarker, docmarker + '        "Marketplace listing webhook",\n', 1)
+          p.write_text(s)
+
+          # Operator documentation: correct the registration/listing split.
+          p = root / 'blueprints/commercial/operator-launch-bootstrap.md'
+          s = p.read_text()
+          old = '''- `public=true`;\n- webhook enabled;\n- webhook URL `<service-base-url>/api/webhooks/github/marketplace`;\n- `marketplace_purchase` event;\n- Setup URL `<service-base-url>/setup/github`;\n'''
+          new = '''- `public=true`;\n- ordinary GitHub App webhook disabled for Marketplace purchase handling;\n- no `marketplace_purchase` normal GitHub App event subscription;\n- Setup URL `<service-base-url>/setup/github`;\n'''
+          assert old in s, 'operator doc Marketplace App bullet shape changed'
+          s = s.replace(old, new)
+          anchor = 'The operator must review GitHub\'s registration form before creating the App. GitHub remains authoritative for the resulting App configuration.\n'
+          addition = anchor + '''\n### Marketplace listing webhook\n\n`marketplace_purchase` is configured separately from the GitHub App registration. After a draft GitHub Marketplace listing exists, open the listing's **Webhook** settings and configure `<service-base-url>/api/webhooks/github/marketplace` with a strong secret stored as `GITHUB_WEBHOOK_SECRET`. Subscribe/process `marketplace_purchase` on that Marketplace listing webhook surface. Do **not** represent the purchase event as a normal GitHub App event subscription.\n'''
+          assert anchor in s
+          s = s.replace(anchor, addition, 1)
+          s = s.replace('4. Generate the Marketplace OAuth client secret and strong webhook secret; store credentials only in the deployment secret store.\n', '4. Generate the Marketplace OAuth client secret; after the draft Marketplace listing exists, configure its separate Marketplace listing webhook and strong `GITHUB_WEBHOOK_SECRET`; store credentials only in the deployment secret store.\n')
+          p.write_text(s)
+          PY
+      - name: Compile and run focused source tests
+        run: |
+          python -m compileall -q scripts tests
+          python -m unittest tests.test_operator_launch_bootstrap tests.test_commercial_launch_package -v
+          python scripts/validate_operator_launch_bootstrap.py
+          python scripts/validate_commercial_launch_package.py
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ops-fix-marketplace-webhook-separation.yml
+          git config user.name "ANPOS Ops"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: separate Marketplace listing webhook from GitHub App registration"
+          git push origin HEAD:commercial/marketplace-webhook-separation
