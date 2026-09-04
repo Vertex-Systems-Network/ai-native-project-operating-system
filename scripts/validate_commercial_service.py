@@ -13,14 +13,14 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/releases.ts",
     "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts",
-    "tests/community-launch.test.ts",
+    "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts",
     "app/api/webhooks/github/marketplace/route.ts",
     "app/api/auth/github/callback/route.ts", "app/setup/github/route.ts", "app/community/page.tsx", "app/community/CommunityClient.tsx",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
-    "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts",
+    "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts", "app/api/v1/releases/current/route.ts",
     "app/api/v1/access/reconcile/route.ts", "app/api/v1/audit/repository/route.ts", "app/api/v1/audit/repositories/route.ts",
 ]
 
@@ -66,7 +66,7 @@ def main() -> int:
         "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
         "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
-        "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
+        "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
         "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
     ):
         if name not in env_example:
@@ -77,6 +77,8 @@ def main() -> int:
         fail("collaborator provisioning must be off by default in the environment example")
     if "Keep Community outside ANPOS_MARKETPLACE_PLAN_MAP" not in env_example:
         fail("environment example must keep Community identity outside the paid Marketplace plan map")
+    if "ANPOS_TEMPLATE_REF=" in env_example:
+        fail("paid delivery must not advertise a mutable template branch ref")
 
     all_source = "\n".join(path.read_text(encoding="utf-8") for path in SERVICE.rglob("*.ts") if path.is_file())
     for forbidden in ("BEGIN PRIVATE KEY-----\\nMII", "ghp_", "github_pat_", "postgresql://postgres:"):
@@ -90,7 +92,7 @@ def main() -> int:
             "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
             "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
             "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
-            "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
+            "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
             "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
             "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
         ),
@@ -101,6 +103,7 @@ def main() -> int:
         (
             "communityMarketplacePlanId", "resolveMarketplacePlan", 'planId: "community"', "paid: false",
             "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "marketplacePlanMap", "marketplaceId === communityId",
+            'developer: ["private_template_access", "protocol_update_channel"]',
         ),
         "Marketplace plan resolution",
     )
@@ -114,6 +117,15 @@ def main() -> int:
         "Marketplace webhook",
     )
     require_markers(
+        "lib/releases.ts",
+        (
+            "parseTemplateReleaseManifest", "canonical-minus-vendor-only-paths", "committed_git_blobs_at_head",
+            "tracked_source_only", "contains_secrets", "COMMERCIAL_RELEASE_FILE_COUNT_MISMATCH",
+            "COMMERCIAL_RELEASE_TOTAL_BYTES_MISMATCH", "INVALID_COMMERCIAL_RELEASE_FILE_DIGEST",
+        ),
+        "certified release manifest verifier",
+    )
+    require_markers(
         "lib/github.ts",
         (
             "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
@@ -123,6 +135,7 @@ def main() -> int:
             "removeTemplateCollaborator", "codeload.github.com", "verifyMarketplaceRepositoryAuditInstallation",
             "MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED", "MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED",
             "/user/installations/", "listMarketplaceUserInstallationRepositories", "verifyMarketplaceUserInstallationAccess",
+            "templateReleaseManifest", "EXPORT-MANIFEST.json", "application/vnd.github.raw+json", "commercialReleaseRef",
         ),
         "GitHub client",
     )
@@ -231,8 +244,19 @@ def main() -> int:
         "organization seat API",
     )
     require_markers(
+        "app/api/v1/releases/current/route.ts",
+        (
+            "protocol_update_channel", "reconcileEntitlement", "requireActiveSeat", "templateReleaseManifest",
+            "protocol_release_metadata_issued", "certified_protocol_updates", "archive_endpoint", "private, no-store",
+        ),
+        "certified protocol update channel",
+    )
+    require_markers(
         "app/api/v1/template/archive/route.ts",
-        ("templateArchiveRedirect", "requireActiveSeat", "template_archive", "Cache-Control", "307"),
+        (
+            "templateArchiveRedirect", "templateReleaseManifest", "requireActiveSeat", "template_archive", "release_ref",
+            "canonical_source_revision", "Cache-Control", "307",
+        ),
         "template archive delivery",
     )
     require_markers(
@@ -268,7 +292,7 @@ def main() -> int:
             "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
             "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
             "legacy single-app credentials do not satisfy split configuration", "Community OAuth state uses PKCE",
-            "Community browser session is encrypted",
+            "Community browser session is encrypted", "ANPOS_COMMERCIAL_RELEASE_REF", "mutable production controls",
         ),
         "commercial security unit tests",
     )
@@ -281,6 +305,16 @@ def main() -> int:
             "missing:GITHUB_VENDOR_APP_ID", "paid: false",
         ),
         "Community launch unit tests",
+    )
+    require_markers(
+        "tests/release-channel.test.ts",
+        (
+            "certified release manifest requires deterministic template export evidence",
+            "commercial release manifest rejects mutable or unverifiable identity",
+            "paid plans include certified update channel while provider compatibility stays core",
+            "protocol_update_channel", "standard_provider_adapters",
+        ),
+        "certified release channel unit tests",
     )
     require_markers(
         "tests/repository-audit.test.ts",
@@ -298,13 +332,14 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 4:
-        fail("commercial service API contract must be schema_version 4")
+    if api_contract.get("schema_version") != 5:
+        fail("commercial service API contract must be schema_version 5")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
-        "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository",
+        "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository",
         "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
-        '"single_file": "read"', "not_persisted_by_repository_audit",
+        "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
+        "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
@@ -318,6 +353,8 @@ def main() -> int:
         for entitlement in plan.get("entitlements", []):
             if entitlement not in plans_source:
                 fail(f"commercial runtime plan features missing catalog entitlement: {plan_id}:{entitlement}")
+        if "standard_provider_adapters" in plan.get("entitlements", []):
+            fail(f"core provider compatibility must not be sold as paid entitlement: {plan_id}")
 
     control = json.loads((ROOT / "config/security/control-plane-policy.json").read_text(encoding="utf-8"))
     if "/commercial-service/**" not in control.get("protected_paths", []):

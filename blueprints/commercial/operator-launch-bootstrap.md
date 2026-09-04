@@ -24,7 +24,7 @@ The renderer accepts only non-secret configuration:
 - optional Vendor Distribution App display name;
 - optional explicit collaborator-provisioning switch.
 
-It intentionally does **not** accept private keys, webhook secrets, database credentials, operator tokens, Marketplace plan IDs, prices, installation counts, publisher evidence, or customer data.
+It intentionally does **not** accept private keys, webhook secrets, database credentials, operator tokens, Marketplace plan IDs, prices, installation counts, publisher evidence, paid release SHAs, or customer data. The exact paid release SHA is selected only after the private vendor template repository has been populated and independently handoff-verified.
 
 ## Package-derived artifact identity
 
@@ -78,6 +78,24 @@ For a private GitHub repository checkout, verification reads committed `HEAD` bl
 
 A successful command prints a JSON receipt containing canonical source revision/tree, target repository revision when applicable, manifest SHA-256, deterministic content-set SHA-256, file counts, and service artifact identity when verifying the service. Retain that receipt as provenance evidence. It proves byte equality to the approved deterministic export; it does **not** prove repository ownership/visibility, GitHub App installation, Marketplace approval, or deployment readiness.
 
+### Immutable paid release selection
+
+Paid Developer/update delivery introduces a second identity after the verified private template push:
+
+- `ANPOS_COMMERCIAL_RELEASE_REF`
+
+This must be the exact **40-character lowercase Git commit SHA** of the verified private `anpos-commercial-template` repository state. It is not the canonical source SHA unless the private repository happens to use the same object identity. Do not use `main`, another branch, a movable tag, or an arbitrary copied SHA.
+
+Before accepting a value for `ANPOS_COMMERCIAL_RELEASE_REF`:
+
+1. populate the private template repository only from the deterministic template export;
+2. clone/check out the private repository cleanly;
+3. run `scripts/verify_vendor_handoff.py` successfully against that checkout;
+4. retain the JSON verification receipt;
+5. record the private repository's exact verified commit SHA as `ANPOS_COMMERCIAL_RELEASE_REF`.
+
+The commercial service then fetches `EXPORT-MANIFEST.json` at that exact private-repository commit and verifies its deterministic template-export properties before returning paid release metadata or redirecting an archive.
+
 ## Generated Marketplace App registration
 
 The Marketplace App registration URL is prefilled as:
@@ -104,7 +122,7 @@ The Vendor Distribution App registration URL is prefilled as:
 - `public=false`;
 - webhooks disabled;
 - OAuth-on-install disabled;
-- `Contents: read` for archive-first template delivery;
+- `Contents: read` for release-manifest verification and archive-first template delivery;
 - no Marketplace events;
 - no `Administration: write` by default.
 
@@ -143,10 +161,11 @@ Additional paid/full commercial service configuration:
 - `ANPOS_OPERATOR_TOKEN`
 - `ANPOS_MARKETPLACE_PLAN_MAP`
 - `ANPOS_ORG_SEAT_LIMITS`
+- `ANPOS_COMMERCIAL_RELEASE_REF`
 
-`ANPOS_MARKETPLACE_PLAN_MAP` remains paid-only and maps real Marketplace IDs only to `developer`, `pro`, `team`, or `enterprise`. Full `/api/ready` remains fail-closed until the paid/vendor configuration is complete.
+`ANPOS_MARKETPLACE_PLAN_MAP` remains paid-only and maps real Marketplace IDs only to `developer`, `pro`, `team`, or `enterprise`. `ANPOS_COMMERCIAL_RELEASE_REF` must be the exact verified private-template commit SHA. Full `/api/ready` remains fail-closed until the paid/vendor configuration is complete.
 
-Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy the split-App contract.
+Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy the split-App contract. Legacy/mutable `ANPOS_TEMPLATE_REF` must not be used for paid delivery.
 
 ## Required operator sequence
 
@@ -161,13 +180,16 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 9. Verify both exports with `scripts/verify_vendor_handoff.py` using the generated service/template argument lists; retain successful JSON receipts.
 10. Create the private vendor repositories and populate them only from verified deterministic exports.
 11. Clone/check out each new private repository cleanly and run the same handoff verification again before accepting it as vendor source.
-12. Register the private Vendor Distribution App from its generated prefilled URL.
-13. Generate/store a distinct Vendor App private key; never reuse Marketplace App identity/key material.
-14. Install only the Vendor Distribution App on the vendor private template repository.
-15. Populate the remaining paid/full production environment with real external values listed by the handoff.
-16. Deploy the exact service artifact represented by `artifact_identity` from a verified immutable source.
-17. Run `scripts/verify_commercial_production.py` with `production_verifier_arguments` plus the required base URL and separately supplied secret environment-variable names.
-18. Require full `/api/ready` HTTP 200 plus applicable paid Marketplace/vendor E2E evidence before paid production launch authorization.
+12. Set `ANPOS_COMMERCIAL_RELEASE_REF` to the exact 40-character commit SHA of the verified private template checkout; never use a mutable ref.
+13. Register the private Vendor Distribution App from its generated prefilled URL.
+14. Generate/store a distinct Vendor App private key; never reuse Marketplace App identity/key material.
+15. Install only the Vendor Distribution App on the vendor private template repository.
+16. Populate the remaining paid/full production environment with real external values listed by the handoff.
+17. Deploy the exact service artifact represented by `artifact_identity` from a verified immutable source.
+18. Run `scripts/verify_commercial_production.py` with `production_verifier_arguments` plus the required base URL and separately supplied secret environment-variable names.
+19. Exercise `GET /api/v1/releases/current` and verify its canonical source revision/tree against the retained template-handoff evidence.
+20. Exercise `GET /api/v1/template/archive` and verify it serves the same exact `ANPOS_COMMERCIAL_RELEASE_REF` release.
+21. Require full `/api/ready` HTTP 200 plus applicable paid Marketplace/vendor E2E evidence before paid production launch authorization.
 
 ## Safety boundary
 
@@ -176,6 +198,8 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 - Canonical Git revision/tree supplies export provenance; do not accept a private vendor checkout merely because its filenames look correct.
 - A successful handoff receipt proves exact deterministic export equality only; it is not evidence of GitHub ownership, repository privacy, App installation, Marketplace approval, or deployment.
 - Community readiness and full commercial readiness are intentionally separate. `/api/ready/community` must never be represented as proof that paid plans, Vendor App distribution, private template access, organization seats, or entitlement signing are ready.
+- Paid release metadata/archive delivery must be bound to an exact verified `ANPOS_COMMERCIAL_RELEASE_REF`; mutable branches/tags are forbidden.
+- Standard provider compatibility is core/capability-dependent ANPOS behavior and must not be represented as a paid Developer entitlement.
 - Never reuse App IDs or private keys across Marketplace and Vendor Distribution roles.
 - Do not add Vendor `Administration: write` unless collaborator provisioning is explicitly approved.
 - Do not infer repository existence, Marketplace approval, publisher verification, installation count, prices, plan IDs, customer billing readiness, or launch authorization from renderer output.

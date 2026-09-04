@@ -1,8 +1,8 @@
 export const PLAN_FEATURES: Record<string, string[]> = {
-  developer: ["private_template_access", "protocol_update_channel", "standard_provider_adapters"],
-  pro: ["private_template_access", "protocol_update_channel", "standard_provider_adapters", "premium_blueprints", "premium_provider_adapters", "hosted_orchestrator_when_offered"],
-  team: ["private_template_access", "protocol_update_channel", "standard_provider_adapters", "premium_blueprints", "premium_provider_adapters", "hosted_orchestrator_when_offered", "organization_team_features", "commercial_support"],
-  enterprise: ["private_template_access", "protocol_update_channel", "standard_provider_adapters", "premium_blueprints", "premium_provider_adapters", "hosted_or_self_hosted_orchestrator_when_offered", "organization_team_features", "enterprise_policy_controls", "priority_support_or_sla_when_contracted"],
+  developer: ["private_template_access", "protocol_update_channel"],
+  pro: ["private_template_access", "protocol_update_channel", "premium_blueprints", "premium_provider_adapters", "hosted_orchestrator_when_offered"],
+  team: ["private_template_access", "protocol_update_channel", "premium_blueprints", "premium_provider_adapters", "hosted_orchestrator_when_offered", "organization_team_features", "commercial_support"],
+  enterprise: ["private_template_access", "protocol_update_channel", "premium_blueprints", "premium_provider_adapters", "hosted_or_self_hosted_orchestrator_when_offered", "organization_team_features", "enterprise_policy_controls", "priority_support_or_sla_when_contracted"],
 };
 
 export function communityMarketplacePlanId(): number {

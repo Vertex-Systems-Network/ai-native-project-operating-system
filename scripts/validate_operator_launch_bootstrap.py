@@ -118,6 +118,7 @@ def main() -> int:
         "--database-url",
         "--operator-token",
         "--marketplace-plan-id",
+        "--commercial-release-ref",
         "--price",
     ):
         if forbidden in renderer_source:
@@ -130,6 +131,7 @@ def main() -> int:
         "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "GITHUB_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO",
+        "ANPOS_COMMERCIAL_RELEASE_REF",
         "legacy_single_app_environment_keys_forbidden",
         "artifact_identity",
         "production_verifier_arguments",
@@ -145,6 +147,8 @@ def main() -> int:
         "PROTOCOL_PATH",
         "launch_authorized",
         "marketplace_purchase",
+        "/api/v1/releases/current",
+        "/api/v1/template/archive",
         "administration",
         "contents",
     ):
@@ -183,6 +187,30 @@ def main() -> int:
         ]
         if data.get("production_verifier_arguments") != expected_args:
             fail("operator handoff must emit exact package-derived production verifier arguments")
+
+        service_env = set(data.get("service_environment_keys") or [])
+        for required in (
+            "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
+            "ANPOS_MARKETPLACE_PLAN_MAP",
+            "ANPOS_COMMERCIAL_RELEASE_REF",
+        ):
+            if required not in service_env:
+                fail(f"operator handoff service environment missing {required}")
+
+        sequence = "\n".join(str(value) for value in data.get("operator_sequence") or [])
+        for marker in (
+            "ANPOS_COMMERCIAL_RELEASE_REF",
+            "exact 40-character commit SHA",
+            "/api/v1/releases/current",
+            "/api/v1/template/archive",
+            "/api/ready/community",
+            "full /api/ready",
+        ):
+            if marker not in sequence:
+                fail(f"operator sequence missing release/readiness marker: {marker}")
+        safety = "\n".join(str(value) for value in data.get("safety") or [])
+        if "mutable refs are forbidden" not in safety:
+            fail("operator safety must explicitly forbid mutable paid release refs")
 
         handoff = data.get("vendor_repository_handoff") or {}
         if handoff.get("canonical_source_revision") != source_revision:
@@ -276,9 +304,12 @@ def main() -> int:
         "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "GITHUB_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO",
+        "ANPOS_COMMERCIAL_RELEASE_REF",
     ):
         if env_name not in env_example:
             fail(f"commercial service environment example missing operator handoff key: {env_name}")
+    if "ANPOS_TEMPLATE_REF=" in env_example:
+        fail("commercial service environment example must not advertise mutable ANPOS_TEMPLATE_REF")
     for legacy in ("\nGITHUB_APP_ID=", "\nGITHUB_APP_PRIVATE_KEY="):
         if legacy in env_example:
             fail("commercial service environment example must not restore legacy single-App credentials")
@@ -298,6 +329,10 @@ def main() -> int:
         "private Vendor Distribution App",
         "GITHUB_MARKETPLACE_APP_ID",
         "GITHUB_VENDOR_APP_ID",
+        "ANPOS_COMMERCIAL_RELEASE_REF",
+        "40-character lowercase Git commit SHA",
+        "/api/v1/releases/current",
+        "/api/v1/template/archive",
         "Legacy `GITHUB_APP_ID`",
         "/api/version",
         "/api/ready",
@@ -317,13 +352,16 @@ def main() -> int:
             fail(f"operator launch bootstrap documentation contains stale hand-maintained version: {stale_doc}")
 
     for marker in (
+        "test_split_environment_contract_and_legacy_rejection_are_explicit",
+        "ANPOS_COMMERCIAL_RELEASE_REF",
+        "/api/v1/releases/current",
         "test_artifact_identity_and_verifier_args_are_package_derived",
         "test_artifact_identity_fails_closed_on_package_protocol_mismatch",
         "test_vendor_handoff_identity_is_git_derived_and_binds_both_exports",
         "test_source_export_identity_rejects_invalid_injected_sha",
     ):
         if marker not in tests_source:
-            fail(f"operator bootstrap tests missing identity/provenance marker: {marker}")
+            fail(f"operator bootstrap tests missing identity/provenance/release marker: {marker}")
 
     boundary = load_json(BOUNDARY)
     vendor_only = set(boundary.get("vendor_only_paths") or [])

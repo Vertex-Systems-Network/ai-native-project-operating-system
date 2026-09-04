@@ -102,11 +102,18 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertIn("ANPOS_SESSION_SECRET", service_keys)
         self.assertIn("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", service_keys)
         self.assertIn("ANPOS_MARKETPLACE_PLAN_MAP", service_keys)
+        self.assertIn("ANPOS_COMMERCIAL_RELEASE_REF", service_keys)
         self.assertNotEqual("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP")
         sequence = "\n".join(data["operator_sequence"])
         self.assertIn("/api/ready/community", sequence)
         self.assertIn("keep Community outside ANPOS_MARKETPLACE_PLAN_MAP", sequence)
+        self.assertIn("ANPOS_COMMERCIAL_RELEASE_REF", sequence)
+        self.assertIn("exact 40-character commit SHA", sequence)
+        self.assertIn("/api/v1/releases/current", sequence)
+        self.assertIn("/api/v1/template/archive", sequence)
         self.assertIn("full /api/ready", sequence)
+        safety = "\n".join(data["safety"])
+        self.assertIn("mutable refs are forbidden", safety)
         self.assertEqual(
             data["legacy_single_app_environment_keys_forbidden"],
             ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY"],
@@ -230,7 +237,10 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertNotIn("github_pat_", serialized)
         self.assertNotIn("ghp_", serialized)
         source = SCRIPT.read_text(encoding="utf-8")
-        for forbidden in ("--private-key", "--webhook-secret", "--database-url", "--operator-token", "--client-secret", "--session-secret"):
+        for forbidden in (
+            "--private-key", "--webhook-secret", "--database-url", "--operator-token",
+            "--client-secret", "--session-secret", "--commercial-release-ref",
+        ):
             self.assertNotIn(forbidden, source)
 
     def test_invalid_organization_and_newline_app_names_fail(self) -> None:

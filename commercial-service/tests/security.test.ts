@@ -23,7 +23,7 @@ const MANAGED_ENV = [
   "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_ENTITLEMENT_ISSUER",
   "ANPOS_OPERATOR_TOKEN", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS",
-  "GITHUB_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO",
+  "GITHUB_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF",
   "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
 ] as const;
 
@@ -45,6 +45,7 @@ function configure() {
   process.env.ANPOS_ORG_SEAT_LIMITS = JSON.stringify({ developer: 1, pro: 2, team: 10, enterprise: 100 });
   process.env.GITHUB_VENDOR_INSTALLATION_ID = "12345678";
   process.env.ANPOS_PRIVATE_TEMPLATE_REPO = "Vertex-Systems-Network/anpos-commercial-template";
+  process.env.ANPOS_COMMERCIAL_RELEASE_REF = "a".repeat(40);
   process.env.ANPOS_PUBLIC_BASE_URL = "https://license.example.test";
   process.env.ANPOS_SESSION_SECRET = "s".repeat(48);
 }
@@ -97,7 +98,7 @@ test("user entitlement is v1 and organization seat entitlement is principal-boun
   assert.ok(organization.signature.length > 40);
 });
 
-test("configuration rejects weak or missing production controls", () => {
+test("configuration rejects weak missing or mutable production controls", () => {
   clearManagedEnv();
   configure();
   assert.deepEqual(configurationProblems(), []);
@@ -106,12 +107,14 @@ test("configuration rejects weak or missing production controls", () => {
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "tiny";
   process.env.ANPOS_SESSION_SECRET = "tiny";
   process.env.ANPOS_PUBLIC_BASE_URL = "http://license.example.test";
+  process.env.ANPOS_COMMERCIAL_RELEASE_REF = "main";
   const problems = configurationProblems();
   assert.ok(problems.includes("weak:GITHUB_WEBHOOK_SECRET"));
   assert.ok(problems.includes("weak:ANPOS_OPERATOR_TOKEN"));
   assert.ok(problems.includes("weak:GITHUB_MARKETPLACE_CLIENT_SECRET"));
   assert.ok(problems.includes("weak:ANPOS_SESSION_SECRET"));
   assert.ok(problems.includes("invalid:ANPOS_PUBLIC_BASE_URL"));
+  assert.ok(problems.includes("invalid:ANPOS_COMMERCIAL_RELEASE_REF"));
   delete process.env.ANPOS_ORG_SEAT_LIMITS;
   assert.ok(configurationProblems().includes("missing:ANPOS_ORG_SEAT_LIMITS"));
 });

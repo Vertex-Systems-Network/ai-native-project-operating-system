@@ -1,5 +1,6 @@
 import { createPrivateKey, sign } from "node:crypto";
 import { marketplaceAppConfig, serviceConfig } from "./env";
+import { parseTemplateReleaseManifest, type VerifiedTemplateRelease } from "./releases";
 
 function b64url(value: string | Buffer): string {
   return Buffer.from(value).toString("base64url");
@@ -35,10 +36,7 @@ const githubHeaders = (token: string) => ({
 });
 
 function privateTemplateRepository(): { full: string; owner: string; repo: string } {
-  const repository = process.env.ANPOS_PRIVATE_TEMPLATE_REPO;
-  if (!repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
-    throw new Error("ANPOS_PRIVATE_TEMPLATE_REPO is not configured");
-  }
+  const repository = serviceConfig().privateTemplateRepo;
   const [owner, repo] = repository.split("/", 2);
   return { full: repository, owner, repo };
 }
@@ -172,8 +170,8 @@ export async function verifyMarketplaceUserInstallationAccess(userToken: string,
 }
 
 async function vendorInstallationToken(operation: "archive" | "collaborator"): Promise<string> {
-  const installationId = process.env.GITHUB_VENDOR_INSTALLATION_ID;
-  if (!installationId || !/^\d+$/.test(installationId)) throw new Error("GITHUB_VENDOR_INSTALLATION_ID is not configured");
+  const cfg = serviceConfig();
+  const installationId = cfg.githubVendorInstallationId;
   const repository = privateTemplateRepository();
   const permissions = operation === "collaborator"
     ? { administration: "write" }
@@ -191,13 +189,47 @@ async function vendorInstallationToken(operation: "archive" | "collaborator"): P
   return body.token;
 }
 
-export async function templateArchiveRedirect(ref: string): Promise<{ repository: string; location: string }> {
+export type CommercialReleaseMetadata = VerifiedTemplateRelease & {
+  repository: string;
+  release_ref: string;
+};
+
+export async function templateReleaseManifest(): Promise<CommercialReleaseMetadata> {
+  const cfg = serviceConfig();
   const repository = privateTemplateRepository();
-  const safeRef = ref.trim();
-  if (!safeRef || safeRef.length > 200 || /[\r\n]/.test(safeRef)) throw new Error("Invalid template ref");
   const token = await vendorInstallationToken("archive");
   const response = await fetch(
-    `https://api.github.com/repos/${repository.owner}/${repository.repo}/zipball/${encodeURIComponent(safeRef)}`,
+    `https://api.github.com/repos/${repository.owner}/${repository.repo}/contents/EXPORT-MANIFEST.json?ref=${cfg.commercialReleaseRef}`,
+    {
+      headers: { ...githubHeaders(token), Accept: "application/vnd.github.raw+json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!response.ok) throw new Error(`Commercial release manifest failed: ${response.status}`);
+  const declaredLength = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > 2 * 1024 * 1024) {
+    throw new Error("COMMERCIAL_RELEASE_MANIFEST_TOO_LARGE");
+  }
+  const raw = await response.text();
+  if (!raw || raw.length > 2 * 1024 * 1024) throw new Error("COMMERCIAL_RELEASE_MANIFEST_TOO_LARGE");
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { throw new Error("INVALID_COMMERCIAL_RELEASE_MANIFEST_JSON"); }
+  const manifest = parseTemplateReleaseManifest(parsed);
+  return {
+    ...manifest,
+    repository: repository.full,
+    release_ref: cfg.commercialReleaseRef,
+  };
+}
+
+export async function templateArchiveRedirect(): Promise<{ repository: string; release_ref: string; location: string }> {
+  const cfg = serviceConfig();
+  const repository = privateTemplateRepository();
+  const token = await vendorInstallationToken("archive");
+  const response = await fetch(
+    `https://api.github.com/repos/${repository.owner}/${repository.repo}/zipball/${cfg.commercialReleaseRef}`,
     {
       headers: githubHeaders(token),
       redirect: "manual",
@@ -212,7 +244,7 @@ export async function templateArchiveRedirect(ref: string): Promise<{ repository
   if (destination.protocol !== "https:" || destination.hostname !== "codeload.github.com") {
     throw new Error("Unexpected template archive redirect host");
   }
-  return { repository: repository.full, location };
+  return { repository: repository.full, release_ref: cfg.commercialReleaseRef, location };
 }
 
 export async function inviteTemplateCollaborator(username: string): Promise<{ repository: string; status: number }> {
