@@ -6,6 +6,7 @@
   "catalog_authority": "commercial_entitlement_service",
   "feature_catalog_ref": "config/licensing/feature-catalog.json",
   "package_architecture_ref": "docs/commercial/package-architecture.md",
+  "legal_approval_ref": "config/licensing/legal-approval.json",
   "productization_status": "community_and_developer_source_value_implemented_external_activation_and_higher_tiers_pending",
   "free_acquisition_plan": {
     "id": "community",
@@ -102,5 +103,5 @@
       ]
     }
   ],
-  "rule": "Plan names, prices, Marketplace plan IDs, limits, trials, discounts, taxes and commercial promises are operator-controlled business configuration. Repository defaults are drafts and never create a billing obligation. A draft entitlement label is not a launch-ready marketing claim; consult feature_catalog_ref and package_architecture_ref before presenting package capabilities."
+  "rule": "Plan names, prices, Marketplace plan IDs, limits, trials, discounts, taxes and commercial promises are operator-controlled business configuration. Repository defaults are drafts and never create a billing obligation. A draft entitlement label is not a launch-ready marketing claim; consult feature_catalog_ref, package_architecture_ref, and legal_approval_ref before presenting package capabilities or sale readiness."
 }
