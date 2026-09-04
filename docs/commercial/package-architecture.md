@@ -49,12 +49,14 @@ Team `commercial_support` and Enterprise priority/SLA claims remain external-con
 
 The following higher-tier labels are not yet independently productized enough to sell without qualification:
 
-- `premium_blueprints` — no dedicated premium blueprint content boundary currently exists;
-- `premium_provider_adapters` — no dedicated premium adapter layer currently exists;
+- `premium_blueprints` — canonical source now defines a private Premium Pack manifest/schema/verifier boundary, but no private premium repository or blueprint payload is evidenced yet;
+- `premium_provider_adapters` — canonical source now defines provider-specific private-pack verification requirements, but no private premium adapter payload or live provider evidence is implemented yet;
 - `hosted_orchestrator_when_offered` — orchestration protocol exists, but no ANPOS-operated hosted orchestrator is implemented;
 - `hosted_or_self_hosted_orchestrator_when_offered` — no supported hosted/self-hosted commercial distribution package exists yet;
 - `enterprise_policy_controls` — strong policy foundations exist, but no enterprise-only administration/policy product surface is separately implemented;
 - `commercial_support` and `priority_support_or_sla_when_contracted` — these require deliberate operator service terms and legal/operational commitments.
+
+The Pro private-pack preparation boundary is defined by `config/licensing/premium-pack-contract.json`, `schemas/premium-pack-manifest.schema.json`, `scripts/verify_premium_pack.py`, and `docs/commercial/premium-pack-boundary.md`. This contract rejects unmanifested/tampered files, symlinks/path traversal, selected secret markers, invalid provider/capability mappings, incompatible protocol ranges, mutable-release assumptions, and byte-for-byte copies of canonical tracked files. A passing receipt certifies pack integrity only; it does not prove that premium assets exist in the vendor's private source, activate Pro billing, or establish production entitlement-gated distribution.
 
 `private_template_access` and `protocol_update_channel` now have implemented commercial-service source paths. Paid delivery is bound to an exact `ANPOS_COMMERCIAL_RELEASE_REF` commit in the private vendor template repository, and the service verifies that commit's deterministic `EXPORT-MANIFEST.json` before returning certified release metadata or redirecting the archive. These are meaningful Developer source capabilities, but they are **not sale activation evidence** until the private repositories, Apps, paid Marketplace configuration, prices/legal terms, production deployment, and E2E are real and verified.
 
@@ -125,7 +127,14 @@ Target deliverables:
 - advanced governance/automation recipes that are not simply copies of the public core;
 - hosted orchestration only after an ANPOS-operated hosted service exists and is production-certified.
 
-Current state: **blocked on premium product implementation**. Do not market `premium_blueprints`, `premium_provider_adapters`, or hosted orchestration as active customer value until the private premium layer exists.
+Source preparation now implemented:
+
+- a private premium-pack contract defining allowed asset classes and paths;
+- JSON Schema for `ANPOS-PREMIUM-MANIFEST.json`;
+- a verifier that binds file SHA-256/bytes, capability/provider mapping, protocol compatibility, no-secret provenance, private immutable distribution intent, and rejects exact copies of canonical tracked files;
+- explicit truth that passing the verifier does not set `pro_sale_ready=true`.
+
+Current state: **contract/verifier implemented; premium payload still not implemented**. Do not market `premium_blueprints`, `premium_provider_adapters`, or hosted orchestration as active customer value until a real private premium repository contains distinct assets, passes verification, is distributed behind active entitlement, and passes production E2E.
 
 ### ANPOS Team — organization collaboration
 
@@ -177,7 +186,7 @@ ANPOS currently does not include bundled LLM inference/compute. Until hosted orc
 1. **Feature truth** — maintain `config/licensing/feature-catalog.json`, the tested core `provider-compatibility-matrix.json`, and the onboarding/support scope; prevent unsupported package/provider/support claims.
 2. **Community source product** — implemented; finish real Marketplace App/listing/production E2E and activation.
 3. **Developer source foundation** — release/update distribution, provider-claim truth, and self-service onboarding/support boundary are implemented; finish private vendor repositories, legal/pricing, Marketplace configuration, deployment, and paid E2E.
-4. **Premium layer** — create actual premium blueprints/adapters with explicit manifests and tests; only then activate Pro differentiation.
+4. **Premium layer** — private-pack contract/schema/verifier are implemented; create actual private premium blueprints/adapters, certify an immutable pack, then add entitlement-gated distribution and production E2E before activating Pro differentiation.
 5. **Team product** — complete production seat/admin/billing UX and operationally approved support policy.
 6. **Enterprise product** — build enterprise-only control/deployment assets and contractual operating model.
 7. **Pricing activation** — approve real monthly/annual prices and map actual Marketplace plan IDs only after the applicable package is operational and current GitHub requirements have been rechecked.
@@ -191,6 +200,7 @@ ANPOS currently does not include bundled LLM inference/compute. Until hosted orc
 - Standard provider compatibility is core/capability-dependent and must not be charged/advertised as `standard_provider_adapters`.
 - Self-service onboarding documentation is not a staffed Developer support entitlement and must not be marketed as an SLA.
 - Paid release delivery must use the exact handoff-verified private-template commit in `ANPOS_COMMERCIAL_RELEASE_REF`; mutable branches/tags are forbidden.
+- A premium-pack verification receipt proves integrity/provenance of an actual private pack only; it does not activate billing, entitlement, provider compatibility, hosted service, or Pro sale readiness.
 - Do not represent source implementation as Marketplace activation, production deployment, pricing approval, legal readiness, or staffed support readiness.
 - Do not represent the public canonical repository as open source unless an explicit approved license grants those rights; repository visibility is not itself a software license.
 - Do not publish Community until its real GitHub-integrated flow passes production E2E.
