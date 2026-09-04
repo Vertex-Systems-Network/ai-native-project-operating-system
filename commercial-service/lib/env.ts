@@ -274,7 +274,7 @@ export function marketplaceAppConfig(): MarketplaceAppConfig {
 }
 
 export function serviceConfig(): ServiceConfig {
-  const problems = configurationProblems();
+  const problems = commonProblems(FULL_REQUIRED, true);
   if (problems.length) {
     throw new Error(`Commercial service is not configured: ${problems.join(", ")}`);
   }
