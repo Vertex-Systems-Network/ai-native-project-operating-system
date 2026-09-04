@@ -73,6 +73,7 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
     }
 
     const marketplacePlanId = subscription.marketplace_purchase.plan.id;
+    // resolveMarketplacePlan delegates paid IDs through marketplacePlanMap while keeping Community outside that paid map.
     const resolvedPlan = resolveMarketplacePlan(marketplacePlanId);
     const planId = resolvedPlan.planId;
     const features = resolvedPlan.features;
