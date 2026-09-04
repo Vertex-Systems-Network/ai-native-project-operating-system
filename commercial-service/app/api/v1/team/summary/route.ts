@@ -75,7 +75,7 @@ export async function GET(request: Request) {
       features: refreshed.entitlements,
       billing_cycle: purchase?.billing_cycle ?? null,
       billing_updated_at: purchase?.updated_at ?? null,
-      updated_at: new Date(),
+      updated_at: null,
     }, seats);
 
     return Response.json({
