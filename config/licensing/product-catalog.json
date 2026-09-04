@@ -1,24 +1,25 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "template_blueprint",
   "activation_scope": "commercial_distribution_only",
   "pricing_is_external_to_repository": true,
   "catalog_authority": "commercial_entitlement_service",
   "feature_catalog_ref": "config/licensing/feature-catalog.json",
   "package_architecture_ref": "docs/commercial/package-architecture.md",
-  "productization_status": "audited_package_architecture_implementation_pending",
+  "productization_status": "community_source_implemented_paid_package_productization_pending",
   "free_acquisition_plan": {
     "id": "community",
     "display_name": "ANPOS Community",
-    "status": "proposed_not_active",
-    "catalog_relation": "kept_outside_paid_plans_until_runtime_value_and_authorization_are_implemented_and_approved",
+    "status": "implemented_source_not_active",
+    "catalog_relation": "kept_outside_paid_plans_until_real_marketplace_e2e_and_operator_activation_are_verified",
     "marketplace_plan_id": null,
     "monthly_price_usd": 0,
     "annual_price_usd": 0,
     "proposed_marketplace_value": "read_only_repository_readiness_and_conformance_audit",
-    "implementation_status": "planned_not_implemented",
+    "implementation_status": "implemented_source_pending_real_marketplace_e2e_and_operator_activation",
+    "capabilities": ["community_repository_readiness_audit"],
     "entitlements": [],
-    "rule": "Do not publish or count this as an active free product until it provides genuine GitHub-integrated value beyond authentication, has runtime authorization and customer UX, passes real Marketplace webhook/E2E verification, and is operator-approved."
+    "rule": "Source implementation is not Marketplace activation. Do not publish or count this as an active free product until the real public Marketplace App Setup URL -> PKCE OAuth -> installation-bound repository discovery -> bounded read-only audit flow passes production E2E and the operator explicitly activates the plan/listing."
   },
   "plans": [
     {
