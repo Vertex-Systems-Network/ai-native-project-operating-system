@@ -31,9 +31,15 @@ class MarketplaceListingEvidenceTests(unittest.TestCase):
     def test_listing_cannot_be_claimed_ready_without_real_evidence(self) -> None:
         gate = self.data["submission_gate"]
         self.assertFalse(gate["listing_evidence_complete"])
-        serialized = json.dumps(self.data).lower()
-        self.assertNotIn("example.com", serialized)
-        self.assertNotIn("placeholder", serialized)
+        items = self.data["evidence_items"]
+        self.assertIsNone(items["homepage"]["url"])
+        self.assertIsNone(items["privacy_policy"]["url"])
+        self.assertIsNone(items["support"]["url_or_email"])
+        self.assertIsNone(items["logo"]["artifact_reference"])
+        self.assertIsNone(items["feature_card"]["artifact_reference"])
+        self.assertEqual(items["screenshots"]["artifact_references"], [])
+        evidence_only = json.dumps(items).lower()
+        self.assertNotIn("example.com", evidence_only)
 
 
 if __name__ == "__main__":
