@@ -49,6 +49,8 @@ COMMUNITY_AUDIT_PATHS = [
 MARKETPLACE_APP_ENV = [
     "GITHUB_MARKETPLACE_APP_ID",
     "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+    "GITHUB_MARKETPLACE_CLIENT_ID",
+    "GITHUB_MARKETPLACE_CLIENT_SECRET",
     "GITHUB_WEBHOOK_SECRET",
 ]
 VENDOR_APP_ENV = [
@@ -59,6 +61,8 @@ VENDOR_APP_ENV = [
 ]
 SERVICE_ENV = [
     "DATABASE_URL",
+    "ANPOS_PUBLIC_BASE_URL",
+    "ANPOS_SESSION_SECRET",
     "ANPOS_ENTITLEMENT_PRIVATE_KEY",
     "ANPOS_ENTITLEMENT_KEY_ID",
     "ANPOS_ENTITLEMENT_ISSUER",
@@ -207,6 +211,8 @@ def registration_url(organization: str, params: list[tuple[str, str]]) -> str:
 
 def marketplace_registration_url(inputs: Inputs) -> str:
     webhook_url = inputs.service_base_url + "/api/webhooks/github/marketplace"
+    callback_url = inputs.service_base_url + "/api/auth/github/callback"
+    setup_url = inputs.service_base_url + "/setup/github"
     params = [
         ("name", inputs.marketplace_app_name),
         ("description", "ANPOS customer-facing GitHub Marketplace application"),
@@ -216,6 +222,9 @@ def marketplace_registration_url(inputs: Inputs) -> str:
         ("webhook_url", webhook_url),
         ("events[]", "marketplace_purchase"),
         ("request_oauth_on_install", "false"),
+        ("callback_urls[]", callback_url),
+        ("setup_url", setup_url),
+        ("setup_on_update", "true"),
         ("single_file", "read"),
     ]
     params.extend(("single_file_paths[]", path) for path in COMMUNITY_AUDIT_PATHS)
@@ -289,8 +298,11 @@ def render(
         *common_handoff_arguments,
     ]
 
+    callback_url = inputs.service_base_url + "/api/auth/github/callback"
+    setup_url = inputs.service_base_url + "/setup/github"
+
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "status": "operator_actions_required",
         "launch_authorized": False,
         "organization": inputs.organization,
@@ -315,10 +327,15 @@ def render(
                 "public": True,
                 "registration_url": marketplace_registration_url(inputs),
                 "webhook_url": inputs.service_base_url + "/api/webhooks/github/marketplace",
+                "callback_url": callback_url,
+                "setup_url": setup_url,
+                "request_oauth_on_install": False,
+                "setup_on_update": True,
                 "events": ["marketplace_purchase"],
                 "repository_permissions": {"metadata": "read", "single_file": "read"},
                 "single_file_paths": list(COMMUNITY_AUDIT_PATHS),
                 "community_audit_reads_application_source": False,
+                "community_auth_flow": "marketplace_setup_url_then_pkce_github_app_oauth",
                 "environment_keys": MARKETPLACE_APP_ENV,
             },
             "vendor_distribution": {
@@ -335,16 +352,20 @@ def render(
         "legacy_single_app_environment_keys_forbidden": LEGACY_SINGLE_APP_ENV,
         "operator_sequence": [
             "Generate deterministic private vendor service and template exports from the certified canonical revision.",
-            "Verify both exports with scripts/verify_vendor_handoff.py using vendor_repository_handoff arguments before accepting or pushing them; retain the successful JSON receipts as provenance evidence.",
+            "Verify both exports with scripts/verify_vendor_handoff.py using vendor_repository_handoff arguments before accepting or pushing/deploying them; retain the successful JSON receipts as provenance evidence.",
             "Create the private vendor repositories and populate them only from verified deterministic exports; verify a clean checkout again after the initial push.",
-            "Register the public Marketplace App using the prefilled URL; verify its Community audit permission remains single-file read for exactly the approved ANPOS control paths and is not broadened to application source-code access.",
+            "Register the public Marketplace App using the prefilled URL; verify the Setup URL, OAuth callback, setup-on-update behavior, and Community single-file permission set before saving the App.",
+            "Keep request OAuth on install disabled. Marketplace purchase/setup redirects land on /setup/github, which starts the explicit PKCE GitHub App OAuth flow.",
+            "Generate the Marketplace App client secret in GitHub, store it only in the deployment secret manager, and configure GITHUB_MARKETPLACE_CLIENT_ID/GITHUB_MARKETPLACE_CLIENT_SECRET plus ANPOS_PUBLIC_BASE_URL/ANPOS_SESSION_SECRET.",
+            "Verify the Community audit permission remains single-file read for exactly the approved ten ANPOS control paths and is not broadened to application source-code access.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",
             "Install only the Vendor Distribution App on the private commercial-template repository.",
             f"Populate the {identity['service']} {identity['service_version']} production environment contract with real external values.",
             f"Deploy the exact {identity['service']} {identity['service_version']} artifact and require /api/version to report source protocol {identity['source_protocol_version']} and runtime contract {identity['runtime_contract']}.",
-            "Run scripts/verify_commercial_production.py with the generated production_verifier_arguments; exact artifact identity must pass before /api/ready can count as evidence.",
-            "Require /api/ready HTTP 200 and real Marketplace E2E evidence before launch authorization.",
+            "Run scripts/verify_commercial_production.py with the generated production_verifier_arguments; exact artifact identity must pass before /api/ready can count as paid-runtime evidence.",
+            "Exercise the Marketplace Setup URL -> PKCE OAuth callback -> authorized repository discovery -> read-only Community audit flow using a real installation before claiming Community launch readiness.",
+            "Require applicable readiness endpoints and real Marketplace E2E evidence before launch authorization.",
         ],
         "safety": [
             "This output contains no credentials and is not proof that either GitHub App or private vendor repository exists.",
@@ -353,6 +374,8 @@ def render(
             "Vendor export identity is read from canonical Git commit/tree identity; handoff verification reconstructs expected bytes from committed canonical blobs and rejects extra, missing, dirty, tampered, stale, or wrong-mode vendor checkouts.",
             "A handoff verification receipt proves byte equality to the approved deterministic export; it does not prove GitHub repository ownership, visibility, App installation, Marketplace approval, or production deployment.",
             "Community audit permission is deliberately limited to ten ANPOS control files and must not be represented as permission to inspect application source code.",
+            "Setup redirect installation IDs are untrusted until OAuth completes and the authenticated GitHub user is verified against that installation.",
+            "Community v1 uses encrypted short-lived HttpOnly sessions and deliberately does not persist GitHub refresh tokens.",
             "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
             "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
             "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, or production readiness from this output.",
