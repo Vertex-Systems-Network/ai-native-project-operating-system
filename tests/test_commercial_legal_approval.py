@@ -113,6 +113,24 @@ class CommercialLegalApprovalTests(unittest.TestCase):
         ]:
             self.assertIn(marker, checklist)
 
+    def test_product_catalog_and_role_router_load_the_legal_gate(self) -> None:
+        catalog = load("config/licensing/product-catalog.json")
+        self.assertEqual(catalog["legal_approval_ref"], "config/licensing/legal-approval.json")
+        for plan in catalog["plans"]:
+            self.assertEqual(plan["sale_status"], "draft")
+            self.assertIsNone(plan["marketplace_plan_id"])
+            self.assertIsNone(plan["monthly_price_usd"])
+            self.assertIsNone(plan["annual_price_usd"])
+
+        manifest = load(".ai/manifest.json")
+        commercial = set(manifest["roles"]["commercial_distribution"])
+        for path in [
+            "config/licensing/legal-approval.json",
+            "docs/commercial/legal-approval-checklist.md",
+            "blueprints/commercial/legal-pack.template.md",
+        ]:
+            self.assertIn(path, commercial)
+
 
 if __name__ == "__main__":
     unittest.main()
