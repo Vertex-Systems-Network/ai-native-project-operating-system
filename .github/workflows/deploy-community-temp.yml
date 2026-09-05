@@ -1,14 +1,89 @@
-name: ANPOS Community E2E Smoke (temporary)
+name: ANPOS Marketplace Draft State Inspect (temporary)
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - ops/deploy-community-aaa9c387
 
 permissions:
   contents: read
 
 jobs:
-  e2e-smoke-disabled:
-    if: ${{ false }}
+  inspect-marketplace:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      ANPOS_MARKETPLACE_APP_ID: ${{ secrets.ANPOS_MARKETPLACE_APP_ID }}
+      ANPOS_MARKETPLACE_APP_PRIVATE_KEY: ${{ secrets.ANPOS_MARKETPLACE_APP_PRIVATE_KEY }}
     steps:
-      - run: echo "Temporary smoke workflow disabled after successful validation"
+      - name: Inspect draft Marketplace plans and subscriptions
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { createPrivateKey, sign } = require('node:crypto');
+          const raw = (process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY || '').trim();
+          const appId = (process.env.ANPOS_MARKETPLACE_APP_ID || '').trim();
+          if (!raw || !appId) throw new Error('Marketplace App credentials unavailable');
+
+          const candidates = [];
+          const add = (value) => {
+            if (typeof value !== 'string' || !value.trim()) return;
+            const normalized = value.trim().replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+            if (!candidates.includes(normalized)) candidates.push(normalized);
+          };
+          const wrapPem = (body, type) => {
+            const compact = body.replace(/\s+/g, '');
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(compact) || compact.length < 200) return;
+            const lines = compact.match(/.{1,64}/g) || [];
+            add(`-----BEGIN ${type}-----\n${lines.join('\n')}\n-----END ${type}-----`);
+          };
+          add(raw);
+          try { const parsed = JSON.parse(raw); if (typeof parsed === 'string') add(parsed); } catch {}
+          try { add(Buffer.from(raw, 'base64').toString('utf8')); } catch {}
+          wrapPem(raw, 'PRIVATE KEY');
+          wrapPem(raw, 'RSA PRIVATE KEY');
+
+          let privateKey = null;
+          for (const candidate of candidates) {
+            try {
+              const key = createPrivateKey(candidate);
+              if (key.asymmetricKeyType === 'rsa') { privateKey = candidate; break; }
+            } catch {}
+          }
+          if (!privateKey) throw new Error('Marketplace RSA private key normalization failed');
+
+          const b64u = (v) => Buffer.from(v).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const header = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+          const payload = b64u(JSON.stringify({ iat: now - 60, exp: now + 540, iss: appId }));
+          const input = `${header}.${payload}`;
+          const signature = sign('RSA-SHA256', Buffer.from(input), privateKey).toString('base64url');
+          const jwt = `${input}.${signature}`;
+
+          const headers = {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${jwt}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'anpos-marketplace-draft-inspect',
+          };
+
+          (async () => {
+            const plansRes = await fetch('https://api.github.com/marketplace_listing/plans?per_page=100', { headers });
+            const plans = await plansRes.json().catch(() => null);
+            if (!plansRes.ok || !Array.isArray(plans)) throw new Error(`plans request failed: HTTP ${plansRes.status}`);
+            console.log(`plans_count=${plans.length}`);
+            for (const plan of plans) {
+              console.log(`plan id=${plan.id} number=${plan.number} name=${plan.name} state=${plan.state} price_model=${plan.price_model}`);
+              const accountsRes = await fetch(`https://api.github.com/marketplace_listing/plans/${encodeURIComponent(plan.id)}/accounts?per_page=100&sort=created&direction=asc`, { headers });
+              const accounts = await accountsRes.json().catch(() => null);
+              if (!accountsRes.ok || !Array.isArray(accounts)) throw new Error(`accounts request failed for plan ${plan.id}: HTTP ${accountsRes.status}`);
+              console.log(`plan_accounts id=${plan.id} count=${accounts.length}`);
+              for (const account of accounts) {
+                console.log(`account plan_id=${plan.id} id=${account.id} login=${account.login} type=${account.type}`);
+              }
+            }
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(3);
+          });
+          NODE
