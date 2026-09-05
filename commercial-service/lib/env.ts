@@ -28,9 +28,28 @@ export type PremiumDistributionConfig = {
   premiumContentSetSha256: string;
 };
 
-function value(name: string): string | null {
+const ENV_ALIASES: Record<string, readonly string[]> = {
+  GITHUB_WEBHOOK_SECRET: ["ANPOS_GITHUB_WEBHOOK_SECRET", "ANPOS_WEBHOOK_SECRET"],
+  GITHUB_MARKETPLACE_APP_ID: ["ANPOS_MARKETPLACE_APP_ID"],
+  GITHUB_MARKETPLACE_APP_PRIVATE_KEY: ["ANPOS_MARKETPLACE_APP_PRIVATE_KEY"],
+  GITHUB_MARKETPLACE_CLIENT_ID: ["ANPOS_MARKETPLACE_CLIENT_ID"],
+  GITHUB_MARKETPLACE_CLIENT_SECRET: ["ANPOS_MARKETPLACE_CLIENT_SECRET"],
+  GITHUB_VENDOR_APP_ID: ["ANPOS_VENDOR_APP_ID"],
+  GITHUB_VENDOR_APP_PRIVATE_KEY: ["ANPOS_VENDOR_APP_PRIVATE_KEY"],
+  GITHUB_VENDOR_INSTALLATION_ID: ["ANPOS_VENDOR_INSTALLATION_ID"],
+};
+
+function rawValue(name: string): string | null {
   const raw = process.env[name];
   return raw && raw.trim() ? raw.trim() : null;
+}
+
+function value(name: string): string | null {
+  for (const alias of ENV_ALIASES[name] ?? []) {
+    const aliased = rawValue(alias);
+    if (aliased) return aliased;
+  }
+  return rawValue(name);
 }
 
 function pem(name: string): string | null {
@@ -39,17 +58,17 @@ function pem(name: string): string | null {
 }
 
 const MARKETPLACE_APP_REQUIRED = [
-  "ANPOS_MARKETPLACE_APP_ID",
-  "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
-  "ANPOS_MARKETPLACE_CLIENT_ID",
-  "ANPOS_MARKETPLACE_CLIENT_SECRET",
+  "GITHUB_MARKETPLACE_APP_ID",
+  "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+  "GITHUB_MARKETPLACE_CLIENT_ID",
+  "GITHUB_MARKETPLACE_CLIENT_SECRET",
   "ANPOS_PUBLIC_BASE_URL",
   "ANPOS_SESSION_SECRET",
 ] as const;
 
 const COMMUNITY_LAUNCH_REQUIRED = [
   "DATABASE_URL",
-  "ANPOS_WEBHOOK_SECRET",
+  "GITHUB_WEBHOOK_SECRET",
   ...MARKETPLACE_APP_REQUIRED,
   "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
 ] as const;
@@ -57,13 +76,13 @@ const COMMUNITY_LAUNCH_REQUIRED = [
 const FULL_REQUIRED = [
   ...COMMUNITY_LAUNCH_REQUIRED,
   "ANPOS_MARKETPLACE_PLAN_MAP",
-  "ANPOS_VENDOR_APP_ID",
-  "ANPOS_VENDOR_APP_PRIVATE_KEY",
+  "GITHUB_VENDOR_APP_ID",
+  "GITHUB_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_KEY_ID",
   "ANPOS_OPERATOR_TOKEN",
   "ANPOS_ORG_SEAT_LIMITS",
-  "ANPOS_VENDOR_INSTALLATION_ID",
+  "GITHUB_VENDOR_INSTALLATION_ID",
   "ANPOS_PRIVATE_TEMPLATE_REPO",
   "ANPOS_COMMERCIAL_RELEASE_REF",
 ] as const;
@@ -113,9 +132,9 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
   if (requiredSet.has("DATABASE_URL") && databaseUrl && !/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
     problems.push("invalid:DATABASE_URL");
   }
-  const webhookSecret = value("ANPOS_WEBHOOK_SECRET");
-  if (requiredSet.has("ANPOS_WEBHOOK_SECRET") && webhookSecret && webhookSecret.length < 32) {
-    problems.push("weak:ANPOS_WEBHOOK_SECRET");
+  const webhookSecret = value("GITHUB_WEBHOOK_SECRET");
+  if (requiredSet.has("GITHUB_WEBHOOK_SECRET") && webhookSecret && webhookSecret.length < 32) {
+    problems.push("weak:GITHUB_WEBHOOK_SECRET");
   }
   const operatorToken = value("ANPOS_OPERATOR_TOKEN");
   if (requiredSet.has("ANPOS_OPERATOR_TOKEN") && operatorToken && operatorToken.length < 32) {
@@ -125,18 +144,18 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
   if (requiredSet.has("ANPOS_SESSION_SECRET") && sessionSecret && sessionSecret.length < 32) {
     problems.push("weak:ANPOS_SESSION_SECRET");
   }
-  const marketplaceClientSecret = value("ANPOS_MARKETPLACE_CLIENT_SECRET");
-  if (requiredSet.has("ANPOS_MARKETPLACE_CLIENT_SECRET") && marketplaceClientSecret && marketplaceClientSecret.length < 32) {
-    problems.push("weak:ANPOS_MARKETPLACE_CLIENT_SECRET");
+  const marketplaceClientSecret = value("GITHUB_MARKETPLACE_CLIENT_SECRET");
+  if (requiredSet.has("GITHUB_MARKETPLACE_CLIENT_SECRET") && marketplaceClientSecret && marketplaceClientSecret.length < 32) {
+    problems.push("weak:GITHUB_MARKETPLACE_CLIENT_SECRET");
   }
 
-  const marketplaceAppId = value("ANPOS_MARKETPLACE_APP_ID");
-  if (requiredSet.has("ANPOS_MARKETPLACE_APP_ID") && marketplaceAppId && !/^\d+$/.test(marketplaceAppId)) {
-    problems.push("invalid:ANPOS_MARKETPLACE_APP_ID");
+  const marketplaceAppId = value("GITHUB_MARKETPLACE_APP_ID");
+  if (requiredSet.has("GITHUB_MARKETPLACE_APP_ID") && marketplaceAppId && !/^\d+$/.test(marketplaceAppId)) {
+    problems.push("invalid:GITHUB_MARKETPLACE_APP_ID");
   }
-  const marketplaceClientId = value("ANPOS_MARKETPLACE_CLIENT_ID");
-  if (requiredSet.has("ANPOS_MARKETPLACE_CLIENT_ID") && marketplaceClientId && !/^[A-Za-z0-9._-]{10,100}$/.test(marketplaceClientId)) {
-    problems.push("invalid:ANPOS_MARKETPLACE_CLIENT_ID");
+  const marketplaceClientId = value("GITHUB_MARKETPLACE_CLIENT_ID");
+  if (requiredSet.has("GITHUB_MARKETPLACE_CLIENT_ID") && marketplaceClientId && !/^[A-Za-z0-9._-]{10,100}$/.test(marketplaceClientId)) {
+    problems.push("invalid:GITHUB_MARKETPLACE_CLIENT_ID");
   }
 
   const publicBaseUrl = value("ANPOS_PUBLIC_BASE_URL");
@@ -161,17 +180,17 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
     }
   }
 
-  validatePrivateKeyMarker("ANPOS_MARKETPLACE_APP_PRIVATE_KEY", problems);
+  validatePrivateKeyMarker("GITHUB_MARKETPLACE_APP_PRIVATE_KEY", problems);
 
   if (includeVendorSeparation) {
-    const vendorAppId = value("ANPOS_VENDOR_APP_ID");
-    if (vendorAppId && !/^\d+$/.test(vendorAppId)) problems.push("invalid:ANPOS_VENDOR_APP_ID");
+    const vendorAppId = value("GITHUB_VENDOR_APP_ID");
+    if (vendorAppId && !/^\d+$/.test(vendorAppId)) problems.push("invalid:GITHUB_VENDOR_APP_ID");
     if (marketplaceAppId && vendorAppId && marketplaceAppId === vendorAppId) {
-      problems.push("unsafe:ANPOS_APP_ROLE_SEPARATION");
+      problems.push("unsafe:GITHUB_APP_ROLE_SEPARATION");
     }
 
-    const installationId = value("ANPOS_VENDOR_INSTALLATION_ID");
-    if (installationId && !/^\d+$/.test(installationId)) problems.push("invalid:ANPOS_VENDOR_INSTALLATION_ID");
+    const installationId = value("GITHUB_VENDOR_INSTALLATION_ID");
+    if (installationId && !/^\d+$/.test(installationId)) problems.push("invalid:GITHUB_VENDOR_INSTALLATION_ID");
     const repository = value("ANPOS_PRIVATE_TEMPLATE_REPO");
     if (repository && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) problems.push("invalid:ANPOS_PRIVATE_TEMPLATE_REPO");
     const releaseRef = value("ANPOS_COMMERCIAL_RELEASE_REF");
@@ -193,11 +212,11 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
       }
     }
 
-    validatePrivateKeyMarker("ANPOS_VENDOR_APP_PRIVATE_KEY", problems);
-    const marketplaceKey = pem("ANPOS_MARKETPLACE_APP_PRIVATE_KEY");
-    const vendorKey = pem("ANPOS_VENDOR_APP_PRIVATE_KEY");
+    validatePrivateKeyMarker("GITHUB_VENDOR_APP_PRIVATE_KEY", problems);
+    const marketplaceKey = pem("GITHUB_MARKETPLACE_APP_PRIVATE_KEY");
+    const vendorKey = pem("GITHUB_VENDOR_APP_PRIVATE_KEY");
     if (marketplaceKey && vendorKey && marketplaceKey === vendorKey) {
-      problems.push("unsafe:ANPOS_APP_PRIVATE_KEY_REUSE");
+      problems.push("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE");
     }
     validatePrivateKeyMarker("ANPOS_ENTITLEMENT_PRIVATE_KEY", problems);
   }
@@ -253,9 +272,9 @@ export function databaseConfig(): { databaseUrl: string } {
 }
 
 export function webhookConfig(): { githubWebhookSecret: string } {
-  const problems = commonProblems(["ANPOS_WEBHOOK_SECRET"], false);
+  const problems = commonProblems(["GITHUB_WEBHOOK_SECRET"], false);
   if (problems.length) throw new Error(`Marketplace webhook is not configured: ${problems.join(", ")}`);
-  return { githubWebhookSecret: value("ANPOS_WEBHOOK_SECRET")! };
+  return { githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")! };
 }
 
 export function marketplaceAppConfig(): MarketplaceAppConfig {
@@ -264,10 +283,10 @@ export function marketplaceAppConfig(): MarketplaceAppConfig {
     throw new Error(`Marketplace App is not configured: ${problems.join(", ")}`);
   }
   return {
-    githubMarketplaceAppId: value("ANPOS_MARKETPLACE_APP_ID")!,
-    githubMarketplaceAppPrivateKeyPem: pem("ANPOS_MARKETPLACE_APP_PRIVATE_KEY")!,
-    githubMarketplaceClientId: value("ANPOS_MARKETPLACE_CLIENT_ID")!,
-    githubMarketplaceClientSecret: value("ANPOS_MARKETPLACE_CLIENT_SECRET")!,
+    githubMarketplaceAppId: value("GITHUB_MARKETPLACE_APP_ID")!,
+    githubMarketplaceAppPrivateKeyPem: pem("GITHUB_MARKETPLACE_APP_PRIVATE_KEY")!,
+    githubMarketplaceClientId: value("GITHUB_MARKETPLACE_CLIENT_ID")!,
+    githubMarketplaceClientSecret: value("GITHUB_MARKETPLACE_CLIENT_SECRET")!,
     publicBaseUrl: value("ANPOS_PUBLIC_BASE_URL")!.replace(/\/$/, ""),
     sessionSecret: value("ANPOS_SESSION_SECRET")!,
   };
@@ -281,10 +300,10 @@ export function serviceConfig(): ServiceConfig {
   return {
     ...marketplaceAppConfig(),
     databaseUrl: value("DATABASE_URL")!,
-    githubWebhookSecret: value("ANPOS_WEBHOOK_SECRET")!,
-    githubVendorAppId: value("ANPOS_VENDOR_APP_ID")!,
-    githubVendorAppPrivateKeyPem: pem("ANPOS_VENDOR_APP_PRIVATE_KEY")!,
-    githubVendorInstallationId: value("ANPOS_VENDOR_INSTALLATION_ID")!,
+    githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")!,
+    githubVendorAppId: value("GITHUB_VENDOR_APP_ID")!,
+    githubVendorAppPrivateKeyPem: pem("GITHUB_VENDOR_APP_PRIVATE_KEY")!,
+    githubVendorInstallationId: value("GITHUB_VENDOR_INSTALLATION_ID")!,
     privateTemplateRepo: value("ANPOS_PRIVATE_TEMPLATE_REPO")!,
     entitlementPrivateKeyPem: pem("ANPOS_ENTITLEMENT_PRIVATE_KEY")!,
     entitlementKeyId: value("ANPOS_ENTITLEMENT_KEY_ID")!,
