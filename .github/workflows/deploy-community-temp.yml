@@ -51,14 +51,22 @@ jobs:
             const normalized = value.trim().replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
             if (!candidates.some((c) => c.value === normalized)) candidates.push({ label, value: normalized });
           };
+          const wrapPem = (label, body, type) => {
+            const compact = body.replace(/\s+/g, '');
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(compact) || compact.length < 200) return;
+            const lines = compact.match(/.{1,64}/g) || [];
+            add(label, `-----BEGIN ${type}-----\n${lines.join('\n')}\n-----END ${type}-----`);
+          };
 
           add('raw', raw);
           try {
             const parsed = JSON.parse(raw);
             if (typeof parsed === 'string') add('json-string', parsed);
           } catch {}
-          try { add('base64', Buffer.from(raw, 'base64').toString('utf8')); } catch {}
+          try { add('base64-decoded-text', Buffer.from(raw, 'base64').toString('utf8')); } catch {}
           try { add('url-decoded', decodeURIComponent(raw)); } catch {}
+          wrapPem('base64-body-pkcs8', raw, 'PRIVATE KEY');
+          wrapPem('base64-body-pkcs1', raw, 'RSA PRIVATE KEY');
 
           let selected = null;
           let selectedLabel = null;
