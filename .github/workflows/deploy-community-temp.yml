@@ -95,10 +95,41 @@ jobs:
           console.log('Marketplace App private key validation: OK via ' + selectedLabel);
           NODE
 
-      - name: Update Vercel production Marketplace private key
+      - name: Upsert Vercel production Marketplace private key through REST API
         shell: bash
         run: |
-          npx --yes vercel@59.11.7 env update ANPOS_MARKETPLACE_APP_PRIVATE_KEY production --yes --token "$VERCEL_TOKEN" < "$RUNNER_TEMP/anpos-marketplace-key.pem"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const keyValue = fs.readFileSync(process.env.RUNNER_TEMP + '/anpos-marketplace-key.pem', 'utf8');
+          const endpoint = `https://api.vercel.com/v10/projects/${encodeURIComponent(process.env.VERCEL_PROJECT_ID)}/env?upsert=true&teamId=${encodeURIComponent(process.env.VERCEL_ORG_ID)}`;
+          (async () => {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
+                'content-type': 'application/json',
+              },
+              body: JSON.stringify({
+                key: 'ANPOS_MARKETPLACE_APP_PRIVATE_KEY',
+                value: keyValue,
+                type: 'sensitive',
+                target: ['production'],
+                comment: 'ANPOS Community GitHub Marketplace App RSA private key',
+              }),
+            });
+            let body = {};
+            try { body = await response.json(); } catch {}
+            if (!response.ok) {
+              const code = body?.error?.code || body?.code || 'unknown';
+              const message = body?.error?.message || body?.message || response.statusText;
+              throw new Error(`Vercel env upsert failed (${response.status}) ${code}: ${message}`);
+            }
+            console.log('Vercel production Marketplace private key upsert: OK');
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(4);
+          });
+          NODE
 
       - name: Stage certified service outside Git metadata
         shell: bash
