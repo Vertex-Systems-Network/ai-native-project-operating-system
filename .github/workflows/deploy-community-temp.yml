@@ -20,6 +20,7 @@ jobs:
       VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
       VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      ANPOS_MARKETPLACE_APP_PRIVATE_KEY: ${{ secrets.ANPOS_MARKETPLACE_APP_PRIVATE_KEY }}
     steps:
       - name: Checkout exact source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -34,6 +35,24 @@ jobs:
             echo "VERCEL_TOKEN secret is not configured for this repository" >&2
             exit 2
           fi
+
+      - name: Validate Marketplace App private key without exposing it
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { createPrivateKey } = require('node:crypto');
+          const raw = process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY || '';
+          if (!raw.trim()) throw new Error('ANPOS_MARKETPLACE_APP_PRIVATE_KEY secret is missing');
+          const normalized = raw.replace(/\\n/g, '\n');
+          const key = createPrivateKey(normalized);
+          if (key.asymmetricKeyType !== 'rsa') throw new Error('Marketplace App private key must be RSA');
+          console.log('Marketplace App private key validation: OK');
+          NODE
+
+      - name: Update Vercel production Marketplace private key
+        shell: bash
+        run: |
+          printf '%s' "$ANPOS_MARKETPLACE_APP_PRIVATE_KEY" | npx --yes vercel@59.11.7 env update ANPOS_MARKETPLACE_APP_PRIVATE_KEY production --yes --token "$VERCEL_TOKEN"
 
       - name: Stage certified service outside Git metadata
         shell: bash
