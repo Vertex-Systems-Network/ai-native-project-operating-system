@@ -1,4 +1,4 @@
-name: ANPOS Community Webhook Smoke (temporary)
+name: ANPOS Community E2E Smoke (temporary)
 
 on:
   push:
@@ -9,24 +9,30 @@ permissions:
   contents: read
 
 concurrency:
-  group: anpos-community-webhook-smoke-temp
+  group: anpos-community-e2e-smoke-temp
   cancel-in-progress: true
 
 jobs:
-  webhook-smoke:
+  e2e-smoke:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       ANPOS_GITHUB_WEBHOOK_SECRET: ${{ secrets.ANPOS_GITHUB_WEBHOOK_SECRET }}
+      ANPOS_MARKETPLACE_APP_ID: ${{ secrets.ANPOS_MARKETPLACE_APP_ID }}
+      ANPOS_MARKETPLACE_APP_PRIVATE_KEY: ${{ secrets.ANPOS_MARKETPLACE_APP_PRIVATE_KEY }}
       WEBHOOK_URL: https://anpos-commercial-service.vercel.app/api/webhooks/github/marketplace
+      INSTALLATION_ID: "159370043"
+      TEST_REPOSITORY: Vertex-Systems-Network/ai-native-project-operating-system
     steps:
-      - name: Verify webhook secret availability
+      - name: Verify required secret availability
         shell: bash
         run: |
-          if [ -z "${ANPOS_GITHUB_WEBHOOK_SECRET:-}" ]; then
-            echo "ANPOS_GITHUB_WEBHOOK_SECRET is not configured" >&2
-            exit 2
-          fi
+          for name in ANPOS_GITHUB_WEBHOOK_SECRET ANPOS_MARKETPLACE_APP_ID ANPOS_MARKETPLACE_APP_PRIVATE_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "$name is not configured" >&2
+              exit 2
+            fi
+          done
 
       - name: Verify signed Marketplace webhook paths without persistence
         shell: bash
@@ -65,7 +71,6 @@ jobs:
                   return exc.code, exc.read().decode("utf-8")
 
           tests = []
-
           payload = b'{"zen":"anpos-community-webhook-smoke"}'
           status, body = post(payload, "ping")
           tests.append(("signed_ping", status, body, 200, lambda x: x.get("ok") is True and x.get("ignored") is True))
@@ -101,3 +106,109 @@ jobs:
               raise SystemExit(3)
           print("ANPOS Community webhook smoke: PASS")
           PY
+
+      - name: Verify Marketplace App installation permission boundary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { createPrivateKey, sign } = require('node:crypto');
+
+          const raw = (process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY || '').trim();
+          const appId = (process.env.ANPOS_MARKETPLACE_APP_ID || '').trim();
+          const installationId = (process.env.INSTALLATION_ID || '').trim();
+          const repository = (process.env.TEST_REPOSITORY || '').trim();
+          if (!raw || !appId || !installationId || !repository) throw new Error('required Marketplace App smoke input missing');
+
+          const candidates = [];
+          const add = (value) => {
+            if (typeof value !== 'string' || !value.trim()) return;
+            const normalized = value.trim().replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+            if (!candidates.includes(normalized)) candidates.push(normalized);
+          };
+          const wrapPem = (body, type) => {
+            const compact = body.replace(/\s+/g, '');
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(compact) || compact.length < 200) return;
+            const lines = compact.match(/.{1,64}/g) || [];
+            add(`-----BEGIN ${type}-----\n${lines.join('\n')}\n-----END ${type}-----`);
+          };
+
+          add(raw);
+          try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'string') add(parsed);
+          } catch {}
+          try { add(Buffer.from(raw, 'base64').toString('utf8')); } catch {}
+          wrapPem(raw, 'PRIVATE KEY');
+          wrapPem(raw, 'RSA PRIVATE KEY');
+
+          let privateKey = null;
+          for (const candidate of candidates) {
+            try {
+              const key = createPrivateKey(candidate);
+              if (key.asymmetricKeyType === 'rsa') { privateKey = candidate; break; }
+            } catch {}
+          }
+          if (!privateKey) throw new Error('Marketplace App RSA private key could not be normalized');
+
+          const base64url = (value) => Buffer.from(value).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+          const payload = base64url(JSON.stringify({ iat: now - 60, exp: now + 540, iss: appId }));
+          const signingInput = `${header}.${payload}`;
+          const signature = sign('RSA-SHA256', Buffer.from(signingInput), privateKey).toString('base64url');
+          const jwt = `${signingInput}.${signature}`;
+
+          const common = {
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'anpos-community-e2e-smoke',
+          };
+
+          (async () => {
+            const tokenResponse = await fetch(`https://api.github.com/app/installations/${encodeURIComponent(installationId)}/access_tokens`, {
+              method: 'POST',
+              headers: { ...common, Authorization: `Bearer ${jwt}` },
+            });
+            const tokenBody = await tokenResponse.json().catch(() => ({}));
+            if (!tokenResponse.ok || !tokenBody.token) {
+              throw new Error(`installation token exchange failed: HTTP ${tokenResponse.status}`);
+            }
+            const installationToken = tokenBody.token;
+            const authHeaders = { ...common, Authorization: `Bearer ${installationToken}` };
+
+            const [owner, repo] = repository.split('/', 2);
+            const repoResponse = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`, { headers: authHeaders });
+            if (repoResponse.status !== 200) throw new Error(`repository metadata read failed: HTTP ${repoResponse.status}`);
+            console.log('repository_metadata_read: PASS');
+
+            const paths = [
+              '.ai/manifest.json',
+              'config/data/data-governance.json',
+              'config/design/design-assurance.json',
+              'config/github/ruleset-policy.json',
+              'config/operations/operations-policy.json',
+              'config/protocol/instance.json',
+              'config/protocol/version.json',
+              'config/quality/quality-policy.json',
+              'config/release/release-policy.json',
+              'config/security/control-plane-policy.json',
+            ];
+
+            for (const path of paths) {
+              const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+              const response = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodedPath}`, { headers: authHeaders });
+              if (response.status !== 200) throw new Error(`approved control file read failed for ${path}: HTTP ${response.status}`);
+              console.log(`approved_control_file_read: PASS ${path}`);
+            }
+
+            const forbiddenResponse = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/README.md`, { headers: authHeaders });
+            if (![403, 404].includes(forbiddenResponse.status)) {
+              throw new Error(`unexpected broad file access for README.md: HTTP ${forbiddenResponse.status}`);
+            }
+            console.log(`broad_source_file_denied: PASS HTTP ${forbiddenResponse.status}`);
+            console.log('ANPOS Community installation permission boundary: PASS');
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(4);
+          });
+          NODE
