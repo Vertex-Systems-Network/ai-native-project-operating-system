@@ -1,0 +1,37 @@
+name: ANPOS Community Production Deploy (temporary)
+
+on:
+  push:
+    branches:
+      - ops/deploy-community-aaa9c387
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
+      VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Vercel credential availability
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN secret is not configured for this repository" >&2
+            exit 2
+          fi
+
+      - name: Deploy certified commercial service to production
+        working-directory: commercial-service
+        shell: bash
+        run: npx --yes vercel@59.11.7 deploy --prod --yes --token "$VERCEL_TOKEN"
