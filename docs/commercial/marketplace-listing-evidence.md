@@ -1,27 +1,38 @@
 # GitHub Marketplace Listing Evidence
 
-Status: **external listing assets and live URLs pending**.
+Status: **partially verified; artwork retention and genuine product screenshots remain pending**.
 
 ANPOS already has a requirements baseline in `blueprints/commercial/github-marketplace-compliance.json` and a listing draft. This evidence layer answers a different question: whether the actual assets, URLs, contacts, public App behavior, and webhook configuration needed for submission have been verified.
 
 Machine-readable state lives in `config/licensing/marketplace-listing-evidence.json`.
 
-## Evidence that must be real
+## Verified external evidence — 2026-09-06
+
+The following live evidence has been checked against the current draft listing and production flow:
+
+- company/homepage URL is reachable;
+- privacy policy URL is reachable;
+- Terms URL is reachable;
+- Marketplace support contact is configured;
+- Marketplace publisher contact information is saved;
+- the public customer-facing GitHub App is installable and a real organization installation completed;
+- Setup URL → PKCE OAuth → callback → installation-bound private-repository discovery works in production;
+- a real authenticated Community readiness audit completed with `application_source_read=false` and `not_persisted_by_repository_audit`;
+- installation permission-boundary smoke verified all ten approved ANPOS control files and denied broad `README.md` access with HTTP 403;
+- the separate Marketplace listing webhook is reachable and verifies signed payloads; negative signature/JSON/account paths fail closed;
+- smoke webhook validation did not persist fake Marketplace purchase rows.
+
+## Evidence still required before submission
 
 Before Marketplace submission, retain verified evidence for:
 
-- product homepage;
-- privacy policy;
-- support URL or support email;
-- Terms URL when used by the listing;
-- publisher contact details;
-- final logo;
-- final feature card;
-- final screenshots;
-- public GitHub App installability;
-- Marketplace webhook configuration and reachable behavior.
+- final logo with a durable artifact reference and SHA-256 when possible;
+- final feature card with a durable artifact reference and SHA-256 when possible;
+- genuine product screenshots captured from the live Community flow, replacing draft/mock imagery;
+- genuine draft-listing Marketplace purchase/cancellation lifecycle evidence once GitHub billing permits the test flow;
+- final operator review and explicit launch authorization.
 
-For artwork, use immutable artifact references plus SHA-256 when possible. For URLs and public App behavior, record verification time and evidence reference.
+GitHub currently reports an account-level billing-information review state that blocks the draft purchase simulation. This is an external GitHub account gate, not an ANPOS runtime-readiness failure.
 
 ## Fail-closed rule
 
