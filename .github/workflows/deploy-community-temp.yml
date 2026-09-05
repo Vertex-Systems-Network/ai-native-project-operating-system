@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: anpos-community-production-deploy-temp
+  cancel-in-progress: true
+
 jobs:
   deploy-production:
     runs-on: ubuntu-24.04
