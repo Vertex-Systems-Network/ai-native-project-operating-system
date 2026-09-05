@@ -31,7 +31,15 @@ jobs:
             exit 2
           fi
 
-      - name: Deploy certified commercial service to production
-        working-directory: commercial-service
+      - name: Stage certified service outside Git metadata
         shell: bash
-        run: npx --yes vercel@59.11.7 deploy --prod --yes --token "$VERCEL_TOKEN"
+        run: |
+          rm -rf "$RUNNER_TEMP/anpos-commercial-service"
+          mkdir -p "$RUNNER_TEMP/anpos-commercial-service"
+          cp -a commercial-service/. "$RUNNER_TEMP/anpos-commercial-service/"
+
+      - name: Deploy certified commercial service to production
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/anpos-commercial-service"
+          npx --yes vercel@59.11.7 deploy --prod --yes --token "$VERCEL_TOKEN"
