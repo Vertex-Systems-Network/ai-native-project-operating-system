@@ -1,4 +1,4 @@
-name: ANPOS Community Production Deploy (temporary)
+name: ANPOS Community Webhook Smoke (temporary)
 
 on:
   push:
@@ -9,137 +9,95 @@ permissions:
   contents: read
 
 concurrency:
-  group: anpos-community-production-deploy-temp
+  group: anpos-community-webhook-smoke-temp
   cancel-in-progress: true
 
 jobs:
-  deploy-production:
+  webhook-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     env:
-      VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
-      VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      ANPOS_MARKETPLACE_APP_PRIVATE_KEY: ${{ secrets.ANPOS_MARKETPLACE_APP_PRIVATE_KEY }}
+      ANPOS_GITHUB_WEBHOOK_SECRET: ${{ secrets.ANPOS_GITHUB_WEBHOOK_SECRET }}
+      WEBHOOK_URL: https://anpos-commercial-service.vercel.app/api/webhooks/github/marketplace
     steps:
-      - name: Checkout exact source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Verify Vercel credential availability
+      - name: Verify webhook secret availability
         shell: bash
         run: |
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "VERCEL_TOKEN secret is not configured for this repository" >&2
+          if [ -z "${ANPOS_GITHUB_WEBHOOK_SECRET:-}" ]; then
+            echo "ANPOS_GITHUB_WEBHOOK_SECRET is not configured" >&2
             exit 2
           fi
 
-      - name: Normalize and validate Marketplace App private key without exposing it
+      - name: Verify signed Marketplace webhook paths without persistence
         shell: bash
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const { createPrivateKey } = require('node:crypto');
-          const raw = (process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY || '').trim();
-          if (!raw) throw new Error('ANPOS_MARKETPLACE_APP_PRIVATE_KEY secret is missing');
+          python - <<'PY'
+          import hashlib
+          import hmac
+          import json
+          import os
+          import uuid
+          import urllib.error
+          import urllib.request
 
-          const candidates = [];
-          const add = (label, value) => {
-            if (typeof value !== 'string' || !value.trim()) return;
-            const normalized = value.trim().replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
-            if (!candidates.some((c) => c.value === normalized)) candidates.push({ label, value: normalized });
-          };
-          const wrapPem = (label, body, type) => {
-            const compact = body.replace(/\s+/g, '');
-            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(compact) || compact.length < 200) return;
-            const lines = compact.match(/.{1,64}/g) || [];
-            add(label, `-----BEGIN ${type}-----\n${lines.join('\n')}\n-----END ${type}-----`);
-          };
+          secret = os.environ["ANPOS_GITHUB_WEBHOOK_SECRET"].encode()
+          url = os.environ["WEBHOOK_URL"]
 
-          add('raw', raw);
-          try {
-            const parsed = JSON.parse(raw);
-            if (typeof parsed === 'string') add('json-string', parsed);
-          } catch {}
-          try { add('base64-decoded-text', Buffer.from(raw, 'base64').toString('utf8')); } catch {}
-          try { add('url-decoded', decodeURIComponent(raw)); } catch {}
-          wrapPem('base64-body-pkcs8', raw, 'PRIVATE KEY');
-          wrapPem('base64-body-pkcs1', raw, 'RSA PRIVATE KEY');
+          def post(payload: bytes, event: str, signature: str | None = None):
+              delivery = f"anpos-smoke-{uuid.uuid4()}"
+              if signature is None:
+                  signature = "sha256=" + hmac.new(secret, payload, hashlib.sha256).hexdigest()
+              req = urllib.request.Request(
+                  url,
+                  data=payload,
+                  method="POST",
+                  headers={
+                      "Content-Type": "application/json",
+                      "X-GitHub-Delivery": delivery,
+                      "X-GitHub-Event": event,
+                      "X-Hub-Signature-256": signature,
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as response:
+                      return response.status, response.read().decode("utf-8")
+              except urllib.error.HTTPError as exc:
+                  return exc.code, exc.read().decode("utf-8")
 
-          let selected = null;
-          let selectedLabel = null;
-          for (const candidate of candidates) {
-            try {
-              const key = createPrivateKey(candidate.value);
-              if (key.asymmetricKeyType === 'rsa') {
-                selected = candidate.value.endsWith('\n') ? candidate.value : candidate.value + '\n';
-                selectedLabel = candidate.label;
-                break;
-              }
-            } catch {}
-          }
-          if (!selected) {
-            const traits = {
-              length: raw.length,
-              containsPemBegin: raw.includes('BEGIN'),
-              containsPrivateKeyWords: raw.includes('PRIVATE KEY'),
-              looksJsonString: raw.startsWith('"') && raw.endsWith('"'),
-              looksBase64: /^[A-Za-z0-9+/=\r\n]+$/.test(raw) && raw.length > 200,
-            };
-            console.error('Marketplace key normalization failed; safe traits:', JSON.stringify(traits));
-            process.exit(3);
-          }
-          fs.writeFileSync(process.env.RUNNER_TEMP + '/anpos-marketplace-key.pem', selected, { mode: 0o600 });
-          console.log('Marketplace App private key validation: OK via ' + selectedLabel);
-          NODE
+          tests = []
 
-      - name: Upsert Vercel production Marketplace private key through REST API
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const keyValue = fs.readFileSync(process.env.RUNNER_TEMP + '/anpos-marketplace-key.pem', 'utf8');
-          const endpoint = `https://api.vercel.com/v10/projects/${encodeURIComponent(process.env.VERCEL_PROJECT_ID)}/env?upsert=true&teamId=${encodeURIComponent(process.env.VERCEL_ORG_ID)}`;
-          (async () => {
-            const response = await fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
-                'content-type': 'application/json',
-              },
-              body: JSON.stringify({
-                key: 'ANPOS_MARKETPLACE_APP_PRIVATE_KEY',
-                value: keyValue,
-                type: 'sensitive',
-                target: ['production'],
-                comment: 'ANPOS Community GitHub Marketplace App RSA private key',
-              }),
-            });
-            let body = {};
-            try { body = await response.json(); } catch {}
-            if (!response.ok) {
-              const code = body?.error?.code || body?.code || 'unknown';
-              const message = body?.error?.message || body?.message || response.statusText;
-              throw new Error(`Vercel env upsert failed (${response.status}) ${code}: ${message}`);
-            }
-            console.log('Vercel production Marketplace private key upsert: OK');
-          })().catch((error) => {
-            console.error(error.message);
-            process.exit(4);
-          });
-          NODE
+          payload = b'{"zen":"anpos-community-webhook-smoke"}'
+          status, body = post(payload, "ping")
+          tests.append(("signed_ping", status, body, 200, lambda x: x.get("ok") is True and x.get("ignored") is True))
 
-      - name: Stage certified service outside Git metadata
-        shell: bash
-        run: |
-          rm -rf "$RUNNER_TEMP/anpos-commercial-service"
-          mkdir -p "$RUNNER_TEMP/anpos-commercial-service"
-          cp -a commercial-service/. "$RUNNER_TEMP/anpos-commercial-service/"
+          status, body = post(payload, "ping", "sha256=" + "0" * 64)
+          tests.append(("invalid_signature", status, body, 401, lambda x: x.get("error") == "invalid_webhook"))
 
-      - name: Deploy certified commercial service to production
-        shell: bash
-        run: |
-          cd "$RUNNER_TEMP/anpos-commercial-service"
-          npx --yes vercel@59.11.7 deploy --prod --yes --token "$VERCEL_TOKEN"
+          payload = b'{"action":"smoke","marketplace_purchase":{"account":{"id":1}}}'
+          status, body = post(payload, "marketplace_purchase")
+          tests.append(("unsupported_marketplace_action", status, body, 200, lambda x: x.get("ok") is True and x.get("ignored") is True))
+
+          payload = b'{not-json'
+          status, body = post(payload, "marketplace_purchase")
+          tests.append(("signed_invalid_json", status, body, 400, lambda x: x.get("error") == "invalid_json"))
+
+          payload = b'{"action":"purchased","marketplace_purchase":{"account":{}}}'
+          status, body = post(payload, "marketplace_purchase")
+          tests.append(("missing_account_id", status, body, 422, lambda x: x.get("error") == "missing_account_id"))
+
+          failed = False
+          for name, status, body, expected_status, predicate in tests:
+              try:
+                  parsed = json.loads(body)
+              except Exception:
+                  parsed = {}
+              ok = status == expected_status and predicate(parsed)
+              print(f"{name}: status={status} result={'PASS' if ok else 'FAIL'}")
+              if not ok:
+                  failed = True
+                  print(f"  response={body[:500]}")
+
+          if failed:
+              raise SystemExit(3)
+          print("ANPOS Community webhook smoke: PASS")
+          PY
