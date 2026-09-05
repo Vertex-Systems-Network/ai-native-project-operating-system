@@ -3,6 +3,7 @@
   "status": "operator_verification_required",
   "activation_scope": "vendor_marketplace_launch_only",
   "source_checked_at": "2026-09-04",
+  "source_reverified_at": "2026-09-06",
   "purpose": "Machine-readable baseline of GitHub Marketplace requirements that must be re-verified against official GitHub documentation before ANPOS Marketplace publication or paid conversion. This file is not launch authority and contains no pricing, credentials, customer data, or Marketplace plan IDs.",
   "official_sources": [
     "https://docs.github.com/en/apps/github-marketplace/creating-apps-for-github-marketplace/requirements-for-listing-an-app",
@@ -57,6 +58,7 @@
     "repository_must_not_define_live_prices": true
   },
   "marketplace_events": {
+    "required_actions_for_all_plans": ["purchased", "cancelled"],
     "required_actions_for_paid_plans": ["purchased", "changed", "cancelled"],
     "free_trial_flow_required_if_enabled": true,
     "periodic_marketplace_reconciliation_required": true
