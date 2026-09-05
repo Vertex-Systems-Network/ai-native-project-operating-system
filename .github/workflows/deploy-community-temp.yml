@@ -36,23 +36,61 @@ jobs:
             exit 2
           fi
 
-      - name: Validate Marketplace App private key without exposing it
+      - name: Normalize and validate Marketplace App private key without exposing it
         shell: bash
         run: |
           node <<'NODE'
+          const fs = require('node:fs');
           const { createPrivateKey } = require('node:crypto');
-          const raw = process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY || '';
-          if (!raw.trim()) throw new Error('ANPOS_MARKETPLACE_APP_PRIVATE_KEY secret is missing');
-          const normalized = raw.replace(/\\n/g, '\n');
-          const key = createPrivateKey(normalized);
-          if (key.asymmetricKeyType !== 'rsa') throw new Error('Marketplace App private key must be RSA');
-          console.log('Marketplace App private key validation: OK');
+          const raw = (process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY || '').trim();
+          if (!raw) throw new Error('ANPOS_MARKETPLACE_APP_PRIVATE_KEY secret is missing');
+
+          const candidates = [];
+          const add = (label, value) => {
+            if (typeof value !== 'string' || !value.trim()) return;
+            const normalized = value.trim().replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+            if (!candidates.some((c) => c.value === normalized)) candidates.push({ label, value: normalized });
+          };
+
+          add('raw', raw);
+          try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'string') add('json-string', parsed);
+          } catch {}
+          try { add('base64', Buffer.from(raw, 'base64').toString('utf8')); } catch {}
+          try { add('url-decoded', decodeURIComponent(raw)); } catch {}
+
+          let selected = null;
+          let selectedLabel = null;
+          for (const candidate of candidates) {
+            try {
+              const key = createPrivateKey(candidate.value);
+              if (key.asymmetricKeyType === 'rsa') {
+                selected = candidate.value.endsWith('\n') ? candidate.value : candidate.value + '\n';
+                selectedLabel = candidate.label;
+                break;
+              }
+            } catch {}
+          }
+          if (!selected) {
+            const traits = {
+              length: raw.length,
+              containsPemBegin: raw.includes('BEGIN'),
+              containsPrivateKeyWords: raw.includes('PRIVATE KEY'),
+              looksJsonString: raw.startsWith('"') && raw.endsWith('"'),
+              looksBase64: /^[A-Za-z0-9+/=\r\n]+$/.test(raw) && raw.length > 200,
+            };
+            console.error('Marketplace key normalization failed; safe traits:', JSON.stringify(traits));
+            process.exit(3);
+          }
+          fs.writeFileSync(process.env.RUNNER_TEMP + '/anpos-marketplace-key.pem', selected, { mode: 0o600 });
+          console.log('Marketplace App private key validation: OK via ' + selectedLabel);
           NODE
 
       - name: Update Vercel production Marketplace private key
         shell: bash
         run: |
-          printf '%s' "$ANPOS_MARKETPLACE_APP_PRIVATE_KEY" | npx --yes vercel@59.11.7 env update ANPOS_MARKETPLACE_APP_PRIVATE_KEY production --yes --token "$VERCEL_TOKEN"
+          npx --yes vercel@59.11.7 env update ANPOS_MARKETPLACE_APP_PRIVATE_KEY production --yes --token "$VERCEL_TOKEN" < "$RUNNER_TEMP/anpos-marketplace-key.pem"
 
       - name: Stage certified service outside Git metadata
         shell: bash
