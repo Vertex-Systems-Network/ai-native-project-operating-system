@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path d="M128 40L204 84V172L128 216L52 172V84L128 40Z" stroke="#063A42" stroke-width="8"/>
+    <path d="M128 40V92M204 84L161 109M204 172L161 147M128 216V166M52 172L95 147M52 84L95 109" stroke="#0B6B72" stroke-width="5"/>
+    <path d="M128 92L161 111L128 130L95 111L128 92Z" fill="#34D399"/>
+    <path d="M95 115L126 133V169L95 151V115Z" fill="#0B6B72"/>
+    <path d="M130 133L161 115V151L130 169V133Z" fill="#063A42"/>
+    <g fill="#10B981">
+      <circle cx="128" cy="40" r="14"/><circle cx="204" cy="84" r="14"/><circle cx="204" cy="172" r="14"/>
+      <circle cx="128" cy="216" r="14"/><circle cx="52" cy="172" r="14"/><circle cx="52" cy="84" r="14"/>
+    </g>
+    <g fill="#6EE7B7" opacity=".55">
+      <circle cx="124" cy="36" r="4"/><circle cx="200" cy="80" r="4"/><circle cx="200" cy="168" r="4"/>
+      <circle cx="124" cy="212" r="4"/><circle cx="48" cy="168" r="4"/><circle cx="48" cy="80" r="4"/>
+    </g>
+  </g>
+</svg>
