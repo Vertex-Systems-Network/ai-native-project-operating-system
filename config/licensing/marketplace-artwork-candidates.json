@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "status": "candidate_ready_not_uploaded",
+  "scope": "github_marketplace_listing_artwork",
+  "source_reverified_at": "2026-09-10",
+  "official_requirements": {
+    "logo": {
+      "minimum_width": 200,
+      "minimum_height": 200,
+      "recommended_shape": "square",
+      "transparent_background_recommended": true,
+      "avoid_text": true
+    },
+    "feature_card": {
+      "width": 965,
+      "height": 482,
+      "custom_background_required": true,
+      "readable_listing_name_text_color_required": true
+    },
+    "screenshots": {
+      "maximum_count": 5,
+      "minimum_width": 1200,
+      "same_dimensions_required": true,
+      "browser_chrome_should_be_excluded": true,
+      "show_product_ui": true
+    }
+  },
+  "candidates": {
+    "logo": {
+      "editable_source": "docs/commercial/marketplace-artwork/anpos-marketplace-logo.svg",
+      "raster_generator": "scripts/generate_marketplace_artwork.py",
+      "generated_file": "anpos-marketplace-logo-256.png",
+      "generated_width": 256,
+      "generated_height": 256,
+      "expected_sha256": "be4f2aacc0e2ba91f03da05d53e81526dd1cb67b5f157c89aaa26c63f5414a1c",
+      "upload_verified": false
+    },
+    "feature_card": {
+      "editable_source": "docs/commercial/marketplace-artwork/anpos-marketplace-feature-card.svg",
+      "raster_generator": "scripts/generate_marketplace_artwork.py",
+      "generated_file": "anpos-marketplace-feature-card-965x482.png",
+      "generated_width": 965,
+      "generated_height": 482,
+      "expected_sha256": "8102920e80d215337dbfd0f7f9f1309cb568f5b448d5bb94b95c6918f247361d",
+      "upload_verified": false
+    }
+  },
+  "gate": {
+    "listing_evidence_complete": false,
+    "rule": "Candidate artwork does not satisfy publication evidence until the exact rendered files are uploaded to the draft GitHub Marketplace listing and the uploaded listing state is verified. Genuine live product screenshots remain a separate required gate."
+  }
+}
