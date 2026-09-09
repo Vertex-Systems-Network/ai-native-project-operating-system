@@ -1,0 +1,74 @@
+name: ANPOS Marketplace Artwork Candidates
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'scripts/generate_marketplace_artwork.py'
+      - 'config/licensing/marketplace-artwork-candidates.json'
+      - 'docs/commercial/marketplace-artwork/**'
+      - '.github/workflows/marketplace-artwork-candidates.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/generate_marketplace_artwork.py'
+      - 'config/licensing/marketplace-artwork-candidates.json'
+      - 'docs/commercial/marketplace-artwork/**'
+      - '.github/workflows/marketplace-artwork-candidates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artwork-candidates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Generate exact Marketplace artwork candidates
+        run: python scripts/generate_marketplace_artwork.py --output "$RUNNER_TEMP/marketplace-artwork"
+
+      - name: Verify dimensions and expected SHA-256 values
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os, struct
+          from pathlib import Path
+
+          root = Path(os.environ['RUNNER_TEMP']) / 'marketplace-artwork'
+          spec = json.loads(Path('config/licensing/marketplace-artwork-candidates.json').read_text())
+
+          def png_size(path: Path):
+              data = path.read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n'
+              return struct.unpack('>II', data[16:24])
+
+          for key in ('logo', 'feature_card'):
+              item = spec['candidates'][key]
+              path = root / item['generated_file']
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              assert digest == item['expected_sha256'], (key, digest, item['expected_sha256'])
+              assert png_size(path) == (item['generated_width'], item['generated_height'])
+          PY
+
+      - name: Upload candidate artwork artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: anpos-marketplace-artwork-candidates
+          path: ${{ runner.temp }}/marketplace-artwork
+          if-no-files-found: error
+          retention-days: 90
