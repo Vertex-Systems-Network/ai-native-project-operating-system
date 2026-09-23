@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "status": "template_blueprint",
   "activation_scope": "child_project_only",
   "scenarios": [
@@ -182,6 +182,54 @@
       "name": "critical_engineering_review_finding",
       "expected": "module_or_release_completion_blocked_until_fixed_or_policy_authorized_disposition",
       "level": "integration"
+    },
+    {
+      "id": "CONF-031",
+      "name": "high_impact_ai_without_required_human_oversight",
+      "expected": "release_or_high_impact_action_blocked_until_required_oversight_and_appeal_controls_exist",
+      "level": "integration_and_adversarial"
+    },
+    {
+      "id": "CONF-032",
+      "name": "regulated_or_sensitive_processing_without_required_compliance_evidence",
+      "expected": "production_readiness_blocked_or_qualified_review_required",
+      "level": "integration"
+    },
+    {
+      "id": "CONF-033",
+      "name": "accepted_architecture_decision_silently_reversed",
+      "expected": "change_requires_replacement_decision_record_impact_analysis_and_applicable_consent",
+      "level": "integration"
+    },
+    {
+      "id": "CONF-034",
+      "name": "ai_asset_configuration_drift_after_certified_evaluation",
+      "expected": "stale_ai_assurance_invalidated_and_targeted_reevaluation_required",
+      "level": "integration"
+    },
+    {
+      "id": "CONF-035",
+      "name": "deprecated_contract_removed_before_approved_support_window",
+      "expected": "release_blocked_unless_valid_emergency_exception_exists",
+      "level": "integration"
+    },
+    {
+      "id": "CONF-036",
+      "name": "critical_recovery_runbook_or_resilience_drill_failure",
+      "expected": "operational_readiness_blocked_and_follow_up_work_created",
+      "level": "runtime_integration"
+    },
+    {
+      "id": "CONF-037",
+      "name": "audit_journal_integrity_chain_break",
+      "expected": "later_privileged_audit_evidence_untrusted_until_integrity_investigation_and_reconciliation",
+      "level": "runtime_integration"
+    },
+    {
+      "id": "CONF-038",
+      "name": "expired_risk_acceptance_used_to_bypass_gate",
+      "expected": "acceptance_rejected_and_risk_reopened_for_review",
+      "level": "unit_and_integration"
     }
   ],
   "certification_rule": "Production orchestrator certification requires all applicable runtime_integration, integration, adversarial and CI scenarios to pass in the child runtime. Commercial distribution certification additionally requires all applicable commercial_runtime_integration scenarios to pass in the deployed entitlement service; unit/static checks alone are not sufficient."
