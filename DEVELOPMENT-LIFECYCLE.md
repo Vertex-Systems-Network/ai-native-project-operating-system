@@ -17,6 +17,7 @@ Throughout every stage:
 - the selected agent pool must satisfy role/capability/privacy/data-boundary requirements;
 - autonomous loops obey `config/runtime/budgets.json` and circuit breakers;
 - capability-aware product assurance follows `AI-NATIVE-PRODUCT-ASSURANCE.md`: AI-system evaluation, user/problem validation, product analytics, bounded experimentation, progressive delivery and engineering maintainability are activated only when relevant to the child project.
+- governance assurance follows `AI-NATIVE-GOVERNANCE-ASSURANCE.md`: responsible-AI oversight, compliance evidence, architecture decisions, AI-configuration identity, deprecation/EOL, operational runbooks/drills, audit integrity and unified risk/exception tracking are activated where relevant.
 
 ## Stage 8 — System Design
 
@@ -213,3 +214,21 @@ After the core lifecycle reaches implementation/SQA/security readiness, load `AI
 A child may record a gate as `not_applicable` only with a project-specific reason. A policy file is not evidence that the gate passed.
 
 Post-release product evidence may create new proposed options/modules/work units, but it must re-enter normal ANPOS planning, consent, architecture, QA and security flow before implementation.
+
+
+---
+
+## Cross-cutting governance assurance — Requirements 89–96
+
+Load `AI-NATIVE-GOVERNANCE-ASSURANCE.md` throughout the lifecycle rather than treating it as a final checklist.
+
+- Responsible-AI and human oversight applies when AI materially affects people or high-impact outcomes.
+- Compliance evidence applies when personal, sensitive, regulated or contractually restricted processing may exist; unknown legal applicability remains unresolved until qualified review where needed.
+- Material architecture decisions are captured as ADRs and may not be silently reversed.
+- AI behavior-producing assets/configuration are versioned or hashed so evaluation evidence can be invalidated on material drift.
+- Compatibility, deprecation and EOL windows are tracked before consumers are broken.
+- Production-critical recovery knowledge is captured in runbooks and verified by safe drills appropriate to risk.
+- Privileged action evidence uses tamper-evident audit semantics without storing secrets or sensitive full prompts.
+- Material risks/exceptions have owners, mitigations, evidence and time-bounded review/expiry.
+
+Requirements 83–96 share the same evidence rule: policy presence is not pass evidence.
