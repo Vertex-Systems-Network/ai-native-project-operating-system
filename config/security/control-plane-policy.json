@@ -55,7 +55,9 @@
     "/requirements-anpos.txt",
     "/AI-NATIVE-PRODUCT-ASSURANCE.md",
     "/config/ai/ai-evaluation-policy.json",
-    "/config/product/**"
+    "/config/product/**",
+    "/config/assurance/**",
+    "/config/research/**"
   ],
   "identity_policy": {
     "agent_name_is_not_identity_proof": true,
