@@ -1,5 +1,5 @@
 {
-  "schema_version": 8,
+  "schema_version": 7,
   "protocol": "ANPOS",
   "purpose": "Role-aware instruction router. Agents read common files plus only the files required by their active role/scope.",
   "authority_order": [
