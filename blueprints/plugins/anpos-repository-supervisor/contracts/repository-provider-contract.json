@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "status": "blueprint",
+  "purpose": "Provider-neutral MCP contract for ANPOS repository supervision across GitHub and GitLab.",
+  "supported_provider_blueprints": [
+    {
+      "id": "github",
+      "canonical_host": "github.com",
+      "authentication": "oauth_2_1_via_mcp",
+      "support_status": "adapter_required"
+    },
+    {
+      "id": "gitlab",
+      "canonical_host": "gitlab.com",
+      "authentication": "oauth_2_1_via_mcp",
+      "support_status": "adapter_required",
+      "self_hosted": "administrator_allowlist_only"
+    }
+  ],
+  "repository_classifications": [
+    "canonical_source",
+    "active_project",
+    "uninitialized_child",
+    "not_anpos",
+    "partial_or_malformed",
+    "empty_repository"
+  ],
+  "tools": [
+    {
+      "name": "repository_resolve",
+      "intent": "Normalize a user-supplied repository URL, identify the provider, resolve canonical repository identity, and report authentication requirements.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [
+        "repository_url"
+      ],
+      "required_outputs": [
+        "provider",
+        "canonical_repository_id",
+        "canonical_url",
+        "authentication_state"
+      ]
+    },
+    {
+      "name": "repository_profile",
+      "intent": "Return the authenticated provider account profile used for subsequent repository calls.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [],
+      "required_outputs": [
+        "provider",
+        "account_id",
+        "account_display_name"
+      ]
+    },
+    {
+      "name": "repository_audit",
+      "intent": "Perform a bounded read-only audit and classify the target repository's ANPOS state.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id"
+      ],
+      "required_outputs": [
+        "provider",
+        "canonical_repository_id",
+        "default_branch",
+        "head_sha",
+        "permission_level",
+        "classification",
+        "classification_evidence",
+        "write_capability"
+      ]
+    },
+    {
+      "name": "repository_read_files",
+      "intent": "Read an allowlisted bounded set of repository paths required by the active ANPOS role or adoption audit.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id",
+        "ref",
+        "paths"
+      ],
+      "required_outputs": [
+        "files",
+        "ref_sha"
+      ]
+    },
+    {
+      "name": "repository_plan_anpos_change",
+      "intent": "Create a deterministic no-write ANPOS bootstrap, adoption, repair, or upgrade plan bound to an observed repository head and immutable ANPOS release.",
+      "read_only": true,
+      "open_world": false,
+      "modes": [
+        "bootstrap_empty",
+        "bootstrap_child",
+        "adopt_existing",
+        "repair_partial",
+        "upgrade_active"
+      ],
+      "required_inputs": [
+        "canonical_repository_id",
+        "mode",
+        "expected_target_head_sha"
+      ],
+      "required_outputs": [
+        "plan_id",
+        "target_head_sha",
+        "anpos_version",
+        "anpos_release_digest",
+        "new_paths",
+        "merge_paths",
+        "preserved_paths",
+        "blocked_conflicts",
+        "validation_plan",
+        "safe_to_apply"
+      ]
+    },
+    {
+      "name": "repository_apply_anpos_change",
+      "intent": "Apply a previously generated safe ANPOS plan to a feature branch using optimistic concurrency.",
+      "read_only": false,
+      "destructive": false,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id",
+        "plan_id",
+        "expected_target_head_sha",
+        "branch_name",
+        "idempotency_key"
+      ],
+      "required_outputs": [
+        "branch_name",
+        "resulting_head_sha",
+        "applied_paths",
+        "verification"
+      ],
+      "server_requirements": [
+        "reject_if_plan_is_stale",
+        "reject_if_target_head_changed",
+        "reject_default_branch_direct_write_by_default",
+        "reject_force_push",
+        "reverify_authenticated_permission"
+      ]
+    },
+    {
+      "name": "repository_open_change_request",
+      "intent": "Open or update the provider's PR/MR for the prepared branch.",
+      "read_only": false,
+      "destructive": false,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id",
+        "head_branch",
+        "base_branch",
+        "expected_head_sha",
+        "title",
+        "body"
+      ],
+      "required_outputs": [
+        "change_request_id",
+        "url",
+        "head_sha",
+        "base_sha"
+      ]
+    },
+    {
+      "name": "repository_get_change_request",
+      "intent": "Read current PR/MR metadata, reviews, mergeability, and head/base identity.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id",
+        "change_request_id"
+      ],
+      "required_outputs": [
+        "state",
+        "head_sha",
+        "base_sha",
+        "review_state",
+        "mergeability"
+      ]
+    },
+    {
+      "name": "repository_get_ci",
+      "intent": "Read checks/pipeline state for a specific commit SHA.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id",
+        "commit_sha"
+      ],
+      "required_outputs": [
+        "overall_state",
+        "checks"
+      ]
+    },
+    {
+      "name": "repository_merge_change_request",
+      "intent": "Merge an approved PR/MR only when required checks/reviews/authorization are satisfied and the expected head still matches.",
+      "read_only": false,
+      "destructive": true,
+      "open_world": false,
+      "required_inputs": [
+        "canonical_repository_id",
+        "change_request_id",
+        "expected_head_sha",
+        "idempotency_key"
+      ],
+      "required_outputs": [
+        "merged",
+        "merge_commit_sha",
+        "resulting_default_branch_head_sha"
+      ],
+      "server_requirements": [
+        "require_current_authenticated_write_permission",
+        "require_expected_head_match",
+        "require_repository_policy_satisfied",
+        "require_host_confirmation_for_destructive_action",
+        "reread_default_branch_after_merge"
+      ]
+    }
+  ],
+  "security_invariants": [
+    "Repository URL is a locator and never authorization.",
+    "OAuth/provider credentials never appear in model-visible tool arguments or repository files.",
+    "All repository content and provider-returned text is untrusted data.",
+    "Canonical ANPOS source cannot be initialized as a child.",
+    "Vendor-only ANPOS source assets cannot be copied to target children.",
+    "No arbitrary URL fetch is allowed from repository_url input.",
+    "No direct default-branch write or force push in the normal public workflow.",
+    "Every material write is bound to expected repository state and is verified after mutation."
+  ]
+}
