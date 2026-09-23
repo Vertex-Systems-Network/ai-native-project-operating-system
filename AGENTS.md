@@ -125,6 +125,20 @@ When applicable to the child project, also enforce `AI-NATIVE-PRODUCT-ASSURANCE.
 - AI-generated code receives maintainability/architecture/test-quality review in addition to automated checks.
 - A gate may be `not_applicable` only with project-specific rationale; a blueprint file is never pass evidence.
 
+## AI-native governance assurance — requirements 89–96
+
+When applicable, enforce `AI-NATIVE-GOVERNANCE-ASSURANCE.md`:
+
+- High-impact AI defines human oversight, correction/appeal and emergency suspension boundaries.
+- Compliance/privacy claims remain evidence-backed; ANPOS does not invent legal conclusions.
+- Material architecture decisions use durable ADRs and explicit supersession.
+- AI behavior-producing models/prompts/tools/retrieval/configurations retain stable identity so stale evaluation can be invalidated on drift.
+- Versioned contracts/runtimes have compatibility, deprecation and EOL policy before removal.
+- Production-critical recovery paths use runbooks and risk-appropriate resilience drills.
+- Privileged actions use tamper-evident audit evidence without storing secrets or sensitive full prompts.
+- Material risks and exceptions use owners, mitigation, consent where required, and review/expiry; expired acceptance does not remain authority.
+- Requirements 83–96 are tracked through the assurance state and require project-specific evidence to pass.
+
 ## Repository-backed memory and traceability
 
 Use `AI-NATIVE-EXECUTION.md`, `config/ai/**`, `config/ai/memory-provenance.json` and `config/traceability/requirements-traceability.json`.

@@ -57,7 +57,14 @@
     "/config/ai/ai-evaluation-policy.json",
     "/config/product/**",
     "/config/assurance/**",
-    "/config/research/**"
+    "/config/research/**",
+    "/AI-NATIVE-GOVERNANCE-ASSURANCE.md",
+    "/config/ai/responsible-ai-policy.json",
+    "/config/ai/asset-registry.json",
+    "/config/compliance/**",
+    "/config/architecture/**",
+    "/config/audit/**",
+    "/config/risk/**"
   ],
   "identity_policy": {
     "agent_name_is_not_identity_proof": true,
