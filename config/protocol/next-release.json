@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "planned_not_released",
+  "current_version": "1.3.13",
+  "planned_version": "1.4.0",
+  "release_reason": "Requirements 83-88 add a new capability-aware AI-native product assurance layer and corresponding machine-readable enforcement/evidence contracts.",
+  "required_before_release": [
+    "PR containing Requirements 83-88 is merged from an exact reviewed head.",
+    "Source continuous certification runs and passes on the release candidate.",
+    "Specialized schemas and assurance-state validation pass.",
+    "New conformance scenarios are present and applicable static/unit enforcement is tested.",
+    "Child bootstrap initializes the new assurance and research state safely.",
+    "Commercial/runtime protocol identity references are updated consistently in the dedicated release migration.",
+    "Deterministic vendor exports and handoff verification pass after version migration."
+  ],
+  "release_rule": "Do not change config/protocol/version.json, source instance version, commercial runtime protocol identity, or migrations.current_protocol_version until the dedicated 1.4.0 release migration is executed and certified."
+}

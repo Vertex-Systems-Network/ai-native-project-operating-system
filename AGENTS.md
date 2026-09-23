@@ -113,6 +113,18 @@ Commercial invariants:
 - Commercial launch requires current provider/publisher/financial requirements, privacy/retention, support/refund/cancellation process, key management, backup/recovery, and operator-supplied legally reviewed license/EULA/terms.
 - Run `scripts/validate_commercial_licensing.py` plus applicable `commercial_runtime_integration` scenarios before claiming the commercial service is production-ready.
 
+## AI-native product assurance — requirements 83–88
+
+When applicable to the child project, also enforce `AI-NATIVE-PRODUCT-ASSURANCE.md`:
+
+- AI/ML/LLM/RAG/agentic products require project-specific evaluation evidence, not only software tests.
+- User-facing products validate material problem/UX assumptions with credible evidence where risk/value warrants it.
+- Product analytics distinguish deployed software from verified user/business outcomes.
+- Experiments are bounded, hypothesis-driven and may not weaken security/privacy/consent boundaries.
+- Progressive delivery uses the least risky rollout strategy justified by project impact and supports verified rollback/stop behavior.
+- AI-generated code receives maintainability/architecture/test-quality review in addition to automated checks.
+- A gate may be `not_applicable` only with project-specific rationale; a blueprint file is never pass evidence.
+
 ## Repository-backed memory and traceability
 
 Use `AI-NATIVE-EXECUTION.md`, `config/ai/**`, `config/ai/memory-provenance.json` and `config/traceability/requirements-traceability.json`.

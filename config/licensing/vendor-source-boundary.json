@@ -33,7 +33,8 @@
     "tests/test_operator_launch_bootstrap.py",
     ".github/workflows/source-continuous-certification.yml",
     "scripts/validate_source_continuous_certification.py",
-    "tests/test_source_continuous_certification.py"
+    "tests/test_source_continuous_certification.py",
+    "config/protocol/next-release.json"
   ],
   "rules": [
     "Canonical source may retain these paths as inert vendor/operator assets.",

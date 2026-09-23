@@ -42,6 +42,12 @@ REQUIRED_CONFORMANCE = {
     "approved_design_revision_drift",
     "destructive_migration_without_valid_consent",
     "backup_restore_or_recovery_verification_failure",
+    "ai_configuration_changed_without_required_reevaluation",
+    "product_success_claim_without_verified_outcome_evidence",
+    "unsafe_or_unbounded_experiment",
+    "progressive_rollout_health_guardrail_failure",
+    "stale_feature_flag_without_owner_or_review_date",
+    "critical_engineering_review_finding",
 }
 PROTECTED_PATTERNS = {
     "/.gitignore", "/AGENTS.md", "/.ai/**", "/.github/**", "/blueprints/**", "/START-HERE.md",
@@ -49,11 +55,12 @@ PROTECTED_PATTERNS = {
     "/MULTI-AGENT-ORCHESTRATION.md", "/AUTO-AGENT.md", "/SUPERVISOR.md", "/ORCHESTRATOR.md",
     "/DEVELOPMENT-LIFECYCLE.md", "/CONTINUOUS-IMPROVEMENT.md", "/GITHUB-GOVERNANCE.md",
     "/CODE-QUALITY.md", "/SECURITY.md", "/CONTROL-PLANE-SECURITY.md", "/PRODUCTION-ASSURANCE.md",
-    "/DESIGN-DATA-OPERATIONS.md", "/config/ai/agent-catalog.json", "/config/ai/memory-provenance.json",
+    "/DESIGN-DATA-OPERATIONS.md", "/AI-NATIVE-PRODUCT-ASSURANCE.md", "/config/ai/agent-catalog.json", "/config/ai/memory-provenance.json",
+    "/config/ai/ai-evaluation-policy.json",
     "/config/coordination/**", "/config/protocol/**", "/config/security/**", "/config/consent/**",
     "/config/github/**", "/config/quality/**", "/config/runtime/**", "/config/release/**",
-    "/config/data/**", "/config/operations/**", "/config/contracts/**", "/config/integrations/**",
-    "/config/design/**", "/config/testing/**", "/config/traceability/**", "/schemas/**", "/scripts/**",
+    "/config/data/**", "/config/product/**", "/config/operations/**", "/config/contracts/**", "/config/integrations/**",
+    "/config/design/**", "/config/testing/**", "/config/traceability/**", "/config/assurance/**", "/config/research/**", "/schemas/**", "/scripts/**",
     "/tests/**", "/requirements-anpos.txt",
 }
 
@@ -125,25 +132,30 @@ def validate_required_files() -> None:
         ".gitignore", "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
         "AI-NATIVE-EXECUTION.md", "MULTI-AGENT-ORCHESTRATION.md", "AUTO-AGENT.md", "SUPERVISOR.md", "ORCHESTRATOR.md",
         "DEVELOPMENT-LIFECYCLE.md", "CONTINUOUS-IMPROVEMENT.md", "GITHUB-GOVERNANCE.md", "CODE-QUALITY.md", "SECURITY.md",
-        "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "README.md",
+        "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "AI-NATIVE-PRODUCT-ASSURANCE.md", "README.md",
         "PROJECT-IDEA.md", "requirements-anpos.txt",
         "config/protocol/version.json", "config/protocol/instance.json", "config/protocol/migrations.json", "config/protocol/state-machine.json",
         "config/traceability/requirements-traceability.json", "config/integrations/project-management.json",
         "config/integrations/linear-sync.json", "config/integrations/sync-authority.json", "config/ai/agent-catalog.json",
-        "config/ai/memory-provenance.json", "config/github/ruleset-policy.json", "config/github/path-ownership.json",
+        "config/ai/memory-provenance.json", "config/ai/ai-evaluation-policy.json", "config/github/ruleset-policy.json", "config/github/path-ownership.json",
         "config/quality/quality-policy.json", "config/security/control-plane-policy.json", "config/security/trust-policy.json",
-        "config/security/threat-model.json", "config/runtime/budgets.json", "config/release/release-policy.json",
-        "config/data/data-governance.json", "config/operations/operations-policy.json", "config/contracts/migration-policy.json",
+        "config/security/threat-model.json", "config/runtime/budgets.json", "config/release/release-policy.json", "config/release/progressive-delivery.json",
+        "config/data/data-governance.json", "config/product/product-validation.json", "config/product/product-analytics.json",
+        "config/product/experimentation-policy.json", "config/quality/engineering-review-policy.json", "config/operations/operations-policy.json", "config/contracts/migration-policy.json",
         "config/design/design-intake.json", "config/design/design-assurance.json", "config/testing/conformance-scenarios.json",
+        "config/assurance/assurance-state.json", "config/assurance/runtime-executors.json", "config/research/evidence-registry.json",
         "config/consent/consent-requests.json", "config/coordination/agent-work-queue.json",
         "config/coordination/supervisor-state.json", ".github/CODEOWNERS",
         "schemas/config-base.schema.json", "schemas/project-state.schema.json", "schemas/agent-work-queue.schema.json",
         "schemas/supervisor-state.schema.json", "schemas/agent-catalog.schema.json", "schemas/consent-requests.schema.json",
         "schemas/design-intake.schema.json", "schemas/requirements-traceability.schema.json",
+        "schemas/assurance-state.schema.json", "schemas/research-evidence.schema.json", "schemas/runtime-executors.schema.json",
+        "schemas/ai-evaluation-policy.schema.json", "schemas/product-validation.schema.json", "schemas/product-analytics.schema.json",
+        "schemas/experimentation-policy.schema.json", "schemas/progressive-delivery.schema.json", "schemas/engineering-review-policy.schema.json",
         "scripts/bootstrap_instance.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
         "scripts/lease_control.py", "scripts/coordination_mutation.py", "scripts/consent_guard.py",
         "scripts/install_quality_capabilities.py", "scripts/configure_dependabot.py", "scripts/validate_ai_native_repo.py",
-        "tests/test_control_plane.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
+        "tests/test_control_plane.py", "tests/test_product_assurance.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
         "blueprints/github/dependabot.yml", "blueprints/github/workflows/codeql-actions.yml",
         "blueprints/github/workflows/dependency-review.yml", "blueprints/github/workflows/governance-audit.yml",
         "blueprints/github/workflows/innovation-scout.yml", "blueprints/github/workflows/protocol-update-watch.yml",
@@ -182,6 +194,15 @@ def validate_json_schemas() -> None:
         "config/consent/consent-requests.json": "schemas/consent-requests.schema.json",
         "config/design/design-intake.json": "schemas/design-intake.schema.json",
         "config/traceability/requirements-traceability.json": "schemas/requirements-traceability.schema.json",
+        "config/assurance/assurance-state.json": "schemas/assurance-state.schema.json",
+        "config/research/evidence-registry.json": "schemas/research-evidence.schema.json",
+        "config/assurance/runtime-executors.json": "schemas/runtime-executors.schema.json",
+        "config/ai/ai-evaluation-policy.json": "schemas/ai-evaluation-policy.schema.json",
+        "config/product/product-validation.json": "schemas/product-validation.schema.json",
+        "config/product/product-analytics.json": "schemas/product-analytics.schema.json",
+        "config/product/experimentation-policy.json": "schemas/experimentation-policy.schema.json",
+        "config/release/progressive-delivery.json": "schemas/progressive-delivery.schema.json",
+        "config/quality/engineering-review-policy.json": "schemas/engineering-review-policy.schema.json",
     }
     for instance_path, schema_path in mapping.items():
         schema = load_json(schema_path)
@@ -313,6 +334,7 @@ def validate_template_boundary() -> None:
         "config/operations/operations-policy.json", "config/contracts/migration-policy.json",
         "config/integrations/sync-authority.json", "config/design/design-assurance.json",
         "config/testing/conformance-scenarios.json",
+        "config/assurance/assurance-state.json", "config/assurance/runtime-executors.json", "config/research/evidence-registry.json",
     ]
     for path in source_blueprints:
         doc = load_json(path)
@@ -608,6 +630,56 @@ def validate_assurance_policies() -> None:
     require_true(quality, ["quality_gate_rules", "control_plane_validator_changes_require_protected_base_validation_and_independent_review"], "quality policy")
 
 
+def validate_product_assurance() -> None:
+    state = load_json("config/assurance/assurance-state.json")
+    rows = state.get("requirements", [])
+    ids_seen = {row.get("requirement_id") for row in rows if isinstance(row, dict)}
+    expected = {"REQ-83", "REQ-84", "REQ-85", "REQ-86", "REQ-87", "REQ-88"}
+    if ids_seen != expected:
+        fail(f"assurance state must contain exactly requirements 83-88; got {sorted(ids_seen)}")
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("state") == "passed":
+            if not row.get("evidence_refs") or not row.get("last_verified_ref") or not row.get("last_verified_at"):
+                fail(f"{row.get('requirement_id')}: passed assurance requires evidence and verified ref/time")
+        if row.get("applicability") == "not_applicable":
+            if row.get("state") != "not_applicable" or not str(row.get("reason") or "").strip():
+                fail(f"{row.get('requirement_id')}: not_applicable requires matching state and non-empty reason")
+
+    ai = load_json("config/ai/ai-evaluation-policy.json")
+    require_true(ai, ["dataset_policy", "versioned_evaluation_set_required"], "AI evaluation policy")
+    require_true(ai, ["change_policy", "material_model_change_requires_targeted_reevaluation"], "AI evaluation policy")
+    require_true(ai, ["change_policy", "material_prompt_or_system_instruction_change_requires_targeted_reevaluation"], "AI evaluation policy")
+    require_true(ai, ["release_gate", "critical_failure_classes_cannot_be_hidden_by_average_score"], "AI evaluation policy")
+
+    analytics = load_json("config/product/product-analytics.json")
+    for key in ["deployment_is_not_product_success", "synthetic_traffic_is_not_user_outcome_evidence", "vanity_metrics_must_not_replace_outcome_metrics"]:
+        require_true(analytics, ["interpretation_rules", key], "product analytics policy")
+
+    experiment = load_json("config/product/experimentation-policy.json")
+    for key in ["no_security_or_privacy_weakening_for_experiment", "no_material_undisclosed_user_risk", "legal_or_consent_requirements_cannot_be_bypassed"]:
+        require_true(experiment, ["safety", key], "experimentation policy")
+
+    delivery = load_json("config/release/progressive-delivery.json")
+    require_true(delivery, ["feature_flag_policy", "owner_required"], "progressive delivery policy")
+    require_true(delivery, ["feature_flag_policy", "cleanup_or_review_date_required"], "progressive delivery policy")
+    require_true(delivery, ["feature_flag_policy", "client_side_flag_is_not_authorization_boundary"], "progressive delivery policy")
+
+    review = load_json("config/quality/engineering-review-policy.json")
+    require_true(review, ["completion_rules", "critical_correctness_security_or_data_integrity_defect_blocks_completion"], "engineering review policy")
+    require_true(review, ["completion_rules", "material_debt_must_be_fixed_deferred_with_rationale_or_tracked"], "engineering review policy")
+
+    executors = load_json("config/assurance/runtime-executors.json")
+    executor_requirements = {row.get("requirement_id") for row in executors.get("executors", []) if isinstance(row, dict)}
+    if executor_requirements != expected:
+        fail("assurance runtime executor contract must cover exactly requirements 83-88")
+
+    research = load_json("config/research/evidence-registry.json")
+    if research.get("entries") not in ([], None) and not isinstance(research.get("entries"), list):
+        fail("research evidence entries must be a list")
+
+
 def validate_conformance() -> None:
     doc = load_json("config/testing/conformance-scenarios.json")
     scenarios = doc.get("scenarios", [])
@@ -685,6 +757,7 @@ def main() -> int:
     validate_coordination()
     validate_consent_and_design()
     validate_assurance_policies()
+    validate_product_assurance()
     validate_conformance()
     validate_workflows()
 

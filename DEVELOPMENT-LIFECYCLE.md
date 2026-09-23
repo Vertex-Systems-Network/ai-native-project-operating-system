@@ -15,7 +15,8 @@ Throughout every stage:
 - production secrets/admin/deployment authority are denied to ordinary Workers by default;
 - material scope/technology/destructive/risk decisions use replay-resistant authenticated consent;
 - the selected agent pool must satisfy role/capability/privacy/data-boundary requirements;
-- autonomous loops obey `config/runtime/budgets.json` and circuit breakers.
+- autonomous loops obey `config/runtime/budgets.json` and circuit breakers;
+- capability-aware product assurance follows `AI-NATIVE-PRODUCT-ASSURANCE.md`: AI-system evaluation, user/problem validation, product analytics, bounded experimentation, progressive delivery and engineering maintainability are activated only when relevant to the child project.
 
 ## Stage 8 — System Design
 
@@ -194,3 +195,21 @@ Before verified project/release completion, confirm:
 - no expired identity, lease or stale consent is being used as authority.
 
 Only then may the applicable scope be marked verified/released.
+
+
+---
+
+## Conditional post-implementation assurance gates — Requirements 83–88
+
+After the core lifecycle reaches implementation/SQA/security readiness, load `AI-NATIVE-PRODUCT-ASSURANCE.md` and activate only the gates that match the project type and risk.
+
+- **AI / LLM evaluation:** use `config/ai/ai-evaluation-policy.json` when AI/ML/LLM/RAG/agentic behavior exists.
+- **User / UX validation:** use `config/product/product-validation.json` when user-facing assumptions or material experience decisions require evidence.
+- **Product analytics:** use `config/product/product-analytics.json` when product outcomes are measurable/material.
+- **Experimentation:** use `config/product/experimentation-policy.json` only for bounded approved experiments that reduce uncertainty safely.
+- **Progressive delivery:** use `config/release/progressive-delivery.json` when staged rollout, feature flags, canary, blue/green or shadow verification reduces release risk.
+- **Engineering quality review:** use `config/quality/engineering-review-policy.json` before major module completion/release.
+
+A child may record a gate as `not_applicable` only with a project-specific reason. A policy file is not evidence that the gate passed.
+
+Post-release product evidence may create new proposed options/modules/work units, but it must re-enter normal ANPOS planning, consent, architecture, QA and security flow before implementation.
