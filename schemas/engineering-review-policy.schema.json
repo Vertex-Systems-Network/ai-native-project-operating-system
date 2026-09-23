@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://anpos.local/schemas/engineering-review-policy.schema.json",
+  "title":"ANPOS Engineering Review Policy",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema_version","status","activation_scope","review_dimensions","finding_contract","completion_rules"],
+  "properties":{
+    "schema_version":{"const":1},
+    "status":{"type":"string"},
+    "activation_scope":{"type":"string"},
+    "review_dimensions":{"type":"array","minItems":8,"items":{"type":"string","minLength":1},"uniqueItems":true},
+    "finding_contract":{"type":"object","minProperties":4,"additionalProperties":{"type":"boolean"}},
+    "completion_rules":{"type":"object","minProperties":3,"additionalProperties":{"type":"boolean"}}
+  }
+}
