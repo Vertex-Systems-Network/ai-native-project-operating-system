@@ -193,3 +193,20 @@ Activate only the controls justified by user impact, operational risk, data sens
 ## Evidence rule
 
 A blueprint/configuration is not completion evidence. Mark a requirement satisfied only when the child project has project-specific artifacts, tests, metrics, research/evaluation results, or verified provider/runtime evidence appropriate to that requirement.
+
+
+## Persistent assurance state and evidence
+
+Requirements 83–88 are tracked in `config/assurance/assurance-state.json`. A requirement may be `pending_detection`, `applicable`, `optional`, or `not_applicable`; completion states are separately tracked and require evidence.
+
+Research and market evidence that materially informs requirements, options, modules, architecture, design or product decisions is recorded in `config/research/evidence-registry.json` with provenance, validation state and explicit fact/inference classification.
+
+Specialized JSON Schemas under `schemas/` validate the assurance state, research registry and each Requirements 83–88 policy.
+
+## Runtime executor contract
+
+`config/assurance/runtime-executors.json` defines provider-neutral executor inputs/outputs for AI evaluation, product/UX validation, analytics, experiments, progressive delivery and engineering review. A provider/tool is not considered integrated merely because its product name is known; it must satisfy the required capability and evidence contract.
+
+## Protocol release preparation
+
+`config/protocol/next-release.json` records the planned ANPOS 1.4.0 boundary. The current protocol remains 1.3.13 until a dedicated version migration updates all source, child-upgrade and commercial identity references and passes deterministic source certification.
