@@ -5,6 +5,7 @@
   "purpose": "Single source of truth for paths that belong to the ANPOS vendor/operator source-management or commercial runtime boundary and must not be retained in initialized customer child repositories or customer-facing commercial-template exports.",
   "vendor_only_paths": [
     "commercial-service",
+    "blueprints/plugins/anpos-repository-supervisor",
     "blueprints/commercial/github-app-manifest.example.json",
     "blueprints/commercial/github-marketplace-app-manifest.example.json",
     "blueprints/commercial/github-vendor-app-manifest.example.json",
@@ -42,6 +43,7 @@
     "anpos-commercial-service export remains sourced only from committed commercial-service/ blobs and strips that prefix.",
     "No untracked/local secrets may be copied by either bootstrap/export flow.",
     "GitHub Marketplace App and Vendor Distribution App blueprints are vendor-only launch architecture and must not leak into customer templates.",
+    "Plugin product/runtime blueprints are source/operator assets and must not leak into initialized child repositories or customer-facing template exports.",
     "Operator launch bootstrap tooling may accept only non-secret setup inputs and must never accept, print, or persist live credentials.",
     "Vendor handoff verification must reconstruct the approved deterministic export from committed canonical Git blobs and reject extra, missing, dirty, stale, tampered, wrong-mode, or wrong-identity vendor repository content.",
     "Deployment identity verification is vendor-only launch assurance and must reject stale/wrong service artifacts before production readiness can be certified.",
