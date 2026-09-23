@@ -27,6 +27,14 @@ class ProductAssuranceTests(unittest.TestCase):
             "config/product/experimentation-policy.json": "schemas/experimentation-policy.schema.json",
             "config/release/progressive-delivery.json": "schemas/progressive-delivery.schema.json",
             "config/quality/engineering-review-policy.json": "schemas/engineering-review-policy.schema.json",
+            "config/ai/responsible-ai-policy.json": "schemas/responsible-ai-policy.schema.json",
+            "config/compliance/compliance-profile.json": "schemas/compliance-profile.schema.json",
+            "config/architecture/decision-records.json": "schemas/decision-records.schema.json",
+            "config/ai/asset-registry.json": "schemas/ai-asset-registry.schema.json",
+            "config/contracts/deprecation-policy.json": "schemas/deprecation-policy.schema.json",
+            "config/operations/runbooks-and-drills.json": "schemas/runbooks-and-drills.schema.json",
+            "config/audit/audit-journal.json": "schemas/audit-journal.schema.json",
+            "config/risk/risk-register.json": "schemas/risk-register.schema.json",
         }
         for instance_path, schema_path in mapping.items():
             with self.subTest(instance=instance_path):
@@ -38,12 +46,12 @@ class ProductAssuranceTests(unittest.TestCase):
                 )
                 self.assertEqual(errors, [], "\n".join(error.message for error in errors))
 
-    def test_assurance_state_covers_exact_requirements_83_88(self) -> None:
+    def test_assurance_state_covers_exact_requirements_83_96(self) -> None:
         state = load("config/assurance/assurance-state.json")
         rows = state["requirements"]
         self.assertEqual(
             {row["requirement_id"] for row in rows},
-            {"REQ-83", "REQ-84", "REQ-85", "REQ-86", "REQ-87", "REQ-88"},
+            {f"REQ-{n}" for n in range(83, 97)},
         )
         for row in rows:
             self.assertNotEqual(row["state"], "passed", "Template source must not claim assurance pass evidence")
@@ -71,6 +79,14 @@ class ProductAssuranceTests(unittest.TestCase):
             "progressive_rollout_health_guardrail_failure",
             "stale_feature_flag_without_owner_or_review_date",
             "critical_engineering_review_finding",
+            "high_impact_ai_without_required_human_oversight",
+            "regulated_or_sensitive_processing_without_required_compliance_evidence",
+            "accepted_architecture_decision_silently_reversed",
+            "ai_asset_configuration_drift_after_certified_evaluation",
+            "deprecated_contract_removed_before_approved_support_window",
+            "critical_recovery_runbook_or_resilience_drill_failure",
+            "audit_journal_integrity_chain_break",
+            "expired_risk_acceptance_used_to_bypass_gate",
         }
         self.assertTrue(expected.issubset(names))
 
@@ -112,6 +128,14 @@ class ProductAssuranceTests(unittest.TestCase):
             "config/product/experimentation-policy.json",
             "config/release/progressive-delivery.json",
             "config/quality/engineering-review-policy.json",
+            "config/ai/responsible-ai-policy.json",
+            "config/compliance/compliance-profile.json",
+            "config/architecture/decision-records.json",
+            "config/ai/asset-registry.json",
+            "config/contracts/deprecation-policy.json",
+            "config/operations/runbooks-and-drills.json",
+            "config/audit/audit-journal.json",
+            "config/risk/risk-register.json",
         ]:
             self.assertIn(marker, proc.stdout)
 
@@ -120,7 +144,7 @@ class ProductAssuranceTests(unittest.TestCase):
         ownership = load("config/github/path-ownership.json")
         protected = set(policy["protected_paths"])
         patterns = {row["pattern"] for row in ownership["rules"]}
-        for marker in ["/config/assurance/**", "/config/research/**"]:
+        for marker in ["/config/assurance/**", "/config/research/**", "/config/compliance/**", "/config/architecture/**", "/config/audit/**", "/config/risk/**"]:
             self.assertIn(marker, protected)
             self.assertIn(marker, patterns)
         vendor = load("config/licensing/vendor-source-boundary.json")
