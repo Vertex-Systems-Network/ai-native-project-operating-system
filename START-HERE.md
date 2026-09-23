@@ -304,6 +304,19 @@ Then apply the capability-aware assurance requirements from `AI-NATIVE-PRODUCT-A
 
 These are project-type-aware gates, not mandatory bureaucracy. Mark a gate `not_applicable` only with a project-specific reason and evidence.
 
+Also apply the cross-cutting governance requirements from `AI-NATIVE-GOVERNANCE-ASSURANCE.md` when relevant:
+
+- **89 Responsible AI + Human Oversight**
+- **90 Privacy / Regulatory / Compliance Evidence**
+- **91 Architecture Decision Records**
+- **92 AI Asset + Configuration Registry**
+- **93 Compatibility / Deprecation / EOL Management**
+- **94 Operational Runbooks + Resilience Drills**
+- **95 Tamper-Evident Audit Journal**
+- **96 Unified Risk + Exception Register**
+
+These are assurance/governance controls across the lifecycle, not eight additional sequential development stages.
+
 After technology approval, the AI also completes the stack-specific Code Quality installation defined by `CODE-QUALITY.md` and verifies resulting child-project check names before final GitHub Rules enforcement/adjustment.
 
 Security requirements influence every lifecycle stage; Stage 15 is the dedicated final hardening/adversarial verification pass.
