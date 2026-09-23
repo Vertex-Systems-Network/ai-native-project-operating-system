@@ -41,6 +41,8 @@
 /config/release/ @wpessential
 /config/data/ @wpessential
 /config/product/ @wpessential
+/config/assurance/ @wpessential
+/config/research/ @wpessential
 /config/operations/ @wpessential
 /config/contracts/ @wpessential
 /config/integrations/ @wpessential
