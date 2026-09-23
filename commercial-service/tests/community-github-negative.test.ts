@@ -82,9 +82,9 @@ function controlFileBody(url: string) {
   let value: Record<string, unknown> = {};
   if (url.includes(".ai/manifest.json")) value = { protocol: "ANPOS", schema_version: 7 };
   if (url.includes("config/protocol/instance.json")) {
-    value = { instance_status: "active_project", bootstrap_completed: true, source_protocol_version: "1.3.13" };
+    value = { instance_status: "active_project", bootstrap_completed: true, source_protocol_version: "1.4.0" };
   }
-  if (url.includes("config/protocol/version.json")) value = { version: "1.3.13" };
+  if (url.includes("config/protocol/version.json")) value = { version: "1.4.0" };
   const raw = Buffer.from(JSON.stringify(value), "utf8");
   return {
     type: "file",
