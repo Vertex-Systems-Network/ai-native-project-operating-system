@@ -90,13 +90,13 @@ class ProductAssuranceTests(unittest.TestCase):
         }
         self.assertTrue(expected.issubset(names))
 
-    def test_next_release_is_planned_not_active(self) -> None:
+    def test_140_is_active_and_next_release_is_unplanned(self) -> None:
         current = load("config/protocol/version.json")
         planned = load("config/protocol/next-release.json")
-        self.assertEqual(current["version"], "1.3.13")
+        self.assertEqual(current["version"], "1.4.0")
         self.assertEqual(planned["current_version"], current["version"])
-        self.assertEqual(planned["planned_version"], "1.4.0")
-        self.assertEqual(planned["status"], "planned_not_released")
+        self.assertIsNone(planned["planned_version"])
+        self.assertEqual(planned["status"], "unplanned")
 
     def test_child_bootstrap_dry_run_includes_assurance_state(self) -> None:
         proc = subprocess.run(
