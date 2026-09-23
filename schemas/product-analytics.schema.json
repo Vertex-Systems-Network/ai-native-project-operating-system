@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://anpos.local/schemas/product-analytics.schema.json",
+  "title":"ANPOS Product Analytics Policy",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema_version","status","activation_scope","metric_examples","metric_contract","interpretation_rules","feedback_loop"],
+  "properties":{
+    "schema_version":{"const":1},
+    "status":{"type":"string"},
+    "activation_scope":{"type":"string"},
+    "metric_examples":{"type":"array","minItems":1,"items":{"type":"string","minLength":1},"uniqueItems":true},
+    "metric_contract":{"type":"object","minProperties":6,"additionalProperties":{"type":"boolean"}},
+    "interpretation_rules":{"type":"object","minProperties":3,"additionalProperties":{"type":"boolean"}},
+    "feedback_loop":{"type":"string","minLength":1}
+  }
+}
