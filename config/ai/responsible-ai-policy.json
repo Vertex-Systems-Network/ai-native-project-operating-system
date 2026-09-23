@@ -22,6 +22,6 @@
   },
   "transparency": {
     "ai_involvement_disclosure_required_when_product_policy_or_context_requires": true,
-    "known_limitations_must_not_be_presented_as guarantees": false
+    "known_limitations_must_not_be_presented_as_guarantees": true
   }
 }
