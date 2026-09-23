@@ -167,7 +167,7 @@ def validate_required_files() -> None:
         "scripts/bootstrap_instance.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
         "scripts/lease_control.py", "scripts/coordination_mutation.py", "scripts/consent_guard.py",
         "scripts/install_quality_capabilities.py", "scripts/configure_dependabot.py", "scripts/validate_ai_native_repo.py",
-        "tests/test_control_plane.py", "tests/test_product_assurance.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
+        "tests/test_control_plane.py", "tests/test_product_assurance.py", "tests/test_governance_assurance.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
         "blueprints/github/dependabot.yml", "blueprints/github/workflows/codeql-actions.yml",
         "blueprints/github/workflows/dependency-review.yml", "blueprints/github/workflows/governance-audit.yml",
         "blueprints/github/workflows/innovation-scout.yml", "blueprints/github/workflows/protocol-update-watch.yml",
