@@ -247,6 +247,18 @@
       "review_required": true
     },
     {
+      "pattern": "/AI-NATIVE-GOVERNANCE-ASSURANCE.md",
+      "owner_roles": [
+        "supervisor",
+        "architecture",
+        "security",
+        "qa",
+        "devops"
+      ],
+      "review_required": true,
+      "independent_review_required": true
+    },
+    {
       "pattern": "/COMMERCIAL-LICENSING.md",
       "owner_roles": [
         "supervisor",
@@ -292,6 +304,27 @@
         "qa",
         "security",
         "architecture"
+      ],
+      "review_required": true
+    },
+    {
+      "pattern": "/config/ai/responsible-ai-policy.json",
+      "owner_roles": [
+        "supervisor",
+        "security",
+        "qa",
+        "architecture"
+      ],
+      "review_required": true,
+      "independent_review_required": true
+    },
+    {
+      "pattern": "/config/ai/asset-registry.json",
+      "owner_roles": [
+        "supervisor",
+        "qa",
+        "architecture",
+        "security"
       ],
       "review_required": true
     },
@@ -398,6 +431,46 @@
         "qa"
       ],
       "review_required": true
+    },
+    {
+      "pattern": "/config/compliance/**",
+      "owner_roles": [
+        "supervisor",
+        "security",
+        "architecture"
+      ],
+      "review_required": true,
+      "independent_review_required": true
+    },
+    {
+      "pattern": "/config/architecture/**",
+      "owner_roles": [
+        "supervisor",
+        "architecture",
+        "security"
+      ],
+      "review_required": true
+    },
+    {
+      "pattern": "/config/audit/**",
+      "owner_roles": [
+        "supervisor",
+        "security",
+        "devops"
+      ],
+      "review_required": true,
+      "independent_review_required": true
+    },
+    {
+      "pattern": "/config/risk/**",
+      "owner_roles": [
+        "supervisor",
+        "security",
+        "architecture",
+        "qa"
+      ],
+      "review_required": true,
+      "independent_review_required": true
     },
     {
       "pattern": "/config/operations/**",
