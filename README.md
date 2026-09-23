@@ -1,6 +1,6 @@
 # AI Native Project Operating System (ANPOS)
 
-**Current protocol:** `1.3.13`
+**Current protocol:** `1.4.0`
 
 ANPOS is a reusable Git repository template/protocol for starting AI-native software projects with structured discovery, research, planning, architecture, provider-agnostic project management, selectable development AIs, multi-agent coordination, design assurance, quality, security, release governance, data governance, operations, project memory, continuous improvement, and optional commercial distribution/licensing.
 
@@ -333,7 +333,7 @@ The canonical repository does not contain real prices, live Marketplace plan IDs
 
 ## Requirements coverage
 
-ANPOS currently represents requirements **1–82**:
+ANPOS currently represents requirements **1–96**:
 
 - **1–34 — Discovery, research, planning, architecture, design, development, PM sync, multi-agent execution, continuous improvement, GitHub governance and Code Quality**
 - **35–44 — Child bootstrap, atomic claims, Supervisor election/failover, durable orchestration, context routing, formal schemas/state machine, protocol migrations, vendor adapters, traceability and path ownership**
@@ -341,6 +341,8 @@ ANPOS currently represents requirements **1–82**:
 - **57–66 — Capability-aware quality bootstrap, workflow permission contracts, dynamic dependency management, Draft 2020-12 schema enforcement, release/environment/OIDC/secrets, SBOM/provenance, PM conflict/idempotency, typed handoff and provider privacy**
 - **67–74 — Design revision lock, visual/accessibility evidence, WCAG 2.2 AA web baseline, data/privacy lifecycle, threat model, API/DB migration safety, SLO/incident/DR and budget/rate/retry/recursion guardrails**
 - **75–82 — Commercial distribution modes, billing authority, signed entitlements, webhook security/replay protection, non-destructive expiry, plan/seat entitlements, customer privacy, and commercial legal/operational launch gates**
+- **83–88 — AI-native product assurance: AI/model evaluation, user/problem validation, product analytics, bounded experimentation, progressive delivery, and engineering maintainability review**
+- **89–96 — AI-native governance assurance: responsible AI/human oversight, compliance evidence, ADRs, AI asset identity, deprecation/EOL, resilience runbooks/drills, tamper-evident audit evidence, and unified risk/exception lifecycle**
 
 Protocol representation does **not** mean a child runtime or commercial service has passed production certification. A production orchestrator must pass applicable project runtime scenarios; a commercial entitlement service must additionally pass `commercial_runtime_integration` scenarios in `config/testing/conformance-scenarios.json`.
 
@@ -524,3 +526,10 @@ This strengthens the 1.3.10 exact handoff contract without changing export conte
 ANPOS 1.3.12 hardens the vendor-only production verifier so explicitly requested authenticated smoke checks cannot pass on route drift. Customer entitlement probes now require a positive GitHub account ID, send the canonical `X-Anpos-Account-Id` header, and accept HTTP 404 only when the JSON error is exactly `entitlement_not_found`. Operator verification is intentionally non-mutating: it authenticates `POST /api/v1/reconcile` with an empty JSON body and requires the route's exact `400 valid_account_id_required` contract, so a missing route, generic 400, unauthorized token, or stale API shape fails verification.
 
 The commercial service package is 0.3.5 solely so exported `/api/version` attests ANPOS 1.3.12 exactly. No Marketplace purchase, reconciliation mutation, pricing decision, App registration, private-repository creation, production secret, or launch authority is created by this verifier hardening.
+
+
+## AI-native assurance baseline in 1.4.0
+
+ANPOS 1.4.0 promotes Requirements 83–96 into the active protocol. Product assurance covers AI/model evaluation, user/problem validation, outcome analytics, bounded experimentation, progressive delivery and engineering maintainability. Governance assurance adds responsible-AI/human-oversight policy, evidence-backed compliance mapping, durable architecture decisions, AI asset/configuration identity, compatibility/deprecation/EOL management, operational runbooks/resilience drills, tamper-evident audit evidence, and unified risk/exception lifecycle.
+
+The canonical source remains an inert template. These controls become project evidence only after a child repository classifies applicability and records project-specific verified evidence. The 1.4.0 upgrade must not overwrite application code, approved architecture, legal/commercial terms, deployment behavior or previously verified child evidence.
