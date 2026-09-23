@@ -25,10 +25,12 @@
 /CONTROL-PLANE-SECURITY.md @wpessential
 /PRODUCTION-ASSURANCE.md @wpessential
 /DESIGN-DATA-OPERATIONS.md @wpessential
+/AI-NATIVE-PRODUCT-ASSURANCE.md @wpessential
 /COMMERCIAL-LICENSING.md @wpessential
 /commercial-service/ @wpessential
 /config/ai/agent-catalog.json @wpessential
 /config/ai/memory-provenance.json @wpessential
+/config/ai/ai-evaluation-policy.json @wpessential
 /config/coordination/ @wpessential
 /config/protocol/ @wpessential
 /config/security/ @wpessential
@@ -38,6 +40,7 @@
 /config/runtime/ @wpessential
 /config/release/ @wpessential
 /config/data/ @wpessential
+/config/product/ @wpessential
 /config/operations/ @wpessential
 /config/contracts/ @wpessential
 /config/integrations/ @wpessential
