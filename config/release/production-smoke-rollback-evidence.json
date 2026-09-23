@@ -7,7 +7,14 @@
     "protocol_version": "1.4.0",
     "runtime_contract": "split-github-app-v1"
   },
-  "observed_production": {},
+  "observed_production": {
+    "deployment_revision": null,
+    "deployment_tree": null,
+    "version_endpoint_verified": false,
+    "ready_endpoint_verified": false,
+    "authenticated_customer_smoke_verified": false,
+    "authenticated_operator_smoke_verified": false
+  },
   "recovery": {
     "rollback_procedure_verified": false,
     "restore_test_verified": false,
