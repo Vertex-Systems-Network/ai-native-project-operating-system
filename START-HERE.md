@@ -294,6 +294,16 @@ Required sequence:
 14. **SQA**
 15. **Security Engineering + Authorized Adversarial Assessment**
 
+Then apply the capability-aware assurance requirements from `AI-NATIVE-PRODUCT-ASSURANCE.md`:
+
+16. **AI / LLM Evaluation + Model Assurance** — required when the product contains AI/ML/LLM/RAG/agentic behavior.
+17. **User / Problem / UX Validation** — required when user-facing assumptions or material UX decisions need evidence.
+18. **Engineering Quality + Maintainability Review** — required before major module completion/release.
+19. **Progressive Delivery + Production Verification** — required when release risk justifies staged rollout/feature controls.
+20. **Product Analytics / KPI Evidence + Experiment Feedback Loop** — required when product outcomes are measurable/material; experimentation remains optional and bounded.
+
+These are project-type-aware gates, not mandatory bureaucracy. Mark a gate `not_applicable` only with a project-specific reason and evidence.
+
 After technology approval, the AI also completes the stack-specific Code Quality installation defined by `CODE-QUALITY.md` and verifies resulting child-project check names before final GitHub Rules enforcement/adjustment.
 
 Security requirements influence every lifecycle stage; Stage 15 is the dedicated final hardening/adversarial verification pass.
