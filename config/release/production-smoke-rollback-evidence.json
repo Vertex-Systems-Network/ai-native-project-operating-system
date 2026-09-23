@@ -3,18 +3,11 @@
   "status": "pending_real_production_verification",
   "scope": "commercial_production_smoke_rollback_and_recovery",
   "expected_identity": {
-    "service_version": "0.3.9",
-    "protocol_version": "1.3.13",
+    "service_version": "0.4.0",
+    "protocol_version": "1.4.0",
     "runtime_contract": "split-github-app-v1"
   },
-  "observed_production": {
-    "deployment_revision": null,
-    "deployment_tree": null,
-    "version_endpoint_verified": false,
-    "ready_endpoint_verified": false,
-    "authenticated_customer_smoke_verified": false,
-    "authenticated_operator_smoke_verified": false
-  },
+  "observed_production": {},
   "recovery": {
     "rollback_procedure_verified": false,
     "restore_test_verified": false,
