@@ -48,6 +48,14 @@ REQUIRED_CONFORMANCE = {
     "progressive_rollout_health_guardrail_failure",
     "stale_feature_flag_without_owner_or_review_date",
     "critical_engineering_review_finding",
+    "high_impact_ai_without_required_human_oversight",
+    "regulated_or_sensitive_processing_without_required_compliance_evidence",
+    "accepted_architecture_decision_silently_reversed",
+    "ai_asset_configuration_drift_after_certified_evaluation",
+    "deprecated_contract_removed_before_approved_support_window",
+    "critical_recovery_runbook_or_resilience_drill_failure",
+    "audit_journal_integrity_chain_break",
+    "expired_risk_acceptance_used_to_bypass_gate",
 }
 PROTECTED_PATTERNS = {
     "/.gitignore", "/AGENTS.md", "/.ai/**", "/.github/**", "/blueprints/**", "/START-HERE.md",
@@ -55,12 +63,12 @@ PROTECTED_PATTERNS = {
     "/MULTI-AGENT-ORCHESTRATION.md", "/AUTO-AGENT.md", "/SUPERVISOR.md", "/ORCHESTRATOR.md",
     "/DEVELOPMENT-LIFECYCLE.md", "/CONTINUOUS-IMPROVEMENT.md", "/GITHUB-GOVERNANCE.md",
     "/CODE-QUALITY.md", "/SECURITY.md", "/CONTROL-PLANE-SECURITY.md", "/PRODUCTION-ASSURANCE.md",
-    "/DESIGN-DATA-OPERATIONS.md", "/AI-NATIVE-PRODUCT-ASSURANCE.md", "/config/ai/agent-catalog.json", "/config/ai/memory-provenance.json",
-    "/config/ai/ai-evaluation-policy.json",
+    "/DESIGN-DATA-OPERATIONS.md", "/AI-NATIVE-PRODUCT-ASSURANCE.md", "/AI-NATIVE-GOVERNANCE-ASSURANCE.md", "/config/ai/agent-catalog.json", "/config/ai/memory-provenance.json",
+    "/config/ai/ai-evaluation-policy.json", "/config/ai/responsible-ai-policy.json", "/config/ai/asset-registry.json",
     "/config/coordination/**", "/config/protocol/**", "/config/security/**", "/config/consent/**",
     "/config/github/**", "/config/quality/**", "/config/runtime/**", "/config/release/**",
     "/config/data/**", "/config/product/**", "/config/operations/**", "/config/contracts/**", "/config/integrations/**",
-    "/config/design/**", "/config/testing/**", "/config/traceability/**", "/config/assurance/**", "/config/research/**", "/schemas/**", "/scripts/**",
+    "/config/design/**", "/config/testing/**", "/config/traceability/**", "/config/assurance/**", "/config/research/**", "/config/compliance/**", "/config/architecture/**", "/config/audit/**", "/config/risk/**", "/schemas/**", "/scripts/**",
     "/tests/**", "/requirements-anpos.txt",
 }
 
@@ -132,18 +140,19 @@ def validate_required_files() -> None:
         ".gitignore", "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
         "AI-NATIVE-EXECUTION.md", "MULTI-AGENT-ORCHESTRATION.md", "AUTO-AGENT.md", "SUPERVISOR.md", "ORCHESTRATOR.md",
         "DEVELOPMENT-LIFECYCLE.md", "CONTINUOUS-IMPROVEMENT.md", "GITHUB-GOVERNANCE.md", "CODE-QUALITY.md", "SECURITY.md",
-        "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "AI-NATIVE-PRODUCT-ASSURANCE.md", "README.md",
+        "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "AI-NATIVE-PRODUCT-ASSURANCE.md", "AI-NATIVE-GOVERNANCE-ASSURANCE.md", "README.md",
         "PROJECT-IDEA.md", "requirements-anpos.txt",
         "config/protocol/version.json", "config/protocol/instance.json", "config/protocol/migrations.json", "config/protocol/state-machine.json",
         "config/traceability/requirements-traceability.json", "config/integrations/project-management.json",
         "config/integrations/linear-sync.json", "config/integrations/sync-authority.json", "config/ai/agent-catalog.json",
-        "config/ai/memory-provenance.json", "config/ai/ai-evaluation-policy.json", "config/github/ruleset-policy.json", "config/github/path-ownership.json",
+        "config/ai/memory-provenance.json", "config/ai/ai-evaluation-policy.json", "config/ai/responsible-ai-policy.json", "config/ai/asset-registry.json", "config/github/ruleset-policy.json", "config/github/path-ownership.json",
         "config/quality/quality-policy.json", "config/security/control-plane-policy.json", "config/security/trust-policy.json",
         "config/security/threat-model.json", "config/runtime/budgets.json", "config/release/release-policy.json", "config/release/progressive-delivery.json",
         "config/data/data-governance.json", "config/product/product-validation.json", "config/product/product-analytics.json",
-        "config/product/experimentation-policy.json", "config/quality/engineering-review-policy.json", "config/operations/operations-policy.json", "config/contracts/migration-policy.json",
+        "config/product/experimentation-policy.json", "config/quality/engineering-review-policy.json", "config/operations/operations-policy.json", "config/operations/runbooks-and-drills.json", "config/contracts/migration-policy.json", "config/contracts/deprecation-policy.json",
         "config/design/design-intake.json", "config/design/design-assurance.json", "config/testing/conformance-scenarios.json",
         "config/assurance/assurance-state.json", "config/assurance/runtime-executors.json", "config/research/evidence-registry.json",
+        "config/compliance/compliance-profile.json", "config/architecture/decision-records.json", "config/audit/audit-journal.json", "config/risk/risk-register.json",
         "config/consent/consent-requests.json", "config/coordination/agent-work-queue.json",
         "config/coordination/supervisor-state.json", ".github/CODEOWNERS",
         "schemas/config-base.schema.json", "schemas/project-state.schema.json", "schemas/agent-work-queue.schema.json",
@@ -152,6 +161,9 @@ def validate_required_files() -> None:
         "schemas/assurance-state.schema.json", "schemas/research-evidence.schema.json", "schemas/runtime-executors.schema.json",
         "schemas/ai-evaluation-policy.schema.json", "schemas/product-validation.schema.json", "schemas/product-analytics.schema.json",
         "schemas/experimentation-policy.schema.json", "schemas/progressive-delivery.schema.json", "schemas/engineering-review-policy.schema.json",
+        "schemas/responsible-ai-policy.schema.json", "schemas/compliance-profile.schema.json", "schemas/decision-records.schema.json",
+        "schemas/ai-asset-registry.schema.json", "schemas/deprecation-policy.schema.json", "schemas/runbooks-and-drills.schema.json",
+        "schemas/audit-journal.schema.json", "schemas/risk-register.schema.json",
         "scripts/bootstrap_instance.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
         "scripts/lease_control.py", "scripts/coordination_mutation.py", "scripts/consent_guard.py",
         "scripts/install_quality_capabilities.py", "scripts/configure_dependabot.py", "scripts/validate_ai_native_repo.py",
@@ -203,6 +215,14 @@ def validate_json_schemas() -> None:
         "config/product/experimentation-policy.json": "schemas/experimentation-policy.schema.json",
         "config/release/progressive-delivery.json": "schemas/progressive-delivery.schema.json",
         "config/quality/engineering-review-policy.json": "schemas/engineering-review-policy.schema.json",
+        "config/ai/responsible-ai-policy.json": "schemas/responsible-ai-policy.schema.json",
+        "config/compliance/compliance-profile.json": "schemas/compliance-profile.schema.json",
+        "config/architecture/decision-records.json": "schemas/decision-records.schema.json",
+        "config/ai/asset-registry.json": "schemas/ai-asset-registry.schema.json",
+        "config/contracts/deprecation-policy.json": "schemas/deprecation-policy.schema.json",
+        "config/operations/runbooks-and-drills.json": "schemas/runbooks-and-drills.schema.json",
+        "config/audit/audit-journal.json": "schemas/audit-journal.schema.json",
+        "config/risk/risk-register.json": "schemas/risk-register.schema.json",
     }
     for instance_path, schema_path in mapping.items():
         schema = load_json(schema_path)
@@ -400,6 +420,7 @@ def validate_control_plane() -> None:
     for marker in [
         "/.gitignore", "/AGENTS.md", "/.ai/", "/blueprints/", "/config/security/", "/config/data/", "/config/operations/",
         "/config/contracts/", "/config/integrations/", "/config/design/", "/config/testing/", "/config/traceability/",
+        "/config/compliance/", "/config/architecture/", "/config/audit/", "/config/risk/",
         "/schemas/", "/scripts/", "/tests/", "/requirements-anpos.txt"
     ]:
         if marker not in codeowners:
@@ -634,9 +655,9 @@ def validate_product_assurance() -> None:
     state = load_json("config/assurance/assurance-state.json")
     rows = state.get("requirements", [])
     ids_seen = {row.get("requirement_id") for row in rows if isinstance(row, dict)}
-    expected = {"REQ-83", "REQ-84", "REQ-85", "REQ-86", "REQ-87", "REQ-88"}
+    expected = {f"REQ-{n}" for n in range(83, 97)}
     if ids_seen != expected:
-        fail(f"assurance state must contain exactly requirements 83-88; got {sorted(ids_seen)}")
+        fail(f"assurance state must contain exactly requirements 83-96; got {sorted(ids_seen)}")
     for row in rows if isinstance(rows, list) else []:
         if not isinstance(row, dict):
             continue
@@ -672,12 +693,65 @@ def validate_product_assurance() -> None:
 
     executors = load_json("config/assurance/runtime-executors.json")
     executor_requirements = {row.get("requirement_id") for row in executors.get("executors", []) if isinstance(row, dict)}
-    if executor_requirements != expected:
-        fail("assurance runtime executor contract must cover exactly requirements 83-88")
+    expected_executor_requirements = {"REQ-83", "REQ-84", "REQ-85", "REQ-86", "REQ-87", "REQ-88"}
+    if executor_requirements != expected_executor_requirements:
+        fail("assurance runtime executor contract must cover exactly executable product-assurance requirements 83-88")
 
     research = load_json("config/research/evidence-registry.json")
     if research.get("entries") not in ([], None) and not isinstance(research.get("entries"), list):
         fail("research evidence entries must be a list")
+
+
+def validate_governance_assurance() -> None:
+    responsible = load_json("config/ai/responsible-ai-policy.json")
+    require_true(responsible, ["risk_detection", "detect_high_impact_ai_use"], "responsible AI policy")
+    require_true(responsible, ["oversight", "human_review_thresholds_required_when_high_impact"], "responsible AI policy")
+    require_true(responsible, ["oversight", "emergency_suspend_or_disable_authority_required"], "responsible AI policy")
+    require_true(responsible, ["evaluation", "fairness_or_bias_dimensions_must_be_assessed_for_applicability"], "responsible AI policy")
+    require_true(responsible, ["transparency", "known_limitations_must_not_be_presented_as_guarantees"], "responsible AI policy")
+
+    compliance = load_json("config/compliance/compliance-profile.json")
+    require_true(compliance, ["controls", "data_purpose_and_category_mapping_required"], "compliance profile")
+    require_true(compliance, ["controls", "legal_or_compliance_review_required_for_qualified_regulatory_conclusions"], "compliance profile")
+
+    assets = load_json("config/ai/asset-registry.json")
+    require_true(assets, ["rules", "secrets_forbidden"], "AI asset registry")
+    require_true(assets, ["rules", "material_configuration_change_invalidates_stale_assurance_when_policy_requires"], "AI asset registry")
+
+    deprecation = load_json("config/contracts/deprecation-policy.json")
+    require_true(deprecation, ["rules", "consumer_impact_analysis_required"], "deprecation policy")
+    require_true(deprecation, ["rules", "approved_support_window_required_before_removal_when_material"], "deprecation policy")
+
+    runbooks = load_json("config/operations/runbooks-and-drills.json")
+    require_true(runbooks, ["rules", "critical_state_restore_or_recovery_runbooks_required"], "runbooks policy")
+    require_true(runbooks, ["rules", "unsafe_failure_injection_forbidden"], "runbooks policy")
+
+    audit = load_json("config/audit/audit-journal.json")
+    if (audit.get("integrity") or {}).get("mode") != "sha256_hash_chain":
+        fail("audit journal must retain sha256_hash_chain integrity mode")
+    require_true(audit, ["rules", "secrets_credentials_and_sensitive_full_prompts_forbidden"], "audit journal")
+    require_true(audit, ["rules", "integrity_break_requires_investigation_before_trusting_later_entries"], "audit journal")
+
+    risks = load_json("config/risk/risk-register.json")
+    require_true(risks, ["rules", "accepted_risk_requires_review_or_expiry"], "risk register")
+    require_true(risks, ["rules", "expired_acceptance_reopens_review"], "risk register")
+    require_true(risks, ["rules", "critical_release_blockers_cannot_be_hidden_by_generic_acceptance"], "risk register")
+
+    decisions = load_json("config/architecture/decision-records.json")
+    instance = load_json("config/protocol/instance.json")
+    if instance.get("instance_status") == "template_source":
+        for label, values in [
+            ("architecture decisions", decisions.get("decisions")),
+            ("AI asset registry", assets.get("assets")),
+            ("runbooks", runbooks.get("runbooks")),
+            ("resilience drills", runbooks.get("drills")),
+            ("audit journal", audit.get("entries")),
+            ("risk register", risks.get("risks")),
+            ("compliance jurisdictions", compliance.get("jurisdictions")),
+            ("compliance frameworks", compliance.get("applicable_frameworks")),
+        ]:
+            if values:
+                fail(f"template source: {label} must remain empty")
 
 
 def validate_conformance() -> None:
@@ -758,6 +832,7 @@ def main() -> int:
     validate_consent_and_design()
     validate_assurance_policies()
     validate_product_assurance()
+    validate_governance_assurance()
     validate_conformance()
     validate_workflows()
 
