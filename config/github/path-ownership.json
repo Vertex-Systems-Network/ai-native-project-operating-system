@@ -381,6 +381,25 @@
       "review_required": true
     },
     {
+      "pattern": "/config/assurance/**",
+      "owner_roles": [
+        "supervisor",
+        "qa",
+        "security",
+        "architecture"
+      ],
+      "review_required": true
+    },
+    {
+      "pattern": "/config/research/**",
+      "owner_roles": [
+        "supervisor",
+        "architecture",
+        "qa"
+      ],
+      "review_required": true
+    },
+    {
       "pattern": "/config/operations/**",
       "owner_roles": [
         "supervisor",
