@@ -476,6 +476,7 @@ Scheduled workflows create signals; they do not pretend to be a continuously rea
 - `CONTROL-PLANE-SECURITY.md` — requirements 45–56
 - `PRODUCTION-ASSURANCE.md` — requirements 57–66
 - `DESIGN-DATA-OPERATIONS.md` — requirements 67–74
+- `AI-NATIVE-PRODUCT-ASSURANCE.md` — requirements 83–88: AI/model evaluation, user validation, product analytics, experimentation, progressive delivery and engineering maintainability
 - `COMMERCIAL-LICENSING.md` — requirements 75–82
 - `commercial-service/` — vendor-only deployable Marketplace entitlement/distribution reference backend; stripped by canonical child bootstrap
 - `config/licensing/` — commercial policy, product catalog, Marketplace adapter and entitlement reference
