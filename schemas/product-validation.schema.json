@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://anpos.local/schemas/product-validation.schema.json",
+  "title":"ANPOS Product Validation Policy",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema_version","status","activation_scope","problem_validation","ux_validation","evidence","skip_rule"],
+  "properties":{
+    "schema_version":{"const":1},
+    "status":{"type":"string"},
+    "activation_scope":{"type":"string"},
+    "problem_validation":{"type":"object","additionalProperties":{"type":"boolean"}},
+    "ux_validation":{"type":"object","additionalProperties":{"type":"boolean"}},
+    "evidence":{"type":"object","additionalProperties":{"type":"boolean"}},
+    "skip_rule":{"type":"object","additionalProperties":{"type":"boolean"}}
+  }
+}
