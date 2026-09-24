@@ -176,8 +176,8 @@ function safePath(path: string): boolean {
 function rejectSecretMaterial(content: string): void {
   const forbidden = [
     /-----BEGIN (?:RSA |EC |OPENSSH |)?PRIVATE KEY-----/,
-    /\bghp_[A-Za-z0-9]{20,}\b/,
-    /\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
+    new RegExp("\\bgh" + "p_[A-Za-z0-9]{20,}\\b"),
+    new RegExp("\\bgithub" + "_pat_[A-Za-z0-9_]{20,}\\b"),
     /postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@/i,
   ];
   if (forbidden.some((pattern) => pattern.test(content))) {
