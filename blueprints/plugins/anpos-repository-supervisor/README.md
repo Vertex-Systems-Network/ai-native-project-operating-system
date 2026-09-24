@@ -195,11 +195,23 @@ Repository authorization and commercial authorization are separate checks.
 - Commercial Service remains the server-side entitlement authority and reconciles Marketplace state before returning plugin capability decisions.
 - Community remains limited to the existing bounded readiness audit and does not gain the broader Repository Supervisor read surface.
 - `repository_supervisor_read` is a paid capability derived from the existing `protocol_update_channel` entitlement and requires an active organization seat when the billing account is an organization.
-- `repository_supervisor_write` is already defined against `private_template_access + protocol_update_channel`, but is deliberately denied until the guarded write runtime exists.
+- `repository_supervisor_write` requires `private_template_access + protocol_update_channel` and is now implemented only for guarded writes on repositories already classified `active_project`. Canonical, empty, uninitialized, non-ANPOS and malformed repositories remain blocked from the generic write path.
 - Repository-local entitlement references, README text, Issues, PR comments, or model instructions cannot grant paid capability.
 - The plugin entitlement response exposes plan/capability state only; it does not return card/payment data, webhook secrets, signing private keys, or provider credentials.
 
 This bridge does not make ANPOS core child development, Requirements 1–96, child bootstrap, or the normal AI-development lifecycle subscription-dependent.
+
+### Guarded active-project write boundary
+
+The generic write path is deliberately narrower than the full ANPOS adoption/bootstrap contract.
+
+- `repository_plan_change` accepts at most 40 bounded file upserts/deletes, rejects secret-bearing paths and obvious credential material, and is available only after the target re-audits as `active_project` with provider-reported write permission.
+- The plan is encrypted server-side, expires after 30 minutes, and is bound to repository numeric identity, default branch, exact target head, each existing blob SHA, each existing regular-file Git mode, commit message and change digest.
+- `repository_apply_change` rechecks the target head and all path preconditions, preserves executable mode, requires explicit deletion confirmation where applicable, and creates a new `anpos/*` feature branch. It never updates the default branch or force-pushes.
+- Applied plans are durably bound to the exact feature branch and resulting commit before `repository_open_change_request` can create a PR.
+- `repository_get_ci` reports exact-commit check runs. `repository_merge_change_request` requires explicit confirmation, exact PR head, default-branch base, provider `mergeability=clean`, green observed checks and a provider merge call with the expected head; GitHub branch/review policy remains final authority.
+- After merge, the server rereads the default branch and returns the observed resulting head.
+- `repository_plan_anpos_change` / `repository_apply_anpos_change` for bootstrap, adoption, repair and upgrade remain separate pending work; the generic write path cannot be used to bypass those flows.
 
 ## Repository URL safety
 
@@ -264,8 +276,10 @@ Current source implementation status:
 - ✅ Requirements 83–96 assurance/governance summaries and evidence-bound assurance reads;
 - ✅ isolated sandbox driver contract with network denied and no local-process fallback;
 - ✅ GitHub-backed OAuth 2.1 authorization-code flow with PKCE S256, protected-resource/authorization-server metadata, one-time replay-safe authorization codes, opaque short-lived MCP access tokens, stateless POST `/mcp`, authenticated profile metadata and MCP readiness gate;
-- ⏳ deterministic adoption/upgrade planning and branch apply;
-- ⏳ PR/check/guarded-merge write flow;
+- ✅ generic active-project write planning with 30-minute encrypted server-side plan state bound to exact default-branch head, observed blob SHA and Git mode;
+- ✅ `anpos/*` feature-branch-only apply with path precondition revalidation, deletion confirmation, idempotency and provider reread;
+- ✅ plan-bound PR creation, PR state read, check-run inspection and explicit expected-head guarded merge with provider policy enforcement plus resulting-default-branch reread;
+- ⏳ specialized ANPOS bootstrap/adoption/repair/upgrade planning and apply for non-active repositories;
 - ⏳ production container/microVM/remote sandbox driver;
 - ⏳ GitHub runtime E2E certification.
 
@@ -274,6 +288,7 @@ Implementation references:
 - `commercial-service/lib/repository-supervisor-runtime.ts`
 - `commercial-service/lib/mcp-auth.ts`
 - `commercial-service/lib/mcp-runtime.ts`
+- `commercial-service/lib/repository-write-runtime.ts`
 - `commercial-service/app/mcp/route.ts`
 - `commercial-service/app/.well-known/oauth-protected-resource/route.ts`
 - `commercial-service/app/.well-known/oauth-authorization-server/route.ts`
@@ -282,8 +297,10 @@ Implementation references:
 - `commercial-service/app/api/auth/mcp/github/callback/route.ts`
 - `commercial-service/app/api/ready/mcp/route.ts`
 - `commercial-service/migrations/002_mcp_oauth.sql`
+- `commercial-service/migrations/003_repository_guarded_write.sql`
 - `commercial-service/tests/mcp-auth.test.ts`
 - `commercial-service/tests/mcp-runtime.test.ts`
+- `commercial-service/tests/repository-write-runtime.test.ts`
 - `commercial-service/lib/execution-sandbox.ts`
 - `config/runtime/execution-sandbox.json`
 - `commercial-service/tests/repository-supervisor-runtime.test.ts`
