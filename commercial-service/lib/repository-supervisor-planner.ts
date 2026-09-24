@@ -85,8 +85,11 @@ export type FullPlannerPayload = StoredSupervisorPlanEnvelope & {
   };
   conflict_free: boolean;
   planning_complete: true;
-  safe_to_apply: false;
-  apply_implementation: "sandbox_full_plan_pending";
+  safe_to_apply: boolean;
+  apply_implementation:
+    | "sandbox_full_plan_v1"
+    | "conflict_resolution_required"
+    | "empty_repository_initialization_pending";
 };
 
 const CLASSIFICATION_BY_MODE: Record<FullPlannerMode, RepositorySupervisorClassification> = {
@@ -439,8 +442,16 @@ export function buildFullPlannerPayload(input: {
     },
     conflict_free: counts.manual_merge === 0 && counts.migration_review === 0,
     planning_complete: true,
-    safe_to_apply: false,
-    apply_implementation: "sandbox_full_plan_pending",
+    safe_to_apply:
+      input.mode !== "bootstrap_empty"
+      && counts.manual_merge === 0
+      && counts.migration_review === 0,
+    apply_implementation:
+      input.mode === "bootstrap_empty"
+        ? "empty_repository_initialization_pending"
+        : counts.manual_merge > 0 || counts.migration_review > 0
+          ? "conflict_resolution_required"
+          : "sandbox_full_plan_v1",
   };
 }
 
