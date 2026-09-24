@@ -80,7 +80,7 @@ test("sandbox artifact channel validates canonical base64, digest and output pat
       path: ".anpos-input/file.txt",
       mode: "100644",
       content_base64: payload.toString("base64"),
-      sha256: "53e8c5e8b03d2f433a6ab6e94aa2b26070a4da5da0c3e9738f573f196c046c9e",
+      sha256: "93d868f3b59590f611d7646894ce8def1cea5ad63a9af0d9ccc56e9bc6968c11",
       bytes: payload.length,
     }],
     output_paths: ["config/result.json"],
