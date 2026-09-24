@@ -6,7 +6,7 @@ import {
   randomUUID,
 } from "node:crypto";
 import { db, transaction } from "./db";
-import { marketplaceAppConfig } from "./env";
+import { supervisorAppConfig } from "./env";
 import {
   auditGithubRepository,
   normalizeGithubRepositoryLocator,
@@ -79,7 +79,7 @@ type StoredPlanEnvelope = {
 
 function key(label: string): Buffer {
   return createHash("sha256")
-    .update(marketplaceAppConfig().sessionSecret, "utf8")
+    .update(supervisorAppConfig().sessionSecret, "utf8")
     .update("\0", "utf8")
     .update(label, "utf8")
     .digest();
