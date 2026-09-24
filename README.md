@@ -570,6 +570,8 @@ Implemented and source-certified:
 - fail-closed production Repository Supervisor E2E verifier with separate `read`, `write_prepare`, and `write_verify_merge` phases and no CI busy-wait;
 - vendor/operator launch bootstrap upgraded to the three-App trust model (Marketplace + Repository Supervisor + Vendor Distribution), signed sandbox environment handoff, and deterministic private service/template export verification so production activation cannot silently fall back to the public canonical source.
 
+Production activation now also includes a source-certified guarded database migration controller. It runs only from explicit `ops/migrate-commercial-*` pushes, checks out canonical `main`, injects the linked Vercel production environment without persisting secrets, prefers `DATABASE_URL_UNPOOLED` when available, runs the checksum-locked commercial migration ledger, and immediately re-runs the migrator to prove the completed state is idempotent. It does not auto-migrate on ordinary source merges or deploys.
+
 Community remains restricted to the separate bounded readiness audit. The commercial bridge, MCP transport, guarded write runtime, sandbox driver and E2E harness do not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint.
 
 This is the **Repository Supervisor source runtime + full planner + explicit resolved-plan conflict flow + sandbox-backed full apply + guarded empty bootstrap + production E2E harness**, not evidence that the sandbox gateway or public plugin is deployed or that live GitHub read/write E2E has passed. Live sandbox/E2E receipts and GitLab parity remain subsequent milestones.
