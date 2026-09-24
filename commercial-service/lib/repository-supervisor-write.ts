@@ -21,6 +21,7 @@ const MAX_CHANGES = 24;
 const MAX_FILE_BYTES = 256_000;
 const MAX_TOTAL_BYTES = 1_000_000;
 const PAYLOAD_VERSION = 1;
+const MAX_ENCRYPTED_PLAN_PLAINTEXT_BYTES = 4 * 1024 * 1024;
 
 type FetchLike = typeof fetch;
 
@@ -356,13 +357,17 @@ export async function persistGithubSupervisorPlan(input: {
     input.expected_target_head_sha !== null
     && !/^[0-9a-f]{40}$/i.test(input.expected_target_head_sha)
   ) throw new RepositorySupervisorError(500, "planner_expected_head_invalid");
-  const planHash = sha256(stableJson({
+  const canonicalPlan = stableJson({
     canonical_repository_id: input.canonical_repository_id,
     repository_full_name: input.repository_full_name,
     default_branch: input.default_branch,
     expected_target_head_sha: input.expected_target_head_sha?.toLowerCase() ?? null,
     payload: input.payload,
-  }));
+  });
+  if (Buffer.byteLength(canonicalPlan, "utf8") > MAX_ENCRYPTED_PLAN_PLAINTEXT_BYTES) {
+    throw new RepositorySupervisorError(413, "planner_payload_too_large");
+  }
+  const planHash = sha256(canonicalPlan);
   const planId = randomUUID();
   const expiresAt = new Date(Date.now() + PLAN_TTL_SECONDS * 1000);
   await db().query(
