@@ -18,6 +18,7 @@ BOUNDARY = ROOT / "config/licensing/vendor-source-boundary.json"
 VENDOR_QUALITY = ROOT / "blueprints/commercial/vendor-launch-quality.yml"
 CHILD_QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
 MARKETPLACE_BLUEPRINT = ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json"
+SUPERVISOR_BLUEPRINT = ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json"
 VENDOR_BLUEPRINT = ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json"
 ENV_EXAMPLE = ROOT / "commercial-service/.env.example"
 PACKAGE = ROOT / "commercial-service/package.json"
@@ -127,6 +128,9 @@ def main() -> int:
     for marker in (
         "GITHUB_MARKETPLACE_APP_ID",
         "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+        "GITHUB_SUPERVISOR_APP_ID",
+        "GITHUB_SUPERVISOR_CLIENT_ID",
+        "GITHUB_SUPERVISOR_CLIENT_SECRET",
         "GITHUB_VENDOR_APP_ID",
         "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "GITHUB_VENDOR_INSTALLATION_ID",
@@ -173,8 +177,8 @@ def main() -> int:
 
     data = render()
     if data:
-        if data.get("schema_version") != 6:
-            fail("operator launch renderer output must be schema_version 6")
+        if data.get("schema_version") != 7:
+            fail("operator launch renderer output must be schema_version 7")
         if data.get("status") != "operator_actions_required" or data.get("launch_authorized") is not False:
             fail("operator launch renderer must remain fail-closed and non-authoritative")
         if data.get("artifact_identity") != expected_identity:
@@ -258,10 +262,12 @@ def main() -> int:
 
         apps = data.get("github_apps") or {}
         marketplace = apps.get("marketplace") or {}
+        supervisor = apps.get("repository_supervisor") or {}
         vendor = apps.get("vendor_distribution") or {}
-        if marketplace.get("public") is not True or vendor.get("public") is not False:
-            fail("operator launch renderer must preserve public Marketplace/private Vendor App split")
+        if marketplace.get("public") is not True or supervisor.get("public") is not True or vendor.get("public") is not False:
+            fail("operator launch renderer must preserve public Marketplace/public Supervisor/private Vendor App split")
         mq = parse_query(str(marketplace.get("registration_url") or ""))
+        sq = parse_query(str(supervisor.get("registration_url") or ""))
         vq = parse_query(str(vendor.get("registration_url") or ""))
         if mq.get("public") != ["true"] or mq.get("webhook_active") != ["false"]:
             fail("Marketplace registration URL must prefill public visibility with the ordinary GitHub App webhook disabled")
@@ -275,7 +281,21 @@ def main() -> int:
         if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":
             fail("operator handoff must bind the Marketplace listing webhook secret environment key")
         if "administration" in mq or "contents" in mq:
-            fail("Marketplace registration URL must not request vendor template repository permissions")
+            fail("Marketplace registration URL must not request broad Supervisor or vendor repository permissions")
+        if sq.get("public") != ["true"] or sq.get("webhook_active") != ["false"]:
+            fail("Supervisor registration URL must be public with ordinary GitHub App webhooks disabled")
+        if sq.get("request_oauth_on_install") != ["false"]:
+            fail("Supervisor App must use the explicit MCP OAuth flow")
+        if sq.get("callback_urls[]") != ["https://license.example.test/api/auth/mcp/github/callback"]:
+            fail("Supervisor App callback must bind the MCP GitHub OAuth callback")
+        if sq.get("contents") != ["write"] or sq.get("pull_requests") != ["write"] or sq.get("checks") != ["read"]:
+            fail("Supervisor App must request only the guarded repository write/read permission set")
+        if "administration" in sq:
+            fail("Supervisor App must not request repository Administration permission")
+        supervisor_env = set(supervisor.get("environment_keys") or [])
+        for required in ("GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET"):
+            if required not in supervisor_env:
+                fail(f"Supervisor App handoff missing environment key: {required}")
         if vq.get("public") != ["false"] or vq.get("webhook_active") != ["false"]:
             fail("Vendor registration URL must prefill private visibility and disabled webhook")
         if vq.get("contents") != ["read"] or "administration" in vq:
@@ -296,9 +316,15 @@ def main() -> int:
             fail("collaborator mode must explicitly add Vendor Administration: write")
 
     marketplace_blueprint = load_json(MARKETPLACE_BLUEPRINT)
+    supervisor_blueprint = load_json(SUPERVISOR_BLUEPRINT)
     vendor_blueprint = load_json(VENDOR_BLUEPRINT)
     if (marketplace_blueprint.get("required_defaults") or {}).get("public") is not True:
         fail("operator renderer depends on public Marketplace App blueprint")
+    if supervisor_blueprint.get("role") != "repository_supervisor_app" or (supervisor_blueprint.get("required_defaults") or {}).get("public") is not True:
+        fail("operator renderer depends on distinct public Repository Supervisor App blueprint")
+    supervisor_permissions = supervisor_blueprint.get("repository_permissions") or {}
+    if supervisor_permissions != {"metadata": "read", "contents": "write", "pull_requests": "write", "checks": "read"}:
+        fail("Repository Supervisor App blueprint permissions drifted from guarded write minimum")
     archive = ((vendor_blueprint.get("minimum_permissions_by_capability") or {}).get("archive_first_delivery") or {})
     if archive.get("contents") != "read" or "administration" in archive:
         fail("operator renderer depends on archive-only Vendor App blueprint")
@@ -306,6 +332,9 @@ def main() -> int:
     for env_name in (
         "GITHUB_MARKETPLACE_APP_ID",
         "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+        "GITHUB_SUPERVISOR_APP_ID",
+        "GITHUB_SUPERVISOR_CLIENT_ID",
+        "GITHUB_SUPERVISOR_CLIENT_SECRET",
         "GITHUB_VENDOR_APP_ID",
         "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "GITHUB_VENDOR_INSTALLATION_ID",
