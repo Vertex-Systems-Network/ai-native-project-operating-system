@@ -317,7 +317,7 @@ export function requireMcpScope(principal: McpPrincipal, required: McpScope): vo
 }
 
 export function mcpBearerChallenge(error = "invalid_token", description = "Authentication is required"): string {
-  const metadata = `${mcpOAuthConfig().publicBaseUrl}/.well-known/oauth-protected-resource`;
+  const metadata = `${marketplaceAppConfig().publicBaseUrl}/.well-known/oauth-protected-resource`;
   const safeDescription = description.replace(/[\r\n"]/g, " ").slice(0, 200);
   return `Bearer resource_metadata="${metadata}", error="${error}", error_description="${safeDescription}"`;
 }
