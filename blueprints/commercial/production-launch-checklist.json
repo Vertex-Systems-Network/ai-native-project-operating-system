@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "inactive_blueprint",
   "purpose": "Fail-closed operator checklist for promoting the optional ANPOS commercial service from certified staging to production sales.",
   "launch_authorized": false,
@@ -29,6 +29,12 @@
       "rule": "Create the customer-facing GitHub Marketplace App under the intended publisher organization. It must be public/installable by other accounts for Marketplace use, subscribe to required Marketplace events, and request only permissions justified by approved customer-facing capabilities."
     },
     {
+      "id": "github_supervisor_app",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Create a distinct public/installable Repository Supervisor GitHub App for MCP repository access. Request only Metadata: read, Contents: write, Pull requests: write and Checks: read; do not grant Administration permission or use it for Marketplace billing/vendor distribution."
+    },
+    {
       "id": "github_vendor_app",
       "status": "pending_external",
       "evidence": null,
@@ -38,7 +44,13 @@
       "id": "github_app_role_separation",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify Marketplace and Vendor GitHub App IDs are different, private keys are not reused, and production runtime uses GITHUB_MARKETPLACE_APP_* only for Marketplace reconciliation and GITHUB_VENDOR_APP_* only for vendor-template access."
+      "rule": "Verify Marketplace, Repository Supervisor and Vendor GitHub App IDs are all distinct; Marketplace OAuth credentials are not reused for Supervisor MCP; production uses Marketplace credentials only for Marketplace/Community, Supervisor credentials only for MCP repository access, and Vendor credentials only for private distribution."
+    },
+    {
+      "id": "supervisor_app_installation_e2e",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Install the Repository Supervisor App on an operator-authorized test repository and verify real MCP OAuth, active-project read, exact-head plan, anpos/* feature-branch apply, PR creation, exact-commit checks and guarded expected-head merge while GitHub branch/review policy remains authoritative."
     },
     {
       "id": "vendor_app_installation",
@@ -98,7 +110,7 @@
       "id": "vercel_production_env",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Configure production DATABASE_URL, Marketplace App ID/private key and webhook secret, distinct Vendor App ID/private key and vendor installation/repo identifiers, Marketplace mapping, Ed25519 signing key, operator token, organization seat limits, and final issuer URL. Legacy GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY must not be used as substitutes."
+      "rule": "Configure production DATABASE_URL, Marketplace App credentials/webhook, distinct Repository Supervisor App ID/OAuth client credentials, distinct Vendor App credentials/installation/repo identifiers, Marketplace mapping, Ed25519 signing key, operator token, organization seat limits, MCP client/redirect allowlists and final issuer URL. Legacy GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY must not be used."
     },
     {
       "id": "webhook_public_reachability",
@@ -116,7 +128,7 @@
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including split GitHub App credential checks and migration checksum, only after exact deployment identity has been confirmed."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration including three-role GitHub App separation and current migration checksum, and verify /api/ready/mcp returns HTTP 200 before Repository Supervisor activation."
     },
     {
       "id": "real_marketplace_events",
@@ -161,6 +173,6 @@
       "rule": "Deploy production from vendor-private source or a verified immutable artifact; do not rely on public canonical source access."
     }
   ],
-  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion. Marketplace/Vendor GitHub App role separation and exact deployed artifact identity are mandatory for this reference architecture.",
+  "promotion_rule": "Production sales/plugin activation require every applicable gate to be verified with external evidence. Repository edits cannot authorize launch. Marketplace, Repository Supervisor, and Vendor GitHub App trust roles must remain distinct; exact deployed artifact identity and real MCP/write E2E are mandatory before enabling Repository Supervisor writes for customers.",
   "non_destructive_expiry": true
 }
