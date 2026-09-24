@@ -734,13 +734,6 @@ export async function openRepositoryChangeRequest(input: {
   if (plan.branch_name !== input.headBranch || plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
     throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
   }
-  const plan = await loadPlan(input.planId, input.githubUserId, store);
-  if (plan.status !== "applied") throw new Error("APPLIED_WRITE_PLAN_REQUIRED");
-  if (plan.billing_account_id !== input.billingAccountId) throw new Error("WRITE_PLAN_BILLING_ACCOUNT_MISMATCH");
-  if (plan.change_request_id !== input.changeRequestId) throw new Error("WRITE_PLAN_CHANGE_REQUEST_MISMATCH");
-  if (plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
-    throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
-  }
   const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
   if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) throw new Error("REPOSITORY_IDENTITY_MISMATCH");
   assertFeatureBranch(input.headBranch, audit.default_branch);
@@ -765,7 +758,7 @@ export async function openRepositoryChangeRequest(input: {
   }, async () => {
     const path = repoPath(audit.full_name);
     const branch = await github(
-      `/repos/${path}/branches/${input.headBranch.split("/").map(encodeURIComponent).join("/")}`,
+      `/repos/${path}/branches/${encodeURIComponent(input.headBranch)}`,
       input.token,
       fetchImpl,
     );
@@ -885,7 +878,18 @@ export async function mergeRepositoryChangeRequest(input: {
   if (!["merge", "squash", "rebase"].includes(input.mergeMethod)) throw new Error("INVALID_MERGE_METHOD");
   if (input.confirmMerge !== true) throw new Error("MERGE_CONFIRMATION_REQUIRED");
 
+  const plan = await loadPlan(input.planId, input.githubUserId, store);
+  if (plan.status !== "applied") throw new Error("APPLIED_WRITE_PLAN_REQUIRED");
+  if (plan.billing_account_id !== input.billingAccountId) throw new Error("WRITE_PLAN_BILLING_ACCOUNT_MISMATCH");
+  if (plan.change_request_id !== input.changeRequestId) throw new Error("WRITE_PLAN_CHANGE_REQUEST_MISMATCH");
+  if (plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
+    throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
+  }
+
   const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
+  if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) {
+    throw new Error("REPOSITORY_IDENTITY_MISMATCH");
+  }
   const githubRepositoryId = repositoryId(audit.canonical_repository_id);
   return withIdempotency(store, {
     idempotencyKey: input.idempotencyKey,
