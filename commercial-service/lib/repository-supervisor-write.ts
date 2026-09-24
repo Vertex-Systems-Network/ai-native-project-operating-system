@@ -185,7 +185,7 @@ function rejectSecretMaterial(content: string): void {
   }
 }
 
-function normalizeChanges(changes: PlannedChange[]): StoredPlanPayload["changes"] {
+export function validatePlannedChanges(changes: PlannedChange[]): StoredPlanPayload["changes"] {
   if (!Array.isArray(changes) || changes.length < 1 || changes.length > MAX_CHANGES) {
     throw new RepositorySupervisorError(400, "invalid_planned_changes");
   }
@@ -226,7 +226,7 @@ function commitMessage(value: unknown): string {
   return normalized;
 }
 
-function branchName(value: unknown, defaultBranch: string): string {
+export function validateFeatureBranchName(value: unknown, defaultBranch: string): string {
   if (typeof value !== "string") throw new RepositorySupervisorError(400, "branch_name_required");
   const normalized = value.trim();
   if (
@@ -366,7 +366,7 @@ export async function createGithubWritePlan(input: {
     throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
   }
 
-  const changes = normalizeChanges(input.changes);
+  const changes = validatePlannedChanges(input.changes);
   const payload: StoredPlanPayload = {
     v: 1,
     mode: "bounded_change",
@@ -437,7 +437,7 @@ export async function applyGithubWritePlan(input: {
     throw new RepositorySupervisorError(409, "write_plan_not_applicable");
   }
   const payload = decodePayload(row);
-  const branch = branchName(input.branch_name, row.default_branch);
+  const branch = validateFeatureBranchName(input.branch_name, row.default_branch);
   const resolution = await resolveGithubRepository(row.repository_full_name, token, fetchImpl);
   assertWriteTarget(resolution);
   if (
