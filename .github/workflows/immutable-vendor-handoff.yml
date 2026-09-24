@@ -93,13 +93,19 @@ jobs:
           assert service_receipt["ok"] is True
           assert template_receipt["ok"] is True
 
+          assert service_receipt["canonical_source_revision"] == source_sha
+          assert template_receipt["canonical_source_revision"] == source_sha
+          assert service_receipt["canonical_source_tree"] == template_receipt["canonical_source_tree"]
+          identity = service_receipt["artifact_identity"]
+          assert isinstance(identity, dict)
+
           manifest = {
               "schema_version": 1,
               "source_revision": source_sha,
-              "source_tree": service_receipt["source_tree"],
-              "protocol_version": service_receipt.get("protocol_version"),
-              "service_version": service_receipt.get("service_version"),
-              "runtime_contract": service_receipt.get("runtime_contract"),
+              "source_tree": service_receipt["canonical_source_tree"],
+              "protocol_version": identity["source_protocol_version"],
+              "service_version": identity["service_version"],
+              "runtime_contract": identity["runtime_contract"],
               "artifacts": {
                   "service": {
                       "file": service_zip.name,
