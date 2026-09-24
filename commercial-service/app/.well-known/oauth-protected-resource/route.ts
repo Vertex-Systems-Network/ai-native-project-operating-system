@@ -8,7 +8,7 @@ export async function GET() {
     resource: cfg.resourceUrl,
     authorization_servers: [cfg.publicBaseUrl],
     bearer_methods_supported: ["header"],
-    scopes_supported: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
+    scopes_supported: ["anpos:profile", "anpos:repo:read"],
   }, {
     status: 200,
     headers: { "Cache-Control": "public, max-age=300" },
