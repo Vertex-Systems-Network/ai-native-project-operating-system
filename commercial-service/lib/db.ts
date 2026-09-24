@@ -1,7 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import { databaseConfig } from "./env";
 
-const REQUIRED_MIGRATION = "002_mcp_oauth.sql";
+const REQUIRED_MIGRATION = "003_repository_guarded_write.sql";
 let pool: Pool | null = null;
 let schemaReady = false;
 
@@ -36,7 +36,9 @@ export async function ensureSchema(): Promise<void> {
         to_regclass('public.rate_limit_windows') AS rate_limit_windows,
         to_regclass('public.commercial_audit_log') AS commercial_audit_log,
         to_regclass('public.mcp_oauth_authorization_codes') AS mcp_oauth_authorization_codes,
-        to_regclass('public.mcp_oauth_access_tokens') AS mcp_oauth_access_tokens
+        to_regclass('public.mcp_oauth_access_tokens') AS mcp_oauth_access_tokens,
+        to_regclass('public.repository_write_plans') AS repository_write_plans,
+        to_regclass('public.repository_write_operations') AS repository_write_operations
     `);
     if (Object.values(tables.rows[0] ?? {}).some((value) => value == null)) {
       throw new Error("COMMERCIAL_DATABASE_SCHEMA_INCOMPLETE");
