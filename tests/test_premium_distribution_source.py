@@ -13,12 +13,12 @@ def load(path: str) -> dict:
 
 
 class PremiumDistributionSourceTests(unittest.TestCase):
-    def test_runtime_identity_and_lock_are_042(self) -> None:
+    def test_runtime_identity_and_lock_are_043(self) -> None:
         package = load("commercial-service/package.json")
         lock = load("commercial-service/package-lock.json")
-        self.assertEqual(package["version"], "0.4.2")
-        self.assertEqual(lock["version"], "0.4.2")
-        self.assertEqual(lock["packages"][""]["version"], "0.4.2")
+        self.assertEqual(package["version"], "0.4.3")
+        self.assertEqual(lock["version"], "0.4.3")
+        self.assertEqual(lock["packages"][""]["version"], "0.4.3")
         self.assertEqual(package["anpos"]["source_protocol_version"], "1.4.0")
         self.assertEqual(package["anpos"]["runtime_contract"], "split-github-app-v1")
 
