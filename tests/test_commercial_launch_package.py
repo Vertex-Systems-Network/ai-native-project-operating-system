@@ -128,6 +128,7 @@ class CommercialLaunchPackageTests(unittest.TestCase):
                 "pull_requests": "write",
                 "checks": "read",
                 "statuses": "read",
+                "workflows": "write",
             },
         )
         self.assertNotIn("administration", supervisor["repository_permissions"])
