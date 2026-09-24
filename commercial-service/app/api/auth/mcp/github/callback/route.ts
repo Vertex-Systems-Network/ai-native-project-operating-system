@@ -1,5 +1,5 @@
 import { githubUserFromToken } from "@/lib/auth";
-import { marketplaceAppConfig, mcpOAuthConfig } from "@/lib/env";
+import { mcpOAuthConfig, supervisorAppConfig } from "@/lib/env";
 import {
   clearMcpOAuthCookie,
   consumeMcpAuthorizationState,
@@ -56,14 +56,14 @@ export async function GET(request: Request) {
   if (providerError) return downstreamError("access_denied", "GitHub authorization was not completed.");
 
   try {
-    const app = marketplaceAppConfig();
+    const app = supervisorAppConfig();
     const callbackUrl = `${app.publicBaseUrl}/api/auth/mcp/github/callback`;
     const response = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: app.githubMarketplaceClientId,
-        client_secret: app.githubMarketplaceClientSecret,
+        client_id: app.githubSupervisorClientId,
+        client_secret: app.githubSupervisorClientSecret,
         code,
         redirect_uri: callbackUrl,
         code_verifier: pending.github_code_verifier,
