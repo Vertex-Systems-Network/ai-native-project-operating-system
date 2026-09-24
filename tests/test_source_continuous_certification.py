@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_PATH = ".github/workflows/source-continuous-certification.yml"
 HANDOFF_WORKFLOW_PATH = ".github/workflows/immutable-vendor-handoff.yml"
 DEPLOY_WORKFLOW_PATH = ".github/workflows/commercial-production-deploy.yml"
+MIGRATE_WORKFLOW_PATH = ".github/workflows/commercial-production-migrate.yml"
 
 
 class SourceContinuousCertificationTests(unittest.TestCase):
@@ -117,12 +118,36 @@ class SourceContinuousCertificationTests(unittest.TestCase):
         self.assertNotIn("contents: write", source)
         self.assertNotIn("pull_request_target:", source)
 
+    def test_guarded_commercial_database_migration_controller(self):
+        source = subprocess.run(
+            ["git", "show", f"HEAD:{MIGRATE_WORKFLOW_PATH}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        for marker in (
+            "ops/migrate-commercial-*",
+            "ref: main",
+            "persist-credentials: false",
+            "contents: read",
+            'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}',
+            "vercel@59.11.7",
+            "env run -e production",
+            "npm run migrate",
+            "Re-run migrator to prove idempotent complete state",
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn("contents: write", source)
+        self.assertNotIn("pull_request_target:", source)
+
     def test_source_only_ci_assets_are_stripped_from_customer_template_boundary(self):
         boundary = json.loads((ROOT / "config" / "licensing" / "vendor-source-boundary.json").read_text())
         vendor_only = set(boundary["vendor_only_paths"])
         for path in (
             WORKFLOW_PATH,
             DEPLOY_WORKFLOW_PATH,
+            MIGRATE_WORKFLOW_PATH,
             "scripts/validate_source_continuous_certification.py",
             "tests/test_source_continuous_certification.py",
         ):

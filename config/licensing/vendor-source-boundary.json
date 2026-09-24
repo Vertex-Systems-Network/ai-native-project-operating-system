@@ -34,6 +34,7 @@
     "tests/test_operator_launch_bootstrap.py",
     ".github/workflows/source-continuous-certification.yml",
     ".github/workflows/commercial-production-deploy.yml",
+    ".github/workflows/commercial-production-migrate.yml",
     "scripts/validate_source_continuous_certification.py",
     "tests/test_source_continuous_certification.py",
     "config/protocol/next-release.json",

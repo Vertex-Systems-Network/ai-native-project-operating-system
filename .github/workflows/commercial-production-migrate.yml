@@ -1,0 +1,85 @@
+name: ANPOS Guarded Commercial Database Migration
+
+on:
+  push:
+    branches:
+      - 'ops/migrate-commercial-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anpos-commercial-production-database
+  cancel-in-progress: false
+
+jobs:
+  migrate-production:
+    if: github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
+      VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Checkout exact canonical main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify canonical source and Vercel credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "main"
+          test -z "$(git status --porcelain)"
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN secret is not configured for this repository" >&2
+            exit 2
+          fi
+          git rev-parse HEAD
+
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: commercial-service/package-lock.json
+
+      - name: Install locked commercial dependencies
+        working-directory: commercial-service
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1 --ignore-scripts
+          test "$(npm --version)" = "11.19.1"
+          npm ci
+
+      - name: Verify production database environment is injectable
+        working-directory: commercial-service
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- node -e '
+            const value=(process.env.DATABASE_URL_UNPOOLED||process.env.DATABASE_URL||"").trim();
+            if(!/^postgres(?:ql)?:\/\//i.test(value)) throw new Error("production database URL is missing or invalid");
+            console.log("production database credential available");
+            console.log("migration connection preference="+(process.env.DATABASE_URL_UNPOOLED?"DATABASE_URL_UNPOOLED":"DATABASE_URL"));
+          '
+
+      - name: Apply checksum-locked commercial migrations
+        working-directory: commercial-service
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- npm run migrate
+
+      - name: Re-run migrator to prove idempotent complete state
+        working-directory: commercial-service
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- npm run migrate
