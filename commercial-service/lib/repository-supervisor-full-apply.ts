@@ -46,6 +46,12 @@ type GithubBlob = { sha?: string };
 type GithubTree = { sha?: string };
 type GithubRef = { object?: { sha?: string } };
 
+export function assertEmptyBootstrapRootCommit(commit: GithubCommit): void {
+  if (!Array.isArray(commit.parents) || commit.parents.length !== 0) {
+    throw new RepositorySupervisorError(409, "empty_repository_seed_not_root_commit");
+  }
+}
+
 function sha256(value: Buffer | string): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -405,9 +411,7 @@ async function initializeEmptyRepositorySeed(
   );
   if (!commitResponse.ok) throw new RepositorySupervisorError(502, "github_empty_repository_seed_verify_failed");
   const commit = await json<GithubCommit>(commitResponse, "github_empty_repository_seed_verify_invalid");
-  if (!Array.isArray(commit.parents) || commit.parents.length !== 0) {
-    throw new RepositorySupervisorError(409, "empty_repository_seed_not_root_commit");
-  }
+  assertEmptyBootstrapRootCommit(commit);
 
   const after = await resolveGithubRepository(repositoryFullName, token, fetchImpl);
   if (
