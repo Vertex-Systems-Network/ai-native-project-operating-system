@@ -299,7 +299,11 @@
       "write_runtime_boundary": "active_project_only",
       "write_plan_store": "encrypted_short_lived_postgresql_ledger",
       "feature_branch_prefix": "anpos/",
-      "merge_requires": "explicit_confirmation_plus_exact_head_plus_clean_provider_mergeability_plus_green_observed_checks"
+      "merge_requires": "explicit_confirmation_plus_exact_head_plus_clean_provider_mergeability_plus_green_observed_checks",
+      "guarded_write_chain": "billing_account_id -> server_stored_plan -> exact anpos/* branch/resulting_head -> plan-recorded PR id -> exact-commit checks -> guarded merge",
+      "merge_requires_plan_id": true,
+      "plan_billing_account_binding_required": true,
+      "plan_created_pull_request_binding_required": true
     },
     {
       "method": "GET",
@@ -370,6 +374,9 @@
     "mcp_provider_branch_review_policy_remains_final_authority": true,
     "mcp_resulting_default_branch_must_be_reread_after_merge": true,
     "mcp_generic_write_rejects_secret_bearing_paths_and_obvious_secret_markers": true,
-    "specialized_anpos_bootstrap_adoption_repair_upgrade_write_planning_remains_unimplemented": true
+    "specialized_anpos_bootstrap_adoption_repair_upgrade_write_planning_remains_unimplemented": true,
+    "mcp_write_plan_billing_account_binding_required": true,
+    "mcp_pr_creation_must_record_plan_created_change_request_id": true,
+    "mcp_merge_must_target_plan_recorded_change_request_id": true
   }
 }
