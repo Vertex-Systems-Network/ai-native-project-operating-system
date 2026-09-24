@@ -1,0 +1,154 @@
+name: ANPOS Guarded Commercial Production Readiness Audit
+
+on:
+  push:
+    branches:
+      - 'ops/verify-commercial-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anpos-commercial-production-readiness
+  cancel-in-progress: false
+
+jobs:
+  verify-production:
+    if: github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
+      VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      PRODUCTION_DEPLOYMENT: anpos-commercial-service.vercel.app
+
+    steps:
+      - name: Checkout exact canonical main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify canonical identity and Vercel credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "main"
+          test -z "$(git status --porcelain)"
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN secret is not configured for this repository" >&2
+            exit 2
+          fi
+          echo "CANONICAL_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "EXPECTED_SERVICE_VERSION=$(python -c "import json; print(json.load(open('commercial-service/package.json'))['version'])")" >> "$GITHUB_ENV"
+          echo "EXPECTED_PROTOCOL_VERSION=$(python -c "import json; print(json.load(open('config/protocol/version.json'))['version'])")" >> "$GITHUB_ENV"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.x'
+
+      - name: Probe protected production routes with Vercel authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/readiness"
+
+          probe() {
+            path="$1"
+            name="$2"
+            set +e
+            output="$(npx --yes vercel@59.11.7 curl "$path" \
+              --deployment "$PRODUCTION_DEPLOYMENT" \
+              --token "$VERCEL_TOKEN" \
+              --no-color 2>&1)"
+            rc=$?
+            set -e
+            printf '%s\n' "$output" > "$RUNNER_TEMP/readiness/$name.raw"
+            printf '%s\n' "$rc" > "$RUNNER_TEMP/readiness/$name.rc"
+          }
+
+          probe "/api/version" "version"
+          probe "/api/ready/community" "community"
+          probe "/api/ready/mcp" "mcp"
+          probe "/api/ready/sandbox" "sandbox"
+          probe "/api/ready" "full"
+
+      - name: Normalize and validate readiness evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "readiness"
+
+          def load(name):
+              raw = (root / f"{name}.raw").read_text(errors="replace")
+              rc = int((root / f"{name}.rc").read_text().strip())
+              ansi = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+              clean = ansi.sub("", raw)
+              payload = None
+              for line in reversed(clean.splitlines()):
+                  line = line.strip()
+                  if not line:
+                      continue
+                  if line.startswith("{") and line.endswith("}"):
+                      try:
+                          payload = json.loads(line)
+                          break
+                      except Exception:
+                          pass
+              print(f"READINESS_{name.upper()}_CLI_RC={rc}")
+              print(f"READINESS_{name.upper()}_RAW_BEGIN")
+              print(clean)
+              print(f"READINESS_{name.upper()}_RAW_END")
+              if payload is None:
+                  raise SystemExit(f"{name}: no JSON payload found in vercel curl output")
+              print(f"READINESS_{name.upper()}_JSON={json.dumps(payload, sort_keys=True, separators=(',', ':'))}")
+              return payload
+
+          version = load("version")
+          expected_service = os.environ["EXPECTED_SERVICE_VERSION"]
+          expected_protocol = os.environ["EXPECTED_PROTOCOL_VERSION"]
+          if version.get("ok") is not True:
+              raise SystemExit("version: ok must be true")
+          if version.get("service") != "anpos-commercial-service":
+              raise SystemExit("version: unexpected service")
+          if version.get("service_version") != expected_service:
+              raise SystemExit("version: service version mismatch")
+          if version.get("source_protocol_version") != expected_protocol:
+              raise SystemExit("version: protocol version mismatch")
+          if version.get("runtime_contract") != "split-github-app-v1":
+              raise SystemExit("version: runtime contract mismatch")
+
+          community = load("community")
+          mcp = load("mcp")
+          sandbox = load("sandbox")
+          full = load("full")
+
+          summary = {
+              "canonical_source_sha": os.environ["CANONICAL_SOURCE_SHA"],
+              "service_version": expected_service,
+              "protocol_version": expected_protocol,
+              "community": community,
+              "mcp": mcp,
+              "sandbox": sandbox,
+              "full": full,
+          }
+          (root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+          print("READINESS_SUMMARY=" + json.dumps(summary, sort_keys=True, separators=(',', ':')))
+          PY
+
+      - name: Upload secret-free readiness evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: anpos-commercial-readiness-${{ env.CANONICAL_SOURCE_SHA }}
+          path: ${{ runner.temp }}/readiness/summary.json
+          if-no-files-found: error
+          retention-days: 30
