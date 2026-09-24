@@ -54,7 +54,7 @@ The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `pai
 
 ## Two-App trust architecture
 
-Production uses two distinct GitHub App registrations and the full commercial service fails closed if their App IDs or private keys are reused.
+Production uses three distinct GitHub App trust roles: Marketplace/Community, Repository Supervisor, and Vendor Distribution. Full readiness fails closed when App identities collapse, while MCP readiness specifically requires the dedicated Supervisor OAuth client.
 
 ### Marketplace App — public/customer-facing
 
@@ -83,6 +83,9 @@ Community runtime credentials/configuration:
 - `GITHUB_MARKETPLACE_APP_PRIVATE_KEY`
 - `GITHUB_MARKETPLACE_CLIENT_ID`
 - `GITHUB_MARKETPLACE_CLIENT_SECRET`
+- `GITHUB_SUPERVISOR_APP_ID`
+- `GITHUB_SUPERVISOR_CLIENT_ID`
+- `GITHUB_SUPERVISOR_CLIENT_SECRET`
 - `ANPOS_PUBLIC_BASE_URL`
 - `ANPOS_SESSION_SECRET`
 - `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`
