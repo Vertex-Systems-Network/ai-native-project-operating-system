@@ -1,7 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import { databaseConfig } from "./env";
 
-const REQUIRED_MIGRATION = "004_repository_supervisor_planner.sql";
+const REQUIRED_MIGRATION = "005_repository_supervisor_full_apply.sql";
 let pool: Pool | null = null;
 let schemaReady = false;
 
