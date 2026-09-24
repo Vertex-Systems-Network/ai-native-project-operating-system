@@ -256,7 +256,10 @@ function actionFor(
       return { action: "bootstrap_transform", reason: "template_child_requires_deterministic_runtime_reset", confirmation: false };
     }
     if (!target) return { action: "add_from_release", reason: "missing_in_uninitialized_child", confirmation: false };
-    return { action: "replace_from_release", reason: "uninitialized_template_file_drifted_from_verified_release", confirmation: false };
+    if (isSharedMerge(path)) {
+      return { action: "manual_merge", reason: "shared_template_file_changed_before_bootstrap_requires_review", confirmation: true };
+    }
+    return { action: "replace_from_release", reason: "uninitialized_template_control_file_drifted_from_verified_release", confirmation: false };
   }
 
   if (mode === "adopt_existing") {
