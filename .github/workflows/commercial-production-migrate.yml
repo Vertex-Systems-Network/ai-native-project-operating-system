@@ -58,7 +58,7 @@ jobs:
           revision="$(git rev-parse HEAD)"
           tree="$(git rev-parse 'HEAD^{tree}')"
           service_version="$(python -c "import json; print(json.load(open('commercial-service/package.json'))['version'])")"
-          protocol_version="$(python -c "import json; print(json.load(open('config/protocol/version.json'))['version'])"
+          protocol_version="$(python -c "import json; print(json.load(open('config/protocol/version.json'))['version'])")"
           runtime_contract="$(python -c "import json; print(json.load(open('commercial-service/package.json'))['anpos']['runtime_contract'])")"
 
           python scripts/verify_vendor_handoff.py \
