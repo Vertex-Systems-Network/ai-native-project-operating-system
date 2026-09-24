@@ -724,7 +724,16 @@ export async function openGithubWritePlanPullRequest(input: {
   );
   if (!response.ok) throw new RepositorySupervisorError(502, "github_pull_request_create_failed");
   const pull = await json<GithubPull>(response, "github_pull_request_response_invalid");
-  if (!Number.isSafeInteger(pull.number) || !pull.number || pull.head?.sha !== row.applied_head_sha) {
+  const expectedBaseHead = row.expected_target_head_sha
+    ?? (row.mode === "bootstrap_empty" ? row.initialization_seed_sha : null);
+  if (
+    !expectedBaseHead
+    || !Number.isSafeInteger(pull.number)
+    || !pull.number
+    || pull.head?.sha !== row.applied_head_sha
+    || pull.base?.ref !== row.default_branch
+    || pull.base?.sha?.toLowerCase() !== expectedBaseHead.toLowerCase()
+  ) {
     throw new RepositorySupervisorError(502, "github_pull_request_response_invalid");
   }
   const result = {
@@ -733,6 +742,7 @@ export async function openGithubWritePlanPullRequest(input: {
     url: pull.html_url ?? null,
     head_sha: pull.head.sha,
     base_branch: row.default_branch,
+    base_sha: pull.base.sha,
     status: "pr_open",
   };
   await transaction(async (client) => {
