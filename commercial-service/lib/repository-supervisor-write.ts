@@ -119,6 +119,7 @@ type PlanRow = {
   applied_head_sha: string | null;
   pull_request_number: string | number | null;
   merge_commit_sha: string | null;
+  sandbox_receipt_sha256: string | null;
   expires_at: Date | string;
 };
 
@@ -821,11 +822,11 @@ export async function mergeGithubWritePlanPullRequest(input: {
     return { plan_id: row.plan_id, merged: true, merge_commit_sha: row.merge_commit_sha, resulting_default_branch_head_sha: row.merge_commit_sha };
   }
   if (
-    row.mode !== "bounded_change"
-    || !row.expected_target_head_sha
+    !row.expected_target_head_sha
     || row.status !== "pr_open"
     || !row.pull_request_number
     || !row.applied_head_sha
+    || (row.mode !== "bounded_change" && !/^[0-9a-f]{64}$/i.test(String(row.sandbox_receipt_sha256 ?? "")))
   ) {
     throw new RepositorySupervisorError(409, "write_plan_pull_request_not_mergeable");
   }
