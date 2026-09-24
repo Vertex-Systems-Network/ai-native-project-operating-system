@@ -173,6 +173,12 @@ def validate_required_files() -> None:
         "blueprints/github/workflows/innovation-scout.yml", "blueprints/github/workflows/protocol-update-watch.yml",
         "blueprints/github/workflows/repository-quality.yml", "blueprints/github/workflows/scorecard.yml",
         "blueprints/github/workflows/technology-update-watch.yml",
+        "blueprints/plugins/anpos-repository-supervisor/README.md",
+        "blueprints/plugins/anpos-repository-supervisor/plugin.json",
+        "blueprints/plugins/anpos-repository-supervisor/mcp.json",
+        "blueprints/plugins/anpos-repository-supervisor/skills/anpos-repository-supervisor/SKILL.md",
+        "blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json",
+        "tests/test_repository_supervisor_plugin_blueprint.py",
     ]
     for relative in required:
         if not (ROOT / relative).is_file():
