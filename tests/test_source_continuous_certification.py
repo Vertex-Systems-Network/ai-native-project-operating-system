@@ -89,7 +89,7 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             'identity["source_protocol_version"]',
             'identity["service_version"]',
             'identity["runtime_contract"]',
-            'anpos-vendor-handoff-\${{ github.sha }}',
+            'anpos-vendor-handoff-${{ github.sha }}',
         ):
             self.assertIn(marker, source)
         self.assertNotIn('service_receipt["source_tree"]', source)
