@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS repository_write_plans (
   status TEXT NOT NULL DEFAULT 'planned',
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  applied_at TIMESTAMPTZ
+  applied_at TIMESTAMPTZ,
+  applied_branch_name TEXT,
+  resulting_head_sha TEXT
 );
 CREATE INDEX IF NOT EXISTS repository_write_plans_lookup_idx
   ON repository_write_plans(github_repository_id, created_by_github_user_id, status, expires_at);
