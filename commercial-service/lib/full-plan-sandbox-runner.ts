@@ -54,9 +54,10 @@ for row in actions:
     rel = safe_relative(str(row.get("path") or ""))
     if action in {"manual_merge", "migration_review"}:
         raise RuntimeError("unresolved_plan_conflict")
-    if action in NO_WRITE_ACTIONS:
+    copy_for_bootstrap = mode in BOOTSTRAP_MODES and action == "unchanged"
+    if action in NO_WRITE_ACTIONS and not copy_for_bootstrap:
         continue
-    if action not in WRITE_ACTIONS:
+    if action not in WRITE_ACTIONS and not copy_for_bootstrap:
         raise RuntimeError("unsupported_plan_action")
 
     source = (RELEASE_ROOT / rel).resolve()
@@ -74,7 +75,8 @@ for row in actions:
     destination.write_bytes(data)
     mode_bits = 0o755 if row.get("release_mode") == "100755" else 0o644
     destination.chmod(mode_bits)
-    output_paths.append(rel.as_posix())
+    if action in WRITE_ACTIONS:
+        output_paths.append(rel.as_posix())
 
 if mode in BOOTSTRAP_MODES:
     context = plan.get("bootstrap_context")
