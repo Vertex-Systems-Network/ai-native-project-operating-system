@@ -558,6 +558,9 @@ Implemented and source-certified:
 - bounded immutable-ref control-file reads;
 - ANPOS repository classification;
 - Requirements 83–96 assurance/governance summary and exact-ref assurance reads;
-- execution-sandbox request/driver contract with network denied by default, bounded time/output, environment names only, and no direct local-process fallback.
+- execution-sandbox request/driver contract with network denied by default, bounded time/output, environment names only, and no direct local-process fallback;
+- commercial service 0.4.1 server-side Plugin Subscription Entitlement Bridge with authenticated GitHub principal/account binding, Marketplace reconciliation, organization-seat-aware paid read gating, and fail-closed write capability.
 
-This is the **read-only runtime foundation**, not a deployed MCP server. Write planning/apply, pull-request/CI/merge tools, a production isolation driver, GitLab parity and production MCP/OAuth transport remain subsequent milestones.
+Community remains restricted to the separate bounded readiness audit. The commercial bridge does not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint.
+
+This is the **read-only runtime foundation plus entitlement gate**, not a deployed MCP server. Write planning/apply, pull-request/CI/merge tools, a production isolation driver, GitLab parity and production MCP/OAuth transport remain subsequent milestones.
