@@ -190,7 +190,7 @@ def main() -> int:
         (
             "normalizeGithubRepositoryLocator", "resolveGithubRepository", "profileGithubAccount",
             "readGithubRepositoryFiles", "auditGithubRepository", "getGithubRepositoryAssurance",
-            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "Requirements 83-96",
+            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "summarizeAssurance(assurance, 83, 96)",
         ),
         "Repository Supervisor GitHub runtime foundation",
     )
