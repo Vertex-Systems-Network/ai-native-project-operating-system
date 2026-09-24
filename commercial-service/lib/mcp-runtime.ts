@@ -14,7 +14,6 @@ import {
   resolveGithubRepository,
 } from "./repository-supervisor-runtime";
 import {
-  applyGithubWritePlan,
   createGithubWritePlan,
   getGithubWritePlanCi,
   getGithubWritePlanPullRequest,
@@ -22,6 +21,7 @@ import {
   openGithubWritePlanPullRequest,
   type PlannedChange,
 } from "./repository-supervisor-write";
+import { applyGithubSupervisorPlan } from "./repository-supervisor-full-apply";
 import {
   createGithubFullAnposPlan,
   type FullPlannerMode,
@@ -440,7 +440,7 @@ async function callTool(
         }, identity, billingAccountId, principal.github_token, fetchImpl));
       }
       if (name === "repository_apply_anpos_change") {
-        return toolSuccess(await applyGithubWritePlan({
+        return toolSuccess(await applyGithubSupervisorPlan({
           plan_id: requiredString(args.plan_id, "PLAN_ID_REQUIRED", 36),
           plan_hash: requiredString(args.plan_hash, "PLAN_HASH_REQUIRED", 64),
           branch_name: args.branch_name,
@@ -510,7 +510,7 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.5",
+            version: "0.4.6",
           },
         },
         instructions: "Use the authenticated profile first when account identity is unclear. Paid repository tools require an explicit billing_account_id and are always re-authorized server-side.",
@@ -530,7 +530,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.5" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.6" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };
