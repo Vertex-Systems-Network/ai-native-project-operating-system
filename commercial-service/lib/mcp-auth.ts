@@ -17,6 +17,21 @@ const AUTHORIZATION_CODE_TTL_SECONDS = 5 * 60;
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 const TOKEN_PREFIX = "anpos_mcp_";
 const SEALED_VERSION = 1;
+const MCP_CLIENT_METADATA_TIMEOUT_MS = 5_000;
+const MCP_CLIENT_METADATA_MAX_BYTES = 32_768;
+
+type McpClientMetadata = {
+  client_id?: unknown;
+  redirect_uris?: unknown;
+  grant_types?: unknown;
+  response_types?: unknown;
+  token_endpoint_auth_methods_supported?: unknown;
+};
+
+type McpMetadataFetcher = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export type PendingAuthorization = {
   v: 1;
@@ -114,10 +129,97 @@ export function pkceChallenge(verifier: string): string {
   return createHash("sha256").update(verifier, "ascii").digest("base64url");
 }
 
-export function createMcpAuthorizationStart(url: URL): {
+function safeMetadataUrl(clientId: string): URL {
+  let parsed: URL;
+  try { parsed = new URL(clientId); }
+  catch { throw new Error("MCP_OAUTH_CLIENT_METADATA_URL_INVALID"); }
+  if (
+    parsed.protocol !== "https:"
+    || parsed.username
+    || parsed.password
+    || parsed.search
+    || parsed.hash
+  ) throw new Error("MCP_OAUTH_CLIENT_METADATA_URL_INVALID");
+  return parsed;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? value as string[]
+    : [];
+}
+
+export async function validateMcpClientMetadata(
+  clientId: string,
+  redirectUri: string,
+  fetcher: McpMetadataFetcher = fetch,
+): Promise<void> {
+  const cfg = mcpOAuthConfig();
+  if (!cfg.allowedClientIds.includes(clientId)) throw new Error("MCP_OAUTH_CLIENT_NOT_ALLOWED");
+  if (!cfg.allowedRedirectUris.includes(redirectUri)) throw new Error("MCP_OAUTH_REDIRECT_NOT_ALLOWED");
+
+  const metadataUrl = safeMetadataUrl(clientId);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MCP_CLIENT_METADATA_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetcher(metadataUrl, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      redirect: "error",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_FETCH_FAILED");
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) throw new Error("MCP_OAUTH_CLIENT_METADATA_FETCH_FAILED");
+  const length = response.headers.get("content-length");
+  if (length && (!/^\d+$/.test(length) || Number(length) > MCP_CLIENT_METADATA_MAX_BYTES)) {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_TOO_LARGE");
+  }
+
+  const raw = await response.text();
+  if (Buffer.byteLength(raw, "utf8") > MCP_CLIENT_METADATA_MAX_BYTES) {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_TOO_LARGE");
+  }
+
+  let metadata: McpClientMetadata;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("invalid");
+    }
+    metadata = parsed as McpClientMetadata;
+  } catch {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_INVALID");
+  }
+
+  if (metadata.client_id !== clientId) throw new Error("MCP_OAUTH_CLIENT_METADATA_ID_MISMATCH");
+  if (!stringArray(metadata.redirect_uris).includes(redirectUri)) {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_REDIRECT_MISMATCH");
+  }
+  if (!stringArray(metadata.grant_types).includes("authorization_code")) {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_GRANT_UNSUPPORTED");
+  }
+  if (!stringArray(metadata.response_types).includes("code")) {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_RESPONSE_UNSUPPORTED");
+  }
+  if (!stringArray(metadata.token_endpoint_auth_methods_supported).includes("none")) {
+    throw new Error("MCP_OAUTH_CLIENT_METADATA_TOKEN_AUTH_UNSUPPORTED");
+  }
+}
+
+export async function createMcpAuthorizationStart(
+  url: URL,
+  fetcher: McpMetadataFetcher = fetch,
+): Promise<{
   githubAuthorizeUrl: string;
   stateCookie: string;
-} {
+}> {
   const cfg = mcpOAuthConfig();
   if (url.searchParams.get("response_type") !== "code") throw new Error("MCP_OAUTH_RESPONSE_TYPE_UNSUPPORTED");
   const clientId = safeString(url.searchParams.get("client_id"));
@@ -129,6 +231,8 @@ export function createMcpAuthorizationStart(url: URL): {
   if (!cfg.allowedRedirectUris.includes(redirectUri)) throw new Error("MCP_OAUTH_REDIRECT_NOT_ALLOWED");
   if (resource !== cfg.resourceUrl) throw new Error("MCP_OAUTH_RESOURCE_MISMATCH");
   if (!/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)) throw new Error("MCP_OAUTH_CODE_CHALLENGE_INVALID");
+
+  await validateMcpClientMetadata(clientId, redirectUri, fetcher);
 
   const downstreamState = url.searchParams.get("state");
   if (downstreamState && (downstreamState.length > 2048 || /[\r\n\0]/.test(downstreamState))) {

@@ -1,5 +1,5 @@
 {
-  "schema_version": 13,
+  "schema_version": 14,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -239,13 +239,22 @@
     {
       "method": "GET",
       "path": "/oauth/authorize",
-      "authentication": "exact_allowlisted_mcp_client_plus_resource_binding_then_github_app_oauth",
+      "authentication": "exact_allowlisted_mcp_client_plus_verified_cimd_redirect_binding_plus_resource_binding_then_github_app_oauth",
       "purpose": "Validate MCP client/redirect/resource/scope/PKCE inputs, seal short-lived authorization state, and redirect to GitHub App OAuth.",
       "exact_client_allowlist_required": true,
       "exact_redirect_allowlist_required": true,
       "resource_parameter_must_equal_mcp_resource": true,
       "pkce_required": "S256",
-      "state_cookie": "HttpOnly Secure SameSite=Lax encrypted max_10_minutes"
+      "state_cookie": "HttpOnly Secure SameSite=Lax encrypted max_10_minutes",
+      "cimd_document_fetch_required": true,
+      "cimd_fetch_redirects": "forbidden",
+      "cimd_fetch_max_bytes": 32768,
+      "cimd_fetch_timeout_ms": 5000,
+      "cimd_client_id_exact_match_required": true,
+      "cimd_redirect_uri_membership_required": true,
+      "cimd_authorization_code_grant_required": true,
+      "cimd_code_response_type_required": true,
+      "cimd_public_client_token_method_required": "none"
     },
     {
       "method": "GET",
@@ -444,6 +453,10 @@
     "supervisor_full_plan_conflict_resolution_source_plan_hash_required": true,
     "supervisor_full_plan_conflict_resolution_target_git_object_required": true,
     "supervisor_full_plan_conflict_resolution_migration_review_ack_required": true,
-    "supervisor_full_plan_conflict_resolution_source_plan_mutation_forbidden": true
+    "supervisor_full_plan_conflict_resolution_source_plan_mutation_forbidden": true,
+    "mcp_cimd_metadata_validation_required": true,
+    "mcp_cimd_exact_allowlist_before_fetch_required": true,
+    "mcp_cimd_redirect_follow_forbidden": true,
+    "mcp_cimd_selected_redirect_must_be_metadata_bound": true
   }
 }
