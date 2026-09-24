@@ -396,9 +396,20 @@ async function initializeEmptyRepositorySeed(
   if (create.status !== 201) {
     throw new RepositorySupervisorError(502, "github_empty_repository_seed_failed");
   }
-  const created = await json<GithubContentCreate>(create, "github_empty_repository_seed_response_invalid");
+  let created: GithubContentCreate | null = null;
+  try {
+    created = await json<GithubContentCreate>(create, "github_empty_repository_seed_response_invalid");
+  } catch (error) {
+    const observed = await resolveGithubRepository(repositoryFullName, token, fetchImpl).catch(() => null);
+    const observedHead = observed?.head_sha?.toLowerCase() ?? "";
+    if (/^[0-9a-f]{40}$/.test(observedHead)) onCreated(observedHead);
+    throw error;
+  }
   const seedSha = created.commit?.sha?.toLowerCase() ?? "";
   if (!/^[0-9a-f]{40}$/.test(seedSha)) {
+    const observed = await resolveGithubRepository(repositoryFullName, token, fetchImpl).catch(() => null);
+    const observedHead = observed?.head_sha?.toLowerCase() ?? "";
+    if (/^[0-9a-f]{40}$/.test(observedHead)) onCreated(observedHead);
     throw new RepositorySupervisorError(502, "github_empty_repository_seed_response_invalid");
   }
   onCreated(seedSha);
