@@ -280,9 +280,13 @@
         "commercial-service/app/mcp/route.ts",
         "commercial-service/migrations/002_mcp_oauth.sql",
         "commercial-service/tests/mcp-auth.test.ts",
-        "commercial-service/tests/mcp-runtime.test.ts"
+        "commercial-service/tests/mcp-runtime.test.ts",
+        "blueprints/commercial/github-supervisor-app-manifest.example.json",
+        "commercial-service/lib/repository-supervisor-write.ts",
+        "commercial-service/migrations/003_repository_supervisor_write.sql",
+        "commercial-service/tests/repository-supervisor-write.test.ts"
       ],
-      "notes": "GitHub read-only Repository Supervisor runtime, server-side subscription entitlement bridge, GitHub-backed OAuth 2.1/PKCE source flow, replay-safe opaque MCP access-token ledger, stateless POST /mcp transport, OpenAI-compatible profile metadata, and explicit billing-account reauthorization are implemented in source. Community remains limited to its bounded readiness audit. Write OAuth scope/tools remain fail-closed until the guarded write runtime exists. Public plugin registration, production MCP deployment/E2E and write runtime are not yet evidenced."
+      "notes": "GitHub Repository Supervisor source now includes read-only runtime, server-side entitlement gating, dedicated Supervisor-App OAuth 2.1/PKCE transport, and guarded write primitives: encrypted expected-head-bound plans, atomic Git Data feature-branch apply, PR creation/re-read, exact commit CI inspection, and guarded merge with resulting-main verification. Community remains a separate bounded readiness audit and Marketplace App permissions are not widened. Full ANPOS bootstrap/adoption/upgrade plan generation, public plugin registration, production deployment/write E2E, production sandbox driver and GitLab parity remain incomplete."
     }
   ]
 }
