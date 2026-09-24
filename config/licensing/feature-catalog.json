@@ -280,9 +280,12 @@
         "commercial-service/app/mcp/route.ts",
         "commercial-service/migrations/002_mcp_oauth.sql",
         "commercial-service/tests/mcp-auth.test.ts",
-        "commercial-service/tests/mcp-runtime.test.ts"
+        "commercial-service/tests/mcp-runtime.test.ts",
+        "commercial-service/lib/repository-write-runtime.ts",
+        "commercial-service/migrations/003_repository_guarded_write.sql",
+        "commercial-service/tests/repository-write-runtime.test.ts"
       ],
-      "notes": "GitHub read-only Repository Supervisor runtime, server-side subscription entitlement bridge, GitHub-backed OAuth 2.1/PKCE source flow, replay-safe opaque MCP access-token ledger, stateless POST /mcp transport, OpenAI-compatible profile metadata, and explicit billing-account reauthorization are implemented in source. Community remains limited to its bounded readiness audit. Write OAuth scope/tools remain fail-closed until the guarded write runtime exists. Public plugin registration, production MCP deployment/E2E and write runtime are not yet evidenced."
+      "notes": "GitHub Repository Supervisor now includes read runtime, subscription entitlement bridge, OAuth 2.1/PKCE MCP transport, and guarded generic writes for already-active ANPOS projects: exact-head encrypted plans, anpos/* feature-branch apply, PR/check inspection, and expected-head provider-policy merge. Specialized bootstrap/adoption/repair/upgrade planners, production MCP E2E, production sandbox driver and GitLab parity remain pending. Core ANPOS child development is not billing-dependent."
     }
   ]
 }
