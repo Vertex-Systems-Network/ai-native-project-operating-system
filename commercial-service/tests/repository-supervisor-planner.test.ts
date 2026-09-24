@@ -89,7 +89,7 @@ test("bootstrap_empty plans verified release plus child transforms without write
   assert.equal(plan.summary.add_from_release, 2);
   assert.equal(plan.conflict_free, true);
   assert.equal(plan.safe_to_apply, false);
-  assert.equal(plan.apply_implementation, "sandbox_full_plan_pending");
+  assert.equal(plan.apply_implementation, "empty_repository_initialization_pending");
   assert.equal(plan.requirements_83_96.initialize_without_pass_claims, true);
 });
 
@@ -111,6 +111,8 @@ test("bootstrap_child transforms runtime identity even when template blobs match
   assert.equal(plan.actions.find((row) => row.path === "config/protocol/instance.json")?.action, "bootstrap_transform");
   assert.equal(plan.actions.find((row) => row.path === "README.md")?.action, "unchanged");
   assert.equal(plan.actions.find((row) => row.path === ".ai/manifest.json")?.action, "unchanged");
+  assert.equal(plan.safe_to_apply, true);
+  assert.equal(plan.apply_implementation, "sandbox_full_plan_v1");
 });
 
 test("adopt_existing never auto-overwrites collisions and preserves target-only application files", () => {
@@ -132,6 +134,8 @@ test("adopt_existing never auto-overwrites collisions and preserves target-only 
   assert.equal(plan.summary.target_only_preserved, 1);
   assert.match(plan.summary.target_only_digest, /^[0-9a-f]{64}$/);
   assert.equal(plan.conflict_free, false);
+  assert.equal(plan.safe_to_apply, false);
+  assert.equal(plan.apply_implementation, "conflict_resolution_required");
   assert.equal(plan.requirements_83_96.initialize_without_pass_claims, true);
 });
 
@@ -156,6 +160,8 @@ test("upgrade_active preserves evidence and flags AI assurance re-verification o
   assert.equal(plan.requirements_83_96.assurance_summary?.verified_requirements, 4);
   assert.equal(plan.requirements_83_96.ai_assurance_reverification_required, true);
   assert.equal(plan.conflict_free, false);
+  assert.equal(plan.safe_to_apply, false);
+  assert.equal(plan.apply_implementation, "conflict_resolution_required");
 });
 
 test("planner mode must match the audited repository classification", () => {
