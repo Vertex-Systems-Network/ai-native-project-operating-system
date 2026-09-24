@@ -389,7 +389,6 @@
     "supervisor_app_must_be_distinct_from_marketplace_and_vendor_apps": true,
     "supervisor_write_plan_must_be_server_issued_and_expected_head_bound": true,
     "supervisor_write_plan_payload_must_be_encrypted_at_rest": true,
-    "supervisor_write_forbids_direct_default_branch_and_force_push": true,
     "supervisor_apply_must_use_atomic_git_data_commit": true,
     "supervisor_merge_requires_fresh_ci_and_expected_head_reverification": true,
     "supervisor_merge_must_verify_resulting_default_branch_head": true,
@@ -434,6 +433,9 @@
     "supervisor_bootstrap_empty_zero_parent_root_required": true,
     "supervisor_bootstrap_empty_seed_removed_on_feature_branch": true,
     "supervisor_bootstrap_empty_post_seed_failure_requires_recovery": true,
-    "supervisor_non_empty_direct_default_branch_write_forbidden": true
+    "supervisor_non_empty_direct_default_branch_write_forbidden": true,
+    "supervisor_force_push_forbidden": true,
+    "supervisor_normal_non_empty_direct_default_branch_write_forbidden": true,
+    "supervisor_empty_repository_seed_is_only_default_branch_exception": true
   }
 }
