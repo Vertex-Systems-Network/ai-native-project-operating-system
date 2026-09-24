@@ -30,7 +30,7 @@ test("Community stays limited to bounded readiness capability", () => {
   assert.equal(supervisor.reason, "capability_not_entitled");
 });
 
-test("Developer entitlement authorizes read-only Repository Supervisor capability", () => {
+test("Developer entitlement authorizes guarded read and write Repository Supervisor capabilities", () => {
   const current = snapshot({
     plan_id: "developer",
     entitlements: ["private_template_access", "protocol_update_channel"],
@@ -40,8 +40,8 @@ test("Developer entitlement authorizes read-only Repository Supervisor capabilit
   assert.equal(read.reason, "allowed");
 
   const write = evaluatePluginCapability(current, USER, "repository_supervisor_write");
-  assert.equal(write.allowed, false);
-  assert.equal(write.reason, "capability_not_implemented");
+  assert.equal(write.allowed, true);
+  assert.equal(write.reason, "allowed");
 });
 
 test("Plugin capability evaluation fails closed on principal mismatch and inactive billing", () => {
@@ -82,4 +82,9 @@ test("Organization paid capability requires an active assigned seat while Commun
 
   const withSeat = evaluatePluginCapability(organization, USER, "repository_supervisor_read", true);
   assert.equal(withSeat.allowed, true);
+  const writeNoSeat = evaluatePluginCapability(organization, USER, "repository_supervisor_write", false);
+  assert.equal(writeNoSeat.allowed, false);
+  assert.equal(writeNoSeat.reason, "organization_seat_required");
+  const writeWithSeat = evaluatePluginCapability(organization, USER, "repository_supervisor_write", true);
+  assert.equal(writeWithSeat.allowed, true);
 });
