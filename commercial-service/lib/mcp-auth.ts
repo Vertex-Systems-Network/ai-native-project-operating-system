@@ -10,7 +10,7 @@ import { db, ensureSchema, transaction } from "./db";
 import { marketplaceAppConfig, mcpOAuthConfig } from "./env";
 
 export const MCP_OAUTH_STATE_COOKIE_NAME = "__Host-anpos_mcp_oauth_state";
-export const MCP_SCOPES = ["anpos:profile", "anpos:repo:read", "anpos:repo:write"] as const;
+export const MCP_SCOPES = ["anpos:profile", "anpos:repo:read"] as const;
 export type McpScope = typeof MCP_SCOPES[number];
 
 const AUTHORIZATION_CODE_TTL_SECONDS = 5 * 60;
