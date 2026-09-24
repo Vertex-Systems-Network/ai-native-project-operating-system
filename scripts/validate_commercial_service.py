@@ -331,7 +331,9 @@ def main() -> int:
             "ACTIVE_ANPOS_PROJECT_REQUIRED", "EXPECTED_TARGET_HEAD_MISMATCH",
             "SECRET_BEARING_PATH_FORBIDDEN", "SECRET_LIKE_CONTENT_FORBIDDEN",
             "expected_blob_sha", "expected_mode", "anpos/", "DELETE_CONFIRMATION_REQUIRED",
-            "APPLIED_PLAN_BRANCH_BINDING_MISMATCH", "IDEMPOTENCY_KEY_CONFLICT",
+            "APPLIED_PLAN_BRANCH_BINDING_MISMATCH", "WRITE_PLAN_BILLING_ACCOUNT_MISMATCH",
+            "WRITE_PLAN_CHANGE_REQUEST_MISMATCH", "WRITE_PLAN_CHANGE_REQUEST_BRANCH_MISMATCH",
+            "IDEMPOTENCY_KEY_CONFLICT",
             "CHANGE_REQUEST_POLICY_NOT_SATISFIED", "CHANGE_REQUEST_CHECKS_NOT_GREEN", "unconfigured",
             "MERGE_CONFIRMATION_REQUIRED", "resulting_default_branch_head_sha",
         ),
@@ -345,6 +347,7 @@ def main() -> int:
             "bound to exact feature branch and head",
             "guarded merge requires clean exact-head PR and green checks",
             "guarded merge fails closed when no CI check runs are configured",
+            "guarded write plan cannot switch billing account or merge an unrelated pull request",
             "rejects secret-bearing paths and non-active repositories",
             "rejects stale expected main head and direct/default branches",
         ),
@@ -429,7 +432,7 @@ def main() -> int:
         "migrations/003_repository_guarded_write.sql",
         (
             "repository_write_plans", "plan_digest_sha256", "changes_ciphertext", "expected_target_head_sha",
-            "applied_branch_name", "resulting_head_sha", "repository_write_operations",
+            "billing_account_id", "applied_branch_name", "resulting_head_sha", "opened_change_request_id", "repository_write_operations",
             "idempotency_key", "request_digest_sha256",
         ),
         "guarded write migration",
@@ -553,6 +556,9 @@ def main() -> int:
         "mcp_repository_mutations_must_use_new_feature_branch_not_default_branch",
         "mcp_merge_requires_explicit_confirmation_and_expected_head",
         "mcp_resulting_default_branch_must_be_reread_after_merge",
+        "mcp_write_plan_billing_account_binding_required",
+        "mcp_pr_creation_must_record_plan_created_change_request_id",
+        "mcp_merge_must_target_plan_recorded_change_request_id",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
