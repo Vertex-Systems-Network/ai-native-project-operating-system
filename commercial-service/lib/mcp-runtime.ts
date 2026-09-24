@@ -24,6 +24,8 @@ import {
 import { applyGithubSupervisorPlan } from "./repository-supervisor-full-apply";
 import {
   createGithubFullAnposPlan,
+  resolveGithubFullAnposPlan,
+  type ConflictResolutionInput,
   type FullPlannerMode,
 } from "./repository-supervisor-planner";
 
@@ -158,6 +160,46 @@ export const MCP_TOOL_DEFINITIONS = [
         },
       },
       required: ["mode", "repository_url", "billing_account_id"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+  {
+    name: "repository_resolve_plan_conflicts",
+    title: "Resolve full-plan conflicts",
+    description: "Derive a new no-write full ANPOS plan from one exact conflict-blocked source plan. Every manual_merge or migration_review path requires an explicit decision bound to the observed target Git object. Project-state replacement additionally requires acknowledgement.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        billing_account_id: { type: "integer", minimum: 1 },
+        source_plan_id: { type: "string", minLength: 36, maxLength: 36 },
+        source_plan_hash: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        resolutions: {
+          type: "array",
+          minItems: 1,
+          maxItems: 5000,
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string", minLength: 1, maxLength: 512 },
+              resolution: { type: "string", enum: ["keep_target", "use_release"] },
+              expected_target_git_object: {
+                anyOf: [
+                  { type: "string", pattern: "^[0-9a-fA-F]{40}$" },
+                  { type: "null" },
+                ],
+              },
+              acknowledge_project_state_replacement: { type: "boolean" },
+            },
+            required: ["path", "resolution", "expected_target_git_object"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["billing_account_id", "source_plan_id", "source_plan_hash", "resolutions"],
       additionalProperties: false,
     },
     outputSchema: { type: "object", additionalProperties: true },
@@ -408,6 +450,7 @@ async function callTool(
 
     if ([
       "repository_plan_anpos_change",
+      "repository_resolve_plan_conflicts",
       "repository_apply_anpos_change",
       "repository_open_change_request",
       "repository_get_change_request",
@@ -438,6 +481,13 @@ async function callTool(
           project_name: args.project_name,
           github_owner: args.github_owner,
           github_security_capability: args.github_security_capability,
+        }, identity, billingAccountId, principal.github_token, fetchImpl));
+      }
+      if (name === "repository_resolve_plan_conflicts") {
+        return toolSuccess(await resolveGithubFullAnposPlan({
+          source_plan_id: requiredString(args.source_plan_id, "SOURCE_PLAN_ID_REQUIRED", 36),
+          source_plan_hash: requiredString(args.source_plan_hash, "SOURCE_PLAN_HASH_REQUIRED", 64),
+          resolutions: args.resolutions as ConflictResolutionInput[],
         }, identity, billingAccountId, principal.github_token, fetchImpl));
       }
       if (name === "repository_apply_anpos_change") {
