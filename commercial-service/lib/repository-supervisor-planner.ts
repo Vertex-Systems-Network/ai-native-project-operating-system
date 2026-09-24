@@ -746,7 +746,25 @@ export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnve
       || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(payload.resolution.resolved_by_github_login)
       || !Array.isArray(payload.resolution.decisions)
       || payload.resolution.decisions.length < 1
+      || payload.resolution.decisions.length > MAX_ACTIONS
     ) throw new RepositorySupervisorError(500, "resolved_plan_lineage_invalid");
+    const resolutionPaths = new Set<string>();
+    for (const decision of payload.resolution.decisions) {
+      if (
+        !decision
+        || typeof decision.path !== "string"
+        || !decision.path
+        || decision.path.length > 512
+        || resolutionPaths.has(decision.path)
+        || !["keep_target", "use_release"].includes(decision.resolution)
+        || (
+          decision.expected_target_git_object !== null
+          && !/^[0-9a-f]{40}$/i.test(decision.expected_target_git_object)
+        )
+        || typeof decision.acknowledge_project_state_replacement !== "boolean"
+      ) throw new RepositorySupervisorError(500, "resolved_plan_lineage_invalid");
+      resolutionPaths.add(decision.path);
+    }
   }
 
   const seen = new Set<string>();
