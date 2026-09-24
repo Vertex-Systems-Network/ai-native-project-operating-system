@@ -13,8 +13,8 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-write-runtime.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_guarded_write.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-write-runtime.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
@@ -211,7 +211,7 @@ def main() -> int:
         "tests/plugin-entitlements.test.ts",
         (
             "Community stays limited to bounded readiness capability",
-            "Developer entitlement authorizes read-only Repository Supervisor capability",
+            "Developer entitlement authorizes guarded read and write Repository Supervisor capabilities",
             "principal mismatch and inactive billing",
             "Organization paid capability requires an active assigned seat",
         ),
@@ -233,7 +233,7 @@ def main() -> int:
             "MCP_OAUTH_STATE_COOKIE_NAME", "MCP_SCOPES", "createMcpAuthorizationStart",
             "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "redeemMcpAuthorizationCode",
             "authenticateMcpRequest", "mcpBearerChallenge", "code_challenge_method", "S256",
-            "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "anpos:profile", "anpos:repo:read",
+            "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "anpos:profile", "anpos:repo:read", "anpos:repo:write",
         ),
         "Repository Supervisor MCP OAuth broker",
     )
@@ -242,7 +242,9 @@ def main() -> int:
         (
             "MCP_TOOL_DEFINITIONS", "server/discover", "2026-07-28", "repository_profile",
             '"openai/profile": true', "repository_resolve", "repository_audit", "repository_get_assurance",
-            "billing_account_id", "authorizeRepositorySupervisorRead", "requireMcpScope",
+            "billing_account_id", "authorizeRepositorySupervisorCapability", "requireMcpScope",
+            "repository_plan_change", "repository_apply_change", "repository_open_change_request",
+            "repository_get_change_request", "repository_get_ci", "repository_merge_change_request",
         ),
         "Repository Supervisor MCP runtime",
     )
@@ -293,7 +295,7 @@ def main() -> int:
         "app/api/ready/mcp/route.ts",
         (
             "mcpOAuthConfigurationProblems", "ensureSchema", "repository_supervisor_mcp",
-            "protected_resource_metadata", "authorization_server_metadata", "write_scope_available: false",
+            "protected_resource_metadata", "authorization_server_metadata", "write_scope_available: true",
         ),
         "MCP readiness gate",
     )
@@ -301,7 +303,7 @@ def main() -> int:
         "tests/mcp-auth.test.ts",
         (
             "exact client, redirect, resource and PKCE S256",
-            "read-only until guarded write runtime exists", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
+            "write scope is available only after guarded write runtime exists", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
             "MCP_OAUTH_RESOURCE_MISMATCH", "MCP_OAUTH_SCOPE_INVALID",
         ),
         "MCP OAuth unit tests",
@@ -310,10 +312,36 @@ def main() -> int:
         "tests/mcp-runtime.test.ts",
         (
             "MCP discovery advertises modern stateless tool capability",
-            "authenticated OpenAI profile metadata and no write tool",
+            "profile plus bounded guarded-write tools",
             "stable opaque profile", "OAuth challenge metadata on insufficient scope",
         ),
         "MCP runtime unit tests",
+    )
+    require_markers(
+        "lib/repository-write-runtime.ts",
+        (
+            "createRepositoryWritePlan", "applyRepositoryWritePlan", "openRepositoryChangeRequest",
+            "getRepositoryChangeRequest", "getRepositoryCi", "mergeRepositoryChangeRequest",
+            "ACTIVE_ANPOS_PROJECT_REQUIRED", "EXPECTED_TARGET_HEAD_MISMATCH",
+            "SECRET_BEARING_PATH_FORBIDDEN", "SECRET_LIKE_CONTENT_FORBIDDEN",
+            "expected_blob_sha", "expected_mode", "anpos/", "DELETE_CONFIRMATION_REQUIRED",
+            "APPLIED_PLAN_BRANCH_BINDING_MISMATCH", "IDEMPOTENCY_KEY_CONFLICT",
+            "CHANGE_REQUEST_POLICY_NOT_SATISFIED", "CHANGE_REQUEST_CHECKS_NOT_GREEN",
+            "MERGE_CONFIRMATION_REQUIRED", "resulting_default_branch_head_sha",
+        ),
+        "Guarded Repository Supervisor write runtime",
+    )
+    require_markers(
+        "tests/repository-write-runtime.test.ts",
+        (
+            "binds active project head, blob SHA and executable mode",
+            "replays successful idempotency key",
+            "bound to exact feature branch and head",
+            "guarded merge requires clean exact-head PR and green checks",
+            "rejects secret-bearing paths and non-active repositories",
+            "rejects stale expected main head and direct/default branches",
+        ),
+        "Guarded Repository Supervisor write runtime tests",
     )
     require_markers(
         "lib/execution-sandbox.ts",
@@ -371,7 +399,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "002_mcp_oauth.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "003_repository_guarded_write.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_write_plans", "repository_write_operations", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -389,6 +417,15 @@ def main() -> int:
             "mcp_oauth_access_tokens", "token_hash", "github_access_token_ciphertext", "revoked_at",
         ),
         "MCP OAuth migration",
+    )
+    require_markers(
+        "migrations/003_repository_guarded_write.sql",
+        (
+            "repository_write_plans", "plan_digest_sha256", "changes_ciphertext", "expected_target_head_sha",
+            "applied_branch_name", "resulting_head_sha", "repository_write_operations",
+            "idempotency_key", "request_digest_sha256",
+        ),
+        "guarded write migration",
     )
     require_markers(
         "scripts/migrate.ts",
@@ -494,8 +531,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 7:
-        fail("commercial service API contract must be schema_version 7")
+    if api_contract.get("schema_version") != 8:
+        fail("commercial service API contract must be schema_version 8")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -505,7 +542,10 @@ def main() -> int:
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
         "mcp_oauth_pkce_s256_required", "mcp_resource_parameter_binding_required",
         "mcp_access_tokens_opaque_short_lived_and_server_side_hashed",
-        "mcp_write_scope_forbidden_until_guarded_write_runtime_exists",
+        "mcp_guarded_write_active_project_only", "mcp_write_plan_must_be_short_lived_encrypted_and_exact_head_bound",
+        "mcp_repository_mutations_must_use_new_feature_branch_not_default_branch",
+        "mcp_merge_requires_explicit_confirmation_and_expected_head",
+        "mcp_resulting_default_branch_must_be_reread_after_merge",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
