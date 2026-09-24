@@ -1,5 +1,5 @@
 {
-  "schema_version": 9,
+  "schema_version": 10,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -303,7 +303,17 @@
         "pull_request": "exact applied branch head only",
         "ci": "fresh GitHub check-runs plus legacy statuses for exact planned commit",
         "merge": "destructive host-confirmed tool; fresh entitlement/permission, PR head/base, CI, unchanged default-branch head, repository-policy response and resulting-main verification"
-      }
+      },
+      "planner_modes": [
+        "bounded_change",
+        "bootstrap_empty",
+        "bootstrap_child",
+        "adopt_existing",
+        "repair_partial",
+        "upgrade_active"
+      ],
+      "full_planner_apply_available": false,
+      "full_planner_apply_status": "sandbox_full_plan_pending"
     },
     {
       "method": "GET",
@@ -394,6 +404,15 @@
     "github_runtime_e2e_live_evidence_contract": "config/runtime/repository-supervisor-e2e.json",
     "github_runtime_e2e_source_harness_is_not_live_evidence": true,
     "github_runtime_e2e_write_requires_disposable_repo_name_and_explicit_confirmation": true,
-    "github_runtime_e2e_never_busy_waits_for_ci": true
+    "github_runtime_e2e_never_busy_waits_for_ci": true,
+    "supervisor_full_planner_source": "commercial-service/lib/repository-supervisor-planner.ts",
+    "supervisor_full_planner_verified_release_identity_required": true,
+    "supervisor_full_planner_immutable_target_tree_required_for_non_empty_targets": true,
+    "supervisor_full_planner_target_only_files_preserved": true,
+    "supervisor_full_planner_adoption_collisions_never_auto_overwritten": true,
+    "supervisor_full_planner_requirements_83_96_evidence_preserved": true,
+    "supervisor_full_planner_material_ai_drift_requires_reverification": true,
+    "supervisor_full_planner_mcp_output_bounded": true,
+    "supervisor_full_plan_apply_remains_fail_closed_until_sandbox_runtime": true
   }
 }

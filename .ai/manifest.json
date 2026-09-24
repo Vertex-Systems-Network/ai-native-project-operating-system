@@ -271,7 +271,12 @@
       "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
       "commercial-service/tests/remote-sandbox-driver.test.ts",
       "config/runtime/repository-supervisor-e2e.json",
-      "schemas/repository-supervisor-e2e.schema.json"
+      "schemas/repository-supervisor-e2e.schema.json",
+      "commercial-service/lib/repository-supervisor-planner.ts",
+      "commercial-service/migrations/004_repository_supervisor_planner.sql",
+      "commercial-service/tests/repository-supervisor-planner.test.ts",
+      "config/runtime/repository-supervisor-planner.json",
+      "schemas/repository-supervisor-planner.schema.json"
     ]
   },
   "bootstrap_entrypoint": "scripts/bootstrap_child.py",

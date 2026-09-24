@@ -289,9 +289,14 @@
         "commercial-service/app/api/ready/sandbox/route.ts",
         "commercial-service/tests/remote-sandbox-driver.test.ts",
         "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
-        "config/runtime/repository-supervisor-e2e.json"
+        "config/runtime/repository-supervisor-e2e.json",
+        "commercial-service/lib/repository-supervisor-planner.ts",
+        "commercial-service/migrations/004_repository_supervisor_planner.sql",
+        "commercial-service/tests/repository-supervisor-planner.test.ts",
+        "config/runtime/repository-supervisor-planner.json",
+        "schemas/repository-supervisor-planner.schema.json"
       ],
-      "notes": "GitHub Repository Supervisor source includes read/write runtime, entitlement gating, dedicated Supervisor-App OAuth 2.1/PKCE transport, guarded write primitives, a signed remote-ephemeral sandbox driver source bound to immutable GitHub commits, and a fail-closed phased production E2E verifier. Community remains separate and Marketplace permissions are not widened. Live sandbox gateway evidence, live GitHub read/write E2E receipts, full bootstrap/adoption/repair/upgrade planning, public plugin registration, and GitLab parity remain incomplete."
+      "notes": "GitHub Repository Supervisor source includes read/write runtime, entitlement gating, dedicated Supervisor-App OAuth 2.1/PKCE transport, deterministic full bootstrap/child/adoption/repair/upgrade no-write plan generation against verified private-template Git identities and immutable target trees, guarded bounded writes, signed remote-ephemeral sandbox driver source, and phased production E2E verifier. Full-mode plans preserve target-only application files and project-specific Requirements 83–96 evidence and remain intentionally non-applicable until the sandbox-backed full-plan apply runtime is implemented. Live sandbox/GitHub E2E, public plugin activation and GitLab parity remain incomplete."
     }
   ]
 }

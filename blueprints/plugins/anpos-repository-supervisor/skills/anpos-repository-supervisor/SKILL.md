@@ -43,19 +43,19 @@ Load the target project's ANPOS router/state, protocol version, unified Requirem
 
 ### uninitialized_child
 
-Use `repository_plan_anpos_change` in `bootstrap_child` mode. The plan must be derived from the target's observed head and the selected immutable ANPOS 1.4.0-or-newer compatible release. Apply only to a feature branch, validate, then open a PR/MR.
+Use `repository_plan_anpos_change` in `bootstrap_child` mode. The plan must be derived from the target's observed head and the selected immutable ANPOS 1.4.0-or-newer compatible release. Inspect the returned conflicts/preservation summary. Do not call apply unless the server explicitly returns `safe_to_apply=true`; current full-mode planner output remains no-write until sandbox-backed apply is available.
 
 ### not_anpos
 
-Use `repository_plan_anpos_change` in `adopt_existing` mode. Never overlay the canonical source blindly. Initialize Requirements 83–96 applicability without claiming pass evidence. Review collisions, preserved paths, merged paths, and blocked conflicts. Apply only after the plan is safe and the user authorizes the write.
+Use `repository_plan_anpos_change` in `adopt_existing` mode. Never overlay the canonical source blindly. Initialize Requirements 83–96 applicability without claiming pass evidence. Review collisions, target-only preserved paths, project-evidence preservation, and blocked conflicts. Existing mismatched paths require merge/review rather than automatic replacement. Do not apply while the server reports `safe_to_apply=false`.
 
 ### partial_or_malformed
 
-Remain read-only. Produce a repair plan that identifies inconsistent ANPOS files/state. Do not continue normal development until the control plane is coherent.
+Remain read-only and use `repository_plan_anpos_change` in `repair_partial` mode. Project state/evidence must be preserved or marked for migration review rather than reset. Do not continue normal development until the control plane is coherent, and do not apply while the server reports `safe_to_apply=false`.
 
 ### empty_repository
 
-Use `repository_plan_anpos_change` in `bootstrap_empty` mode with a sanitized child release. Never copy source/vendor-only assets.
+Use `repository_plan_anpos_change` in `bootstrap_empty` mode with the immutable verified sanitized child release. Never copy source/vendor-only assets. The no-write plan may contain deterministic bootstrap transforms, but current full-mode apply remains sandbox-backed follow-up work.
 
 ## Assurance and governance rule
 
@@ -70,7 +70,7 @@ For ANPOS 1.4.0 children:
 
 ## Upgrade rule
 
-For an active pre-1.4.0 child, use `repository_plan_anpos_change` in `upgrade_active` mode. The plan must preserve project code, CI/deployment behavior, project legal/commercial terms, approved architecture, and already verified evidence while reconciling missing Requirements 83–96 control files.
+For an active child requiring protocol reconciliation, use `repository_plan_anpos_change` in `upgrade_active` mode. The plan must preserve project code, CI/deployment behavior, project legal/commercial terms, approved architecture, and already verified Requirements 83–96 evidence. Project-state/evidence drift becomes migration review; material AI-control drift requires assurance re-verification. Do not apply while `safe_to_apply=false`.
 
 ## Planning rule
 
@@ -87,6 +87,8 @@ planned file/change set
 ```
 
 If any tuple member changes, re-plan before writing.
+
+For full planner modes, the server stores the complete encrypted plan and returns a bounded action/conflict preview. `planning_complete=true` does not mean write authorization. Treat `safe_to_apply=false` or `apply_implementation=sandbox_full_plan_pending` as a hard stop; do not call `repository_apply_anpos_change` for that plan.
 
 ## Write rule
 

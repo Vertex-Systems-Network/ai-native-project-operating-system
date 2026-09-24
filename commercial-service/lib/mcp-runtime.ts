@@ -22,6 +22,10 @@ import {
   openGithubWritePlanPullRequest,
   type PlannedChange,
 } from "./repository-supervisor-write";
+import {
+  createGithubFullAnposPlan,
+  type FullPlannerMode,
+} from "./repository-supervisor-planner";
 
 type JsonRpcId = string | number | null;
 type JsonRpcRequest = {
@@ -121,15 +125,22 @@ export const MCP_TOOL_DEFINITIONS = [
   },
   {
     name: "repository_plan_anpos_change",
-    title: "Plan bounded repository change",
-    description: "Create a deterministic encrypted server-side write plan bound to the exact repository identity and observed default-branch head. This tool does not mutate the repository.",
+    title: "Plan ANPOS repository change",
+    description: "Create an encrypted no-write plan bound to the exact repository identity and verified ANPOS release. bounded_change accepts explicit file content; full bootstrap/adoption/repair/upgrade modes compare the immutable target tree with the verified private template release and preserve project evidence.",
     inputSchema: {
       type: "object",
       properties: {
+        mode: {
+          type: "string",
+          enum: ["bounded_change", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"],
+        },
         repository_url: { type: "string", minLength: 1, maxLength: 512 },
         billing_account_id: { type: "integer", minimum: 1 },
         expected_target_head_sha: { type: "string", pattern: "^[0-9a-fA-F]{40}$" },
         commit_message: { type: "string", minLength: 1, maxLength: 160 },
+        project_name: { type: "string", minLength: 1, maxLength: 120 },
+        github_owner: { type: "string", minLength: 1, maxLength: 39 },
+        github_security_capability: { type: "string", enum: ["enabled", "unavailable", "unknown"] },
         changes: {
           type: "array",
           minItems: 1,
@@ -146,7 +157,7 @@ export const MCP_TOOL_DEFINITIONS = [
           },
         },
       },
-      required: ["repository_url", "billing_account_id", "expected_target_head_sha", "commit_message", "changes"],
+      required: ["mode", "repository_url", "billing_account_id"],
       additionalProperties: false,
     },
     outputSchema: { type: "object", additionalProperties: true },
@@ -407,11 +418,25 @@ async function callTool(
 
       const identity = { id: principal.github_user_id, login: principal.github_login };
       if (name === "repository_plan_anpos_change") {
-        return toolSuccess(await createGithubWritePlan({
+        const mode = typeof args.mode === "string" ? args.mode : "";
+        if (mode === "bounded_change") {
+          return toolSuccess(await createGithubWritePlan({
+            repository_url: args.repository_url,
+            expected_target_head_sha: args.expected_target_head_sha,
+            commit_message: args.commit_message,
+            changes: args.changes as PlannedChange[],
+          }, identity, billingAccountId, principal.github_token, fetchImpl));
+        }
+        if (!["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"].includes(mode)) {
+          throw new Error("PLANNER_MODE_REQUIRED");
+        }
+        return toolSuccess(await createGithubFullAnposPlan({
+          mode: mode as FullPlannerMode,
           repository_url: args.repository_url,
           expected_target_head_sha: args.expected_target_head_sha,
-          commit_message: args.commit_message,
-          changes: args.changes as PlannedChange[],
+          project_name: args.project_name,
+          github_owner: args.github_owner,
+          github_security_capability: args.github_security_capability,
         }, identity, billingAccountId, principal.github_token, fetchImpl));
       }
       if (name === "repository_apply_anpos_change") {
@@ -485,7 +510,7 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.3",
+            version: "0.4.5",
           },
         },
         instructions: "Use the authenticated profile first when account identity is unclear. Paid repository tools require an explicit billing_account_id and are always re-authorized server-side.",
@@ -505,7 +530,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.3" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.5" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };

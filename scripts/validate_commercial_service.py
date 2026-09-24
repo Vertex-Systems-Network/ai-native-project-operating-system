@@ -13,8 +13,8 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
@@ -131,7 +131,8 @@ def main() -> int:
     require_markers(
         "lib/releases.ts",
         (
-            "parseTemplateReleaseManifest", "canonical-minus-vendor-only-paths", "committed_git_blobs_at_head",
+            "parseTemplateReleaseManifest", "parseTemplateReleasePlanManifest", "VerifiedTemplateReleasePlan",
+            "canonical-minus-vendor-only-paths", "committed_git_blobs_at_head",
             "tracked_source_only", "contains_secrets", "COMMERCIAL_RELEASE_FILE_COUNT_MISMATCH",
             "COMMERCIAL_RELEASE_TOTAL_BYTES_MISMATCH", "INVALID_COMMERCIAL_RELEASE_FILE_DIGEST",
         ),
@@ -147,7 +148,8 @@ def main() -> int:
             "removeTemplateCollaborator", "codeload.github.com", "verifyMarketplaceRepositoryAuditInstallation",
             "MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED", "MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED",
             "/user/installations/", "listMarketplaceUserInstallationRepositories", "verifyMarketplaceUserInstallationAccess",
-            "templateReleaseManifest", "EXPORT-MANIFEST.json", "application/vnd.github.raw+json", "commercialReleaseRef",
+            "templateReleaseManifest", "templateReleasePlanSnapshot", "parseTemplateReleasePlanManifest",
+            "EXPORT-MANIFEST.json", "application/vnd.github.raw+json", "commercialReleaseRef",
         ),
         "GitHub client",
     )
@@ -201,8 +203,9 @@ def main() -> int:
         "lib/repository-supervisor-runtime.ts",
         (
             "normalizeGithubRepositoryLocator", "resolveGithubRepository", "profileGithubAccount",
-            "readGithubRepositoryFiles", "auditGithubRepository", "getGithubRepositoryAssurance",
-            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "summarizeAssurance(assurance, 83, 96)",
+            "readGithubRepositoryFiles", "listGithubRepositoryTree", "auditGithubRepository", "getGithubRepositoryAssurance",
+            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "github_repository_tree_truncated",
+            "summarizeAssurance(assurance, 83, 96)",
         ),
         "Repository Supervisor GitHub runtime foundation",
     )
@@ -254,6 +257,7 @@ def main() -> int:
             "billing_account_id", "authorizeRepositorySupervisorCapability", "requireMcpScope",
             "repository_plan_anpos_change", "repository_apply_anpos_change", "repository_open_change_request",
             "repository_get_change_request", "repository_get_ci", "repository_merge_change_request",
+            "createGithubFullAnposPlan", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active",
         ),
         "Repository Supervisor MCP runtime",
     )
@@ -424,7 +428,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "003_repository_supervisor_write.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "004_repository_supervisor_planner.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -453,10 +457,41 @@ def main() -> int:
         "Repository Supervisor write migration",
     )
     require_markers(
+        "migrations/004_repository_supervisor_planner.sql",
+        (
+            "expected_target_head_sha DROP NOT NULL",
+            "repository_supervisor_write_plans_expected_head_shape",
+            "repository_supervisor_write_plans_mode_status_idx",
+        ),
+        "Repository Supervisor planner migration",
+    )
+    require_markers(
+        "lib/repository-supervisor-planner.ts",
+        (
+            "buildFullPlannerPayload", "createGithubFullAnposPlan", "templateReleasePlanSnapshot",
+            "listGithubRepositoryTree", "bootstrap_empty", "bootstrap_child", "adopt_existing",
+            "repair_partial", "upgrade_active", "target_only_digest",
+            "preserve_verified_evidence_never_reset_on_adoption_or_upgrade",
+            "sandbox_full_plan_pending", "action_preview_truncated",
+        ),
+        "Repository Supervisor full planner runtime",
+    )
+    require_markers(
+        "tests/repository-supervisor-planner.test.ts",
+        (
+            "bootstrap_empty plans verified release plus child transforms without writes",
+            "adopt_existing never auto-overwrites collisions and preserves target-only application files",
+            "upgrade_active preserves evidence and flags AI assurance re-verification on material drift",
+            "planner mode must match the audited repository classification",
+        ),
+        "Repository Supervisor full planner unit tests",
+    )
+    require_markers(
         "lib/repository-supervisor-write.ts",
         (
-            "createGithubWritePlan", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
+            "createGithubWritePlan", "persistGithubSupervisorPlan", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
             "getGithubWritePlanPullRequest", "getGithubWritePlanCi", "mergeGithubWritePlanPullRequest",
+            "full_plan_sandbox_apply_not_implemented", "planner_payload_too_large",
             "validatePlannedChanges", "validateFeatureBranchName", "target_head_changed_replan_required",
             "canonical_source_write_forbidden", "planned_change_contains_secret_material",
             "refs/heads/", "git/blobs", "git/trees", "git/commits", "check-runs",
@@ -579,8 +614,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 9:
-        fail("commercial service API contract must be schema_version 9")
+    if api_contract.get("schema_version") != 10:
+        fail("commercial service API contract must be schema_version 10")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -600,6 +635,14 @@ def main() -> int:
         "sandbox_source_ready_is_not_live_gateway_evidence", "github_runtime_e2e_verifier",
         "github_runtime_e2e_live_evidence_contract", "github_runtime_e2e_source_harness_is_not_live_evidence",
         "github_runtime_e2e_never_busy_waits_for_ci",
+        "supervisor_full_planner_source", "supervisor_full_planner_verified_release_identity_required",
+        "supervisor_full_planner_immutable_target_tree_required_for_non_empty_targets",
+        "supervisor_full_planner_target_only_files_preserved",
+        "supervisor_full_planner_adoption_collisions_never_auto_overwritten",
+        "supervisor_full_planner_requirements_83_96_evidence_preserved",
+        "supervisor_full_planner_material_ai_drift_requires_reverification",
+        "supervisor_full_planner_mcp_output_bounded",
+        "supervisor_full_plan_apply_remains_fail_closed_until_sandbox_runtime",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
@@ -623,6 +666,23 @@ def main() -> int:
     ):
         if production_driver.get(key) != expected:
             fail(f"execution sandbox production driver mismatch: {key}")
+
+    planner_policy = json.loads((ROOT / "config/runtime/repository-supervisor-planner.json").read_text(encoding="utf-8"))
+    if planner_policy.get("schema_version") != 1 or planner_policy.get("status") != "source_planner_policy":
+        fail("Repository Supervisor planner policy identity is invalid")
+    if planner_policy.get("modes") != ["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"]:
+        fail("Repository Supervisor planner policy must define the exact full planner modes")
+    if planner_policy.get("target_only_rule") != "preserve":
+        fail("Repository Supervisor planner must preserve target-only files")
+    if planner_policy.get("adoption_collision_rule") != "manual_merge":
+        fail("Repository Supervisor adoption collisions must remain manual-merge")
+    if planner_policy.get("requirements_83_96_rule") != "preserve_verified_evidence_never_reset_on_adoption_or_upgrade":
+        fail("Repository Supervisor planner must preserve Requirements 83-96 evidence")
+    planner_vendor_boundary = json.loads((ROOT / "config/licensing/vendor-source-boundary.json").read_text(encoding="utf-8"))
+    if "config/runtime/repository-supervisor-planner.json" not in planner_vendor_boundary.get("vendor_only_paths", []):
+        fail("Repository Supervisor planner policy must remain vendor-only")
+    if "schemas/repository-supervisor-planner.schema.json" not in planner_vendor_boundary.get("vendor_only_paths", []):
+        fail("Repository Supervisor planner schema must remain vendor-only")
 
     e2e_contract = json.loads((ROOT / "config/runtime/repository-supervisor-e2e.json").read_text(encoding="utf-8"))
     if e2e_contract.get("status") != "source_harness_implemented_live_evidence_pending":

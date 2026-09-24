@@ -134,7 +134,7 @@
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including split GitHub App credential checks and migration checksum, only after exact deployment identity has been confirmed."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 004_repository_supervisor_planner.sql, only after exact deployment identity has been confirmed."
     },
     {
       "id": "real_marketplace_events",

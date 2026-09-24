@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/repository-supervisor-planner.schema.json",
+  "title": "ANPOS Repository Supervisor Planner Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "protocol_baseline",
+    "modes",
+    "classification_contract",
+    "project_preserve_exact",
+    "bootstrap_transform_exact",
+    "bootstrap_transform_prefixes",
+    "shared_merge_exact",
+    "shared_merge_prefixes",
+    "source_owned_prefixes",
+    "target_only_rule",
+    "adoption_collision_rule",
+    "upgrade_project_state_rule",
+    "requirements_83_96_rule",
+    "material_ai_drift_prefixes",
+    "max_release_files",
+    "max_plan_actions",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "const": "source_planner_policy"
+    },
+    "protocol_baseline": {
+      "const": "1.4.0"
+    },
+    "modes": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "bootstrap_empty",
+          "bootstrap_child",
+          "adopt_existing",
+          "repair_partial",
+          "upgrade_active"
+        ]
+      }
+    },
+    "classification_contract": {
+      "type": "object"
+    },
+    "project_preserve_exact": {
+      "type": "array",
+      "minItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "bootstrap_transform_exact": {
+      "type": "array",
+      "minItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "bootstrap_transform_prefixes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "shared_merge_exact": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "shared_merge_prefixes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "source_owned_prefixes": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "target_only_rule": {
+      "const": "preserve"
+    },
+    "adoption_collision_rule": {
+      "const": "manual_merge"
+    },
+    "upgrade_project_state_rule": {
+      "const": "preserve_and_migration_review_when_release_differs"
+    },
+    "requirements_83_96_rule": {
+      "const": "preserve_verified_evidence_never_reset_on_adoption_or_upgrade"
+    },
+    "material_ai_drift_prefixes": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "max_release_files": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    },
+    "max_plan_actions": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

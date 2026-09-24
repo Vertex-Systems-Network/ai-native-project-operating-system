@@ -90,7 +90,7 @@ A successful receipt includes pack/version, file count, total bytes, manifest/co
 
 ## Source-side distribution runtime
 
-Commercial service **0.4.4** retains conditional premium delivery plumbing and attests the ANPOS 1.4.0 protocol identity while leaving Developer-only operation independent from premium configuration.
+Commercial service **0.4.5** retains conditional premium delivery plumbing and attests the ANPOS 1.4.0 protocol identity while leaving Developer-only operation independent from premium configuration.
 
 When `ANPOS_MARKETPLACE_PLAN_MAP` contains `pro`, `team`, or `enterprise`, full `/api/ready` fails closed unless all of these real external values are configured:
 
@@ -130,7 +130,7 @@ The operator flow is:
 Current canonical source truth for this lane is:
 
 - premium contract/schema/offline verifier: **implemented**;
-- entitlement-gated immutable premium distribution source: **implemented in commercial service 0.4.4**;
+- entitlement-gated immutable premium distribution source: **implemented in commercial service 0.4.5**;
 - conditional higher-tier readiness configuration: **implemented in source**;
 - private premium repository: **not evidenced**;
 - premium blueprint payload: **not implemented/evidenced**;

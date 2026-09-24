@@ -52,9 +52,17 @@ Community is deliberately outside the paid `ANPOS_MARKETPLACE_PLAN_MAP`. After t
 
 The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `paid=false`. The same Marketplace plan ID cannot also appear in `ANPOS_MARKETPLACE_PLAN_MAP`, and `community` is not accepted as a paid-map target. Do not invent a placeholder production plan ID merely to make readiness pass.
 
+## Full Repository Supervisor planner
+
+Commercial service 0.4.5 implements deterministic no-write planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.
+
+Full modes bind the plan to the authenticated principal/account, canonical repository identity, immutable observed target head when present, and the operator-configured exact private-template release. Planning compares validated `EXPORT-MANIFEST.json` per-file Git object identities against a non-truncated immutable target Git tree. Target-only files are preserved; adoption collisions become manual merges; project runtime/evidence paths are preserved or marked for migration review; material AI-control drift requires assurance re-verification.
+
+The complete plan is encrypted server-side. MCP returns only a bounded preview and counts. Full-mode plans are intentionally **not applicable yet**: `repository_apply_anpos_change` rejects them until the sandbox-backed full-plan apply runtime is separately implemented and certified.
+
 ## Production sandbox gateway
 
-Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.4 includes a remote-ephemeral production driver source configured only through environment secrets:
+Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.5 includes a remote-ephemeral production driver source configured only through environment secrets:
 
 - `ANPOS_SANDBOX_ENDPOINT` — exact HTTPS `/v1/execute` endpoint;
 - `ANPOS_SANDBOX_DRIVER_ID` — expected gateway driver identity;

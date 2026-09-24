@@ -2,7 +2,12 @@ import { createHash, createPrivateKey, sign } from "node:crypto";
 import packageJson from "@/package.json";
 import { marketplaceAppConfig, premiumDistributionConfig, serviceConfig } from "./env";
 import { parsePremiumReleaseManifest, type VerifiedPremiumRelease } from "./premium-releases";
-import { parseTemplateReleaseManifest, type VerifiedTemplateRelease } from "./releases";
+import {
+  parseTemplateReleaseManifest,
+  parseTemplateReleasePlanManifest,
+  type VerifiedTemplateRelease,
+  type VerifiedTemplateReleasePlan,
+} from "./releases";
 
 function b64url(value: string | Buffer): string {
   return Buffer.from(value).toString("base64url");
@@ -239,6 +244,41 @@ export async function templateReleaseManifest(): Promise<CommercialReleaseMetada
   try { parsed = JSON.parse(raw); }
   catch { throw new Error("INVALID_COMMERCIAL_RELEASE_MANIFEST_JSON"); }
   const manifest = parseTemplateReleaseManifest(parsed);
+  return {
+    ...manifest,
+    repository: repository.full,
+    release_ref: cfg.commercialReleaseRef,
+  };
+}
+
+export type CommercialReleasePlanSnapshot = VerifiedTemplateReleasePlan & {
+  repository: string;
+  release_ref: string;
+};
+
+export async function templateReleasePlanSnapshot(): Promise<CommercialReleasePlanSnapshot> {
+  const cfg = serviceConfig();
+  const repository = privateTemplateRepository();
+  const token = await vendorInstallationToken(repository, "archive");
+  const response = await fetch(
+    `https://api.github.com/repos/${repository.owner}/${repository.repo}/contents/EXPORT-MANIFEST.json?ref=${cfg.commercialReleaseRef}`,
+    {
+      headers: { ...githubHeaders(token), Accept: "application/vnd.github.raw+json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!response.ok) throw new Error(`Commercial release manifest failed: ${response.status}`);
+  const declaredLength = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > 2 * 1024 * 1024) {
+    throw new Error("COMMERCIAL_RELEASE_MANIFEST_TOO_LARGE");
+  }
+  const raw = await response.text();
+  if (!raw || raw.length > 2 * 1024 * 1024) throw new Error("COMMERCIAL_RELEASE_MANIFEST_TOO_LARGE");
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { throw new Error("INVALID_COMMERCIAL_RELEASE_MANIFEST_JSON"); }
+  const manifest = parseTemplateReleasePlanManifest(parsed);
   return {
     ...manifest,
     repository: repository.full,
