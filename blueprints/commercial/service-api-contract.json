@@ -1,5 +1,5 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -312,6 +312,15 @@
       "purpose": "Fail closed unless MCP OAuth allowlists, database migration and service connectivity are ready.",
       "write_scope_available": true,
       "cache_control": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ready/sandbox",
+      "authentication": "public_readiness_no_secrets",
+      "purpose": "Report fail-closed source configuration readiness for the signed remote-ephemeral Repository Supervisor sandbox driver without pretending a live gateway probe occurred.",
+      "exposes_secret_values": false,
+      "live_gateway_probe": false,
+      "cache_control": "no-store"
     }
   ],
   "cross_cutting_rules": {
@@ -370,6 +379,21 @@
     "supervisor_apply_must_use_atomic_git_data_commit": true,
     "supervisor_merge_requires_fresh_ci_and_expected_head_reverification": true,
     "supervisor_merge_must_verify_resulting_default_branch_head": true,
-    "supervisor_write_source_implementation_is_not_production_write_e2e": true
+    "supervisor_write_source_implementation_is_not_production_write_e2e": true,
+    "sandbox_production_driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
+    "sandbox_transport_https_only": true,
+    "sandbox_request_signature": "hmac_sha256_exact_body_hash_timestamp_nonce",
+    "sandbox_response_signature": "hmac_sha256_request_id_exact_body_hash",
+    "sandbox_source_binding": "github_repository_plus_immutable_commit_sha",
+    "sandbox_network_default_deny": true,
+    "sandbox_workspace_destroy_after_execution_required": true,
+    "sandbox_redirects_forbidden": true,
+    "sandbox_secret_values_never_in_model_request": true,
+    "sandbox_source_ready_is_not_live_gateway_evidence": true,
+    "github_runtime_e2e_verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
+    "github_runtime_e2e_live_evidence_contract": "config/runtime/repository-supervisor-e2e.json",
+    "github_runtime_e2e_source_harness_is_not_live_evidence": true,
+    "github_runtime_e2e_write_requires_disposable_repo_name_and_explicit_confirmation": true,
+    "github_runtime_e2e_never_busy_waits_for_ci": true
   }
 }
