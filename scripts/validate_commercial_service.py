@@ -13,8 +13,8 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/execution-sandbox.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts",
     "app/api/webhooks/github/marketplace/route.ts",
@@ -185,6 +185,39 @@ def main() -> int:
         ),
         "Community repository audit engine",
     )
+    require_markers(
+        "lib/repository-supervisor-runtime.ts",
+        (
+            "normalizeGithubRepositoryLocator", "resolveGithubRepository", "profileGithubAccount",
+            "readGithubRepositoryFiles", "auditGithubRepository", "getGithubRepositoryAssurance",
+            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "summarizeAssurance(assurance, 83, 96)",
+        ),
+        "Repository Supervisor GitHub runtime foundation",
+    )
+    require_markers(
+        "lib/execution-sandbox.ts",
+        (
+            "SandboxDriver", "normalizeSandboxRequest", "executeWithSandboxDriver",
+            'network: "deny"', "isolated_sandbox_driver_required", "network_access_not_supported",
+        ),
+        "Repository Supervisor execution sandbox contract",
+    )
+    require_markers(
+        "tests/repository-supervisor-runtime.test.ts",
+        (
+            "repository_resolve binds canonical identity", "repository_profile returns authenticated provider account identity",
+            "repository_audit classifies active ANPOS child", "repository_get_assurance requires immutable SHA",
+        ),
+        "Repository Supervisor runtime unit tests",
+    )
+    require_markers(
+        "tests/execution-sandbox.test.ts",
+        (
+            "bounded network-denied execution", "rejects host paths", "requires an isolated driver",
+        ),
+        "Repository Supervisor sandbox unit tests",
+    )
+
     require_markers(
         "app/api/v1/audit/repository/route.ts",
         (

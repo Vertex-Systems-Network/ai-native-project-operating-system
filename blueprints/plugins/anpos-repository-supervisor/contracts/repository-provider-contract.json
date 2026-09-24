@@ -259,5 +259,35 @@
     "Adoption and upgrade flows preserve verified child evidence and must not reset project-specific assurance state blindly.",
     "Material AI configuration drift must invalidate stale AI assurance when the child policy requires reevaluation."
   ],
-  "anpos_protocol_baseline": "1.4.0"
+  "anpos_protocol_baseline": "1.4.0",
+  "implementation": {
+    "phase": "github_read_only_runtime_foundation",
+    "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
+    "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
+    "sandbox_policy": "config/runtime/execution-sandbox.json",
+    "implemented_tools": [
+      "repository_resolve",
+      "repository_profile",
+      "repository_audit",
+      "repository_get_assurance"
+    ],
+    "implemented_support": [
+      "bounded_immutable_ref_file_reads",
+      "github_repository_classification",
+      "requirements_83_96_assurance_summary",
+      "network_denied_isolated_driver_contract"
+    ],
+    "not_yet_implemented": [
+      "supervisor_specific_oauth_and_mcp_transport",
+      "repository_plan_anpos_change",
+      "repository_apply_anpos_change",
+      "repository_open_change_request",
+      "repository_get_change_request",
+      "repository_get_ci",
+      "repository_merge_change_request",
+      "production_sandbox_driver",
+      "gitlab_adapter"
+    ],
+    "claim_boundary": "Source implementation and unit certification do not claim a deployed MCP endpoint, write-capable repository runtime, or production isolation driver."
+  }
 }

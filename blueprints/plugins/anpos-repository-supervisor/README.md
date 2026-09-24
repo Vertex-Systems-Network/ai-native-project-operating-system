@@ -236,6 +236,32 @@ This plugin blueprint is source/operator infrastructure and must not be retained
 - security/adoption rules.
 
 ### Phase 2 — GitHub adapter
+
+Current source implementation status:
+
+- ✅ read-only GitHub repository locator normalization and canonical identity resolution;
+- ✅ authenticated provider account profile;
+- ✅ default-branch exact-head resolution;
+- ✅ bounded immutable-ref ANPOS control-file reads;
+- ✅ repository classification including empty/not-ANPOS/uninitialized/active/partial/canonical;
+- ✅ Requirements 83–96 assurance/governance summaries and evidence-bound assurance reads;
+- ✅ isolated sandbox driver contract with network denied and no local-process fallback;
+- ⏳ supervisor-specific OAuth/MCP transport;
+- ⏳ deterministic adoption/upgrade planning and branch apply;
+- ⏳ PR/check/guarded-merge write flow;
+- ⏳ production container/microVM/remote sandbox driver;
+- ⏳ GitHub runtime E2E certification.
+
+Implementation references:
+
+- `commercial-service/lib/repository-supervisor-runtime.ts`
+- `commercial-service/lib/execution-sandbox.ts`
+- `config/runtime/execution-sandbox.json`
+- `commercial-service/tests/repository-supervisor-runtime.test.ts`
+- `commercial-service/tests/execution-sandbox.test.ts`
+
+The existing Community ten-file Marketplace audit remains a separate least-privilege product path and is not widened by the Supervisor runtime foundation.
+
 - ANPOS 1.4.0 protocol + Requirements 83–96 audit/resume/upgrade support;
 - OAuth and account profile;
 - repository audit/read tools;
