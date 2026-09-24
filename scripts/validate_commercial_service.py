@@ -14,7 +14,7 @@ REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
@@ -432,7 +432,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "005_repository_supervisor_full_apply.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "006_guarded_empty_repository_initialization.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -479,13 +479,23 @@ def main() -> int:
         "Repository Supervisor full-apply migration",
     )
     require_markers(
+        "migrations/006_guarded_empty_repository_initialization.sql",
+        (
+            "initialization_seed_sha", "initialization_seed_path",
+            "repository_supervisor_write_plans_initialization_seed_sha_shape",
+            "repository_supervisor_write_plans_initialization_seed_pair",
+            ".anpos-bootstrap-seed",
+        ),
+        "Repository Supervisor guarded empty initialization migration",
+    )
+    require_markers(
         "lib/repository-supervisor-planner.ts",
         (
             "buildFullPlannerPayload", "createGithubFullAnposPlan", "templateReleasePlanSnapshot",
             "listGithubRepositoryTree", "bootstrap_empty", "bootstrap_child", "adopt_existing",
             "repair_partial", "upgrade_active", "target_only_digest",
             "preserve_verified_evidence_never_reset_on_adoption_or_upgrade",
-            "sandbox_full_plan_v1", "conflict_resolution_required", "empty_repository_initialization_pending",
+            "sandbox_full_plan_v1", "guarded_empty_repository_v1", "conflict_resolution_required",
             "validateStoredFullPlannerPayload", "release_bytes", "action_preview_truncated",
         ),
         "Repository Supervisor full planner runtime",
@@ -519,9 +529,12 @@ def main() -> int:
             "applyGithubSupervisorPlan", "buildFullApplySandboxRequest", "verifyFullApplySandboxOutputs",
             "materializeTemplateReleaseFiles", "productionSandboxDriver", "sandbox_receipt_sha256",
             "target_head_changed_replan_required", "commercial_release_changed_replan_required",
-            "full_plan_conflict_resolution_required", "empty_repository_initialization_pending",
+            "full_plan_conflict_resolution_required", "guarded_empty_repository_v1",
+            "empty_repository_initialization_confirmation_required", "initializeEmptyRepositorySeed",
+            "empty_repository_seed_not_root_commit", "EMPTY_BOOTSTRAP_SEED_PATH",
+            "empty_repository_initialization_recovery_required", "initialization_seed_sha",
             "full_plan_apply_recovery_required", "make_interval", "cleanupBranch",
-            "materializeTemplateReleaseFiles", "source: undefined", "environment_variable_names: []",
+            "delete_paths", "materializeTemplateReleaseFiles", "source: undefined", "environment_variable_names: []",
         ),
         "Repository Supervisor sandbox-backed full apply runtime",
     )
@@ -529,7 +542,7 @@ def main() -> int:
         "lib/full-plan-sandbox-runner.ts",
         (
             "FULL_PLAN_SANDBOX_RUNNER", "subprocess.run", "shell=False",
-            "bootstrap_child", "adopt_existing", "release_input_digest_mismatch",
+            "bootstrap_empty", "bootstrap_child", "adopt_existing", "release_input_digest_mismatch",
             "unresolved_plan_conflict", "expected_regular_file",
         ),
         "Repository Supervisor isolated full-plan runner",
@@ -540,6 +553,7 @@ def main() -> int:
             "empty isolated workspace and exact output allowlist",
             "accepts exact release output and rejects non-transform drift",
             "rejects timeout or truncated sandbox evidence",
+            "empty bootstrap seed must be the zero-parent root commit",
         ),
         "Repository Supervisor sandbox full-apply unit tests",
     )
@@ -658,8 +672,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 11:
-        fail("commercial service API contract must be schema_version 11")
+    if api_contract.get("schema_version") != 12:
+        fail("commercial service API contract must be schema_version 12")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -688,11 +702,19 @@ def main() -> int:
         "supervisor_full_planner_mcp_output_bounded",
         "sandbox_protocol_version", "sandbox_artifact_channel", "sandbox_runtime_requirement",
         "supervisor_full_plan_apply_source", "supervisor_full_plan_apply_requires_conflict_free",
-        "supervisor_full_plan_apply_requires_non_empty_target", "supervisor_full_plan_apply_reverifies_release_and_target_head",
+        "supervisor_full_plan_apply_reverifies_release_and_target_head",
         "supervisor_full_plan_apply_customer_provider_token_never_forwarded_to_sandbox",
         "supervisor_full_plan_apply_signed_receipt_required_for_merge",
         "supervisor_full_plan_apply_uses_operation_lease",
-        "supervisor_full_plan_apply_conflict_resolution_pending", "supervisor_bootstrap_empty_apply_pending",
+        "supervisor_full_plan_apply_conflict_resolution_pending",
+        "supervisor_bootstrap_empty_guarded_source",
+        "supervisor_bootstrap_empty_explicit_confirmation_required",
+        "supervisor_bootstrap_empty_single_default_branch_seed_exception",
+        "supervisor_bootstrap_empty_seed_path",
+        "supervisor_bootstrap_empty_zero_parent_root_required",
+        "supervisor_bootstrap_empty_seed_removed_on_feature_branch",
+        "supervisor_bootstrap_empty_post_seed_failure_requires_recovery",
+        "supervisor_non_empty_direct_default_branch_write_forbidden",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
@@ -720,7 +742,7 @@ def main() -> int:
             fail(f"execution sandbox production driver mismatch: {key}")
 
     planner_policy = json.loads((ROOT / "config/runtime/repository-supervisor-planner.json").read_text(encoding="utf-8"))
-    if planner_policy.get("schema_version") != 2 or planner_policy.get("status") != "source_planner_policy":
+    if planner_policy.get("schema_version") != 3 or planner_policy.get("status") != "source_planner_policy":
         fail("Repository Supervisor planner policy identity is invalid")
     if planner_policy.get("modes") != ["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"]:
         fail("Repository Supervisor planner policy must define the exact full planner modes")
@@ -737,8 +759,20 @@ def main() -> int:
         fail("Repository Supervisor full apply must require sandbox protocol v2")
     if planner_apply.get("conflict_free_required") is not True:
         fail("Repository Supervisor full apply must require conflict-free plans")
-    if planner_apply.get("bootstrap_empty") != "pending_guarded_initialization":
-        fail("Repository Supervisor empty-repository apply must remain pending")
+    if planner_apply.get("bootstrap_empty") != "guarded_root_seed_then_feature_branch_pr_v1":
+        fail("Repository Supervisor empty-repository apply contract is invalid")
+    if planner_apply.get("eligible_modes") != ["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"]:
+        fail("Repository Supervisor full apply eligible modes are invalid")
+    if planner_apply.get("empty_repository_direct_default_branch_exception") != "single_verified_zero_parent_seed_only":
+        fail("Repository Supervisor empty bootstrap must allow only the single seed exception")
+    if planner_apply.get("empty_repository_seed_path") != ".anpos-bootstrap-seed":
+        fail("Repository Supervisor empty bootstrap seed path is invalid")
+    if planner_apply.get("empty_repository_seed_removed_on_feature_branch") is not True:
+        fail("Repository Supervisor empty bootstrap seed must be removed on the feature branch")
+    if planner_apply.get("empty_repository_explicit_confirmation_required") is not True:
+        fail("Repository Supervisor empty bootstrap must require explicit confirmation")
+    if planner_apply.get("empty_repository_recovery_after_seed_failure") != "apply_recovery_required":
+        fail("Repository Supervisor post-seed failures must require recovery")
     if planner_apply.get("customer_provider_token_forwarded_to_sandbox") is not False:
         fail("Repository Supervisor must never forward customer provider token to sandbox")
     if planner_apply.get("merge_requires_sandbox_receipt") is not True:
