@@ -392,17 +392,13 @@ function classifyRepository(
   resolution: RepositoryResolution,
   files: Record<string, RepositoryFileObservation>,
 ): RepositorySupervisorClassification {
+  if (resolution.full_name.toLowerCase() === CANONICAL_REPOSITORY.toLowerCase()) return "canonical_source";
   if (resolution.empty_repository) return "empty_repository";
   const manifest = files[".ai/manifest.json"]?.json;
   const instance = files["config/protocol/instance.json"]?.json;
   const protocolDetected = manifest?.protocol === "ANPOS";
   const instanceStatus = stringValue(instance?.instance_status);
   const bootstrapCompleted = booleanValue(instance?.bootstrap_completed);
-  if (
-    resolution.full_name.toLowerCase() === CANONICAL_REPOSITORY.toLowerCase() &&
-    protocolDetected &&
-    instanceStatus === "template_source"
-  ) return "canonical_source";
   if (!protocolDetected && !files["config/protocol/instance.json"]?.present) return "not_anpos";
   if (protocolDetected && instanceStatus === "template_source" && bootstrapCompleted !== true) return "uninitialized_child";
   if (protocolDetected && instanceStatus === "active_project" && bootstrapCompleted === true) return "active_project";
