@@ -226,6 +226,7 @@
       "blueprints/commercial/entitlement-envelope.example.json",
       "blueprints/commercial/service-api-contract.json",
       "blueprints/commercial/github-marketplace-app-manifest.example.json",
+      "blueprints/commercial/github-supervisor-app-manifest.example.json",
       "blueprints/commercial/github-vendor-app-manifest.example.json",
       "blueprints/commercial/github-marketplace-compliance.json",
       "blueprints/commercial/marketplace-staged-launch.json",
