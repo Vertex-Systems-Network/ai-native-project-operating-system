@@ -7,7 +7,7 @@ const principal: McpPrincipal = {
   github_user_id: 42,
   github_login: "octo",
   github_token: "token",
-  scopes: ["anpos:profile", "anpos:repo:read"],
+  scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
   resource: "https://license.example.test/mcp",
 };
 
@@ -41,7 +41,7 @@ test("MCP discovery advertises modern stateless tool capability", async () => {
   assert.equal(body.result._meta["io.modelcontextprotocol/serverInfo"].name, "anpos-repository-supervisor");
 });
 
-test("tool list exposes authenticated OpenAI profile metadata and no write tool", async () => {
+test("tool list exposes authenticated profile plus guarded write tool metadata", async () => {
   const result = await handleMcpRpc({
     jsonrpc: "2.0",
     id: 1,
@@ -55,8 +55,16 @@ test("tool list exposes authenticated OpenAI profile metadata and no write tool"
   assert.equal(profile._meta["openai/profile"], true);
   assert.equal(profile.annotations.readOnlyHint, true);
   assert.deepEqual(profile.securitySchemes, [{ type: "oauth2", scopes: ["anpos:profile"] }]);
-  assert.equal(tools.some((tool: any) => tool.name.includes("write") || tool.name.includes("merge")), false);
-  assert.equal(MCP_TOOL_DEFINITIONS.length, 4);
+  const merge = tools.find((tool: any) => tool.name === "repository_merge_change_request");
+  const plan = tools.find((tool: any) => tool.name === "repository_plan_anpos_change");
+  assert.equal(plan.annotations.readOnlyHint, true);
+  assert.equal(merge.annotations.readOnlyHint, false);
+  assert.equal(merge.annotations.destructiveHint, true);
+  assert.deepEqual(merge.securitySchemes, [{
+    type: "oauth2",
+    scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
+  }]);
+  assert.equal(MCP_TOOL_DEFINITIONS.length, 10);
 });
 
 test("repository_profile returns one stable opaque profile from validated credentials", async () => {
@@ -86,6 +94,9 @@ test("profile tool returns OAuth challenge metadata on insufficient scope", asyn
     "-----BEGIN RSA PRIVATE KEY-----\nplaceholder\n-----END RSA PRIVATE KEY-----";
   process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.GITHUB_SUPERVISOR_APP_ID = "777777";
+  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
+  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
 
   const result = await handleMcpRpc({
     jsonrpc: "2.0",
