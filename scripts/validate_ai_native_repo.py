@@ -381,16 +381,19 @@ def validate_template_boundary() -> None:
         [path.name for path in active.glob("*.yml")] +
         [path.name for path in active.glob("*.yaml")]
     ) if active.exists() else []
-    allowed_source_workflows = ["source-continuous-certification.yml"]
-    if active_workflows not in ([], allowed_source_workflows):
-        fail("template source: only guarded source-continuous-certification.yml may exist in active .github/workflows")
-    source_ci = active / "source-continuous-certification.yml"
-    if source_ci.is_file():
-        source_ci_text = source_ci.read_text(encoding="utf-8")
-        if "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'" not in source_ci_text:
-            fail("template source: source continuous certification workflow must be repository-guarded")
-        if "contents: write" in source_ci_text or "persist-credentials: true" in source_ci_text:
-            fail("template source: source continuous certification workflow must remain read-only")
+    allowed_source_workflows = {
+        "source-continuous-certification.yml",
+        "immutable-vendor-handoff.yml",
+    }
+    if not set(active_workflows).issubset(allowed_source_workflows):
+        fail("template source: active source workflows must remain in the guarded source-only allowlist")
+    for workflow_name in active_workflows:
+        workflow_path = active / workflow_name
+        source_text = workflow_path.read_text(encoding="utf-8")
+        if "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'" not in source_text:
+            fail(f"template source: {workflow_name} must be repository-guarded")
+        if "contents: write" in source_text or "persist-credentials: true" in source_text:
+            fail(f"template source: {workflow_name} must remain read-only")
     if (ROOT / ".github" / "dependabot.yml").exists():
         fail("template source: child Dependabot config must not be active")
 

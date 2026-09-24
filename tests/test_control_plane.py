@@ -258,7 +258,7 @@ class TemplatePolicyTests(unittest.TestCase):
         self.assertEqual(catalog.get("selected_agents"), [])
         self.assertEqual(catalog.get("available_agents"), [])
 
-    def test_source_template_has_only_optional_guarded_source_certification_workflow(self):
+    def test_source_template_has_only_allowlisted_guarded_source_workflows(self):
         instance = json.loads((ROOT / "config/protocol/instance.json").read_text())
         if instance.get("instance_status") != "template_source":
             self.skipTest("source-template workflow invariant does not apply after child bootstrap")
@@ -267,9 +267,13 @@ class TemplatePolicyTests(unittest.TestCase):
             [p.name for p in workflow_dir.glob("*.yml")] +
             [p.name for p in workflow_dir.glob("*.yaml")]
         ) if workflow_dir.exists() else []
-        self.assertIn(active, ([], ["source-continuous-certification.yml"]))
-        if active:
-            source = (workflow_dir / "source-continuous-certification.yml").read_text()
+        allowed = {
+            "source-continuous-certification.yml",
+            "immutable-vendor-handoff.yml",
+        }
+        self.assertTrue(set(active).issubset(allowed))
+        for name in active:
+            source = (workflow_dir / name).read_text()
             self.assertIn(
                 "github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'",
                 source,
