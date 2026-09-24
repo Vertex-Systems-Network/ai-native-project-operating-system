@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -289,11 +289,15 @@
     "Repository Supervisor writes use a distinct installable GitHub App and must not reuse Vendor Distribution credentials.",
     "Every write is bound to a server-issued plan hash, canonical repository identity and exact default-branch head.",
     "Normal apply creates a new anpos/* feature branch from one atomic Git Data commit; default-branch direct write and force push are forbidden.",
-    "Guarded merge must re-read exact PR head/base, exact commit CI, current default-branch head, repository policy response and resulting default-branch head."
+    "Guarded merge must re-read exact PR head/base, exact commit CI, current default-branch head, repository policy response and resulting default-branch head.",
+    "Production sandbox execution must bind to an immutable GitHub commit and signed remote-ephemeral gateway response.",
+    "Sandbox source-ready status never substitutes for live gateway deployment evidence.",
+    "Repository Supervisor production E2E write mode is allowed only on explicitly disposable e2e/sandbox/test repositories with explicit operator confirmation.",
+    "Production E2E verification must not busy-wait for CI and must never treat mocks/static validation as live evidence."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_guarded_write_runtime_source_implemented",
+    "phase": "github_guarded_write_plus_production_sandbox_source",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -330,14 +334,25 @@
       "atomic_git_data_feature_branch_apply",
       "pull_request_open_and_reread",
       "exact_commit_ci_reread",
-      "guarded_expected_head_merge_and_resulting_main_verification"
+      "guarded_expected_head_merge_and_resulting_main_verification",
+      "signed_remote_ephemeral_sandbox_driver_source",
+      "immutable_github_commit_workspace_binding",
+      "remote_sandbox_response_signature_and_destruction_evidence",
+      "live_github_read_e2e_verifier",
+      "phased_guarded_write_e2e_verifier_without_busy_wait"
     ],
     "not_yet_implemented": [
       "full_anpos_bootstrap_adoption_upgrade_plan_generator",
-      "production_sandbox_driver",
-      "gitlab_adapter"
+      "gitlab_adapter",
+      "live_production_sandbox_gateway_evidence",
+      "live_github_repository_supervisor_read_e2e_receipt",
+      "live_github_repository_supervisor_write_e2e_receipt"
     ],
-    "claim_boundary": "Source implementation and unit certification do not claim a publicly deployed/registered plugin connection, production write E2E, production isolation driver, or complete bootstrap/adoption/upgrade plan generation."
+    "claim_boundary": "Source implements the GitHub read/write runtime, signed remote-ephemeral sandbox driver, and fail-closed live E2E verifier. It does not claim a deployed sandbox gateway, public plugin registration, live production read/write E2E receipts, complete bootstrap/adoption/upgrade planning, or GitLab parity.",
+    "sandbox_driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
+    "sandbox_readiness_endpoint": "/api/ready/sandbox",
+    "e2e_verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
+    "e2e_evidence_contract": "config/runtime/repository-supervisor-e2e.json"
   },
   "commercial_authorization": {
     "authority": "commercial_service_server_side_entitlement_ledger",
@@ -393,5 +408,31 @@
     "profile_tool": "repository_profile",
     "profile_meta": "openai/profile=true",
     "github_app_role": "dedicated_repository_supervisor_app"
+  },
+  "production_sandbox": {
+    "policy": "config/runtime/execution-sandbox.json",
+    "schema": "schemas/execution-sandbox.schema.json",
+    "driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
+    "readiness_endpoint": "/api/ready/sandbox",
+    "isolation": "remote_ephemeral",
+    "transport": "https_post",
+    "request_authentication": "hmac_sha256_exact_body_hash_timestamp_nonce",
+    "response_authentication": "hmac_sha256_request_id_exact_body_hash",
+    "immutable_source_binding": "github_repository_full_name_plus_commit_sha",
+    "network": "deny",
+    "destroy_after_execution": true,
+    "live_gateway_evidence": "pending"
+  },
+  "github_runtime_e2e": {
+    "verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
+    "evidence_contract": "config/runtime/repository-supervisor-e2e.json",
+    "modes": [
+      "read",
+      "write_prepare",
+      "write_verify_merge"
+    ],
+    "busy_wait": false,
+    "live_read_receipt": "pending",
+    "live_write_receipt": "pending"
   }
 }
