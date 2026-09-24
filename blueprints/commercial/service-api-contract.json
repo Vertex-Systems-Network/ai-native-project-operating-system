@@ -1,5 +1,5 @@
 {
-  "schema_version": 11,
+  "schema_version": 12,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -299,7 +299,7 @@
       "cache_control": "no-store",
       "write_tool_policy": {
         "plan": "server-issued encrypted plan bound to canonical repository identity, exact expected default-branch head SHA and deterministic plan hash",
-        "apply": "atomic Git Data commit to a new anpos/* feature branch only; no direct default-branch write and no force push",
+        "apply": "Normal plans use one expected-head anpos/* feature-branch commit. bootstrap_empty requires explicit confirmation and may create one deterministic zero-parent .anpos-bootstrap-seed root commit on the configured default branch solely to initialize GitHub, then removes that seed in the sandbox-verified feature-branch commit.",
         "pull_request": "exact applied branch head only",
         "ci": "fresh GitHub check-runs plus legacy statuses for exact planned commit",
         "merge": "destructive host-confirmed tool; fresh entitlement/permission, PR head/base, CI, unchanged default-branch head, repository-policy response and resulting-main verification"
@@ -313,9 +313,8 @@
         "upgrade_active"
       ],
       "full_planner_apply_available": true,
-      "full_planner_apply_status": "sandbox_full_plan_v1_non_empty_conflict_free_only",
+      "full_planner_apply_status": "sandbox_full_plan_v1_plus_guarded_empty_repository_v1",
       "full_planner_apply_exclusions": [
-        "bootstrap_empty",
         "manual_merge_conflicts",
         "migration_review_conflicts"
       ]
@@ -423,12 +422,18 @@
     "sandbox_runtime_requirement": "python3>=3.12",
     "supervisor_full_plan_apply_source": "commercial-service/lib/repository-supervisor-full-apply.ts",
     "supervisor_full_plan_apply_requires_conflict_free": true,
-    "supervisor_full_plan_apply_requires_non_empty_target": true,
     "supervisor_full_plan_apply_reverifies_release_and_target_head": true,
     "supervisor_full_plan_apply_customer_provider_token_never_forwarded_to_sandbox": true,
     "supervisor_full_plan_apply_signed_receipt_required_for_merge": true,
     "supervisor_full_plan_apply_uses_operation_lease": true,
     "supervisor_full_plan_apply_conflict_resolution_pending": true,
-    "supervisor_bootstrap_empty_apply_pending": true
+    "supervisor_bootstrap_empty_guarded_source": true,
+    "supervisor_bootstrap_empty_explicit_confirmation_required": true,
+    "supervisor_bootstrap_empty_single_default_branch_seed_exception": true,
+    "supervisor_bootstrap_empty_seed_path": ".anpos-bootstrap-seed",
+    "supervisor_bootstrap_empty_zero_parent_root_required": true,
+    "supervisor_bootstrap_empty_seed_removed_on_feature_branch": true,
+    "supervisor_bootstrap_empty_post_seed_failure_requires_recovery": true,
+    "supervisor_non_empty_direct_default_branch_write_forbidden": true
   }
 }
