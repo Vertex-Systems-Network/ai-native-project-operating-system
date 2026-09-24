@@ -25,9 +25,9 @@ export async function GET() {
         authorization_endpoint: `${cfg.publicBaseUrl}/oauth/authorize`,
         token_endpoint: `${cfg.publicBaseUrl}/oauth/token`,
         pkce: "S256",
-        scopes: ["anpos:profile", "anpos:repo:read"],
+        scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
       },
-      write_scope_available: false,
+      write_scope_available: true,
     }, {
       status: 200,
       headers: { "Cache-Control": "no-store" },
