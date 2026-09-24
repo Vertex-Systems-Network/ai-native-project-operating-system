@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -92,7 +92,7 @@
     },
     {
       "name": "repository_plan_anpos_change",
-      "intent": "Create a deterministic no-write plan. The current source implementation supports bounded_change plans for explicit file upsert/delete sets; bootstrap/adoption/repair/upgrade plan generation remains a later planner milestone.",
+      "intent": "Create a deterministic encrypted no-write plan bound to exact repository identity, exact target head when present, and an immutable verified sanitized ANPOS release. bounded_change accepts explicit file content; bootstrap/adoption/repair/upgrade modes compare verified release Git objects with the immutable target tree and preserve project-specific evidence.",
       "read_only": true,
       "open_world": false,
       "modes": [
@@ -104,37 +104,76 @@
         "upgrade_active"
       ],
       "required_inputs": [
+        "mode",
         "repository_url",
-        "billing_account_id",
-        "expected_target_head_sha",
-        "commit_message",
-        "changes"
+        "billing_account_id"
       ],
       "required_outputs": [
         "plan_id",
         "plan_hash",
+        "mode",
         "canonical_repository_id",
         "repository_full_name",
         "default_branch",
         "expected_target_head_sha",
         "expires_at",
+        "release",
+        "target",
+        "summary",
+        "requirements_83_96",
+        "conflict_free",
+        "planning_complete",
         "safe_to_apply",
-        "changes"
+        "apply_implementation",
+        "action_preview",
+        "action_preview_truncated",
+        "full_action_count",
+        "confirmation_paths"
       ],
       "source_implemented_modes": [
-        "bounded_change"
-      ],
-      "planned_modes": [
+        "bounded_change",
         "bootstrap_empty",
         "bootstrap_child",
         "adopt_existing",
         "repair_partial",
         "upgrade_active"
-      ]
+      ],
+      "planned_modes": [],
+      "mode_dependent_inputs": {
+        "bounded_change": [
+          "expected_target_head_sha",
+          "commit_message",
+          "changes"
+        ],
+        "bootstrap_empty": [
+          "project_name_optional",
+          "github_owner_optional",
+          "github_security_capability_optional"
+        ],
+        "bootstrap_child": [
+          "expected_target_head_sha_optional",
+          "project_name_optional",
+          "github_owner_optional",
+          "github_security_capability_optional"
+        ],
+        "adopt_existing": [
+          "expected_target_head_sha_optional",
+          "project_name_optional",
+          "github_owner_optional",
+          "github_security_capability_optional"
+        ],
+        "repair_partial": [
+          "expected_target_head_sha_optional"
+        ],
+        "upgrade_active": [
+          "expected_target_head_sha_optional"
+        ]
+      },
+      "full_mode_apply_status": "sandbox_full_plan_pending"
     },
     {
       "name": "repository_apply_anpos_change",
-      "intent": "Apply a previously generated safe ANPOS plan to a feature branch using optimistic concurrency.",
+      "intent": "Apply a previously generated bounded_change plan to a feature branch using optimistic concurrency. Full bootstrap/adoption/repair/upgrade planner records remain non-applicable until the separate sandbox-backed full-plan apply runtime is implemented.",
       "read_only": false,
       "destructive": false,
       "open_world": false,
@@ -158,7 +197,8 @@
         "reject_if_target_head_changed",
         "reject_default_branch_direct_write_by_default",
         "reject_force_push",
-        "reverify_authenticated_permission"
+        "reverify_authenticated_permission",
+        "reject_full_mode_apply_until_sandbox_runtime_exists"
       ]
     },
     {
@@ -293,11 +333,16 @@
     "Production sandbox execution must bind to an immutable GitHub commit and signed remote-ephemeral gateway response.",
     "Sandbox source-ready status never substitutes for live gateway deployment evidence.",
     "Repository Supervisor production E2E write mode is allowed only on explicitly disposable e2e/sandbox/test repositories with explicit operator confirmation.",
-    "Production E2E verification must not busy-wait for CI and must never treat mocks/static validation as live evidence."
+    "Production E2E verification must not busy-wait for CI and must never treat mocks/static validation as live evidence.",
+    "Full-mode planner output never deletes target-only project files.",
+    "Adoption never automatically overwrites a mismatched existing target path.",
+    "Upgrade/repair never blindly resets project-specific Requirements 83-96 evidence or child runtime state.",
+    "Every full-mode plan binds to the verified private-template release ref/source revision/source tree and immutable target head when one exists.",
+    "Full-mode plans remain no-write until sandbox-backed full-plan apply is separately implemented and certified."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_guarded_write_plus_production_sandbox_source",
+    "phase": "github_full_planner_source_plus_guarded_bounded_apply",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -339,16 +384,26 @@
       "immutable_github_commit_workspace_binding",
       "remote_sandbox_response_signature_and_destruction_evidence",
       "live_github_read_e2e_verifier",
-      "phased_guarded_write_e2e_verifier_without_busy_wait"
+      "phased_guarded_write_e2e_verifier_without_busy_wait",
+      "verified_private_template_per_file_git_identity_planning",
+      "immutable_target_tree_inventory",
+      "bootstrap_empty_plan_generation",
+      "bootstrap_child_plan_generation",
+      "existing_repository_adoption_plan_generation",
+      "partial_anpos_repair_plan_generation",
+      "active_project_upgrade_plan_generation",
+      "target_only_file_preservation",
+      "requirements_83_96_evidence_preservation_planning",
+      "bounded_mcp_action_preview_with_full_encrypted_server_plan"
     ],
     "not_yet_implemented": [
-      "full_anpos_bootstrap_adoption_upgrade_plan_generator",
+      "sandbox_backed_full_plan_apply_runtime",
       "gitlab_adapter",
       "live_production_sandbox_gateway_evidence",
       "live_github_repository_supervisor_read_e2e_receipt",
       "live_github_repository_supervisor_write_e2e_receipt"
     ],
-    "claim_boundary": "Source implements the GitHub read/write runtime, signed remote-ephemeral sandbox driver, and fail-closed live E2E verifier. It does not claim a deployed sandbox gateway, public plugin registration, live production read/write E2E receipts, complete bootstrap/adoption/upgrade planning, or GitLab parity.",
+    "claim_boundary": "Source implements GitHub audit/read, deterministic full bootstrap/adoption/repair/upgrade plan generation, bounded guarded writes, OAuth/MCP, and sandbox driver source. Full-mode plans are intentionally no-write and cannot be applied until the sandbox-backed full-plan apply runtime exists. Live sandbox/plugin/GitHub E2E evidence and GitLab parity remain pending.",
     "sandbox_driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
     "sandbox_readiness_endpoint": "/api/ready/sandbox",
     "e2e_verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
@@ -434,5 +489,25 @@
     "busy_wait": false,
     "live_read_receipt": "pending",
     "live_write_receipt": "pending"
+  },
+  "full_planner": {
+    "source": "commercial-service/lib/repository-supervisor-planner.ts",
+    "policy": "config/runtime/repository-supervisor-planner.json",
+    "policy_schema": "schemas/repository-supervisor-planner.schema.json",
+    "release_source": "verified_private_template_EXPORT-MANIFEST_at_ANPOS_COMMERCIAL_RELEASE_REF",
+    "target_source": "immutable_recursive_git_tree_at_observed_head",
+    "implemented_modes": [
+      "bootstrap_empty",
+      "bootstrap_child",
+      "adopt_existing",
+      "repair_partial",
+      "upgrade_active"
+    ],
+    "target_only_files": "preserve",
+    "adoption_collisions": "manual_merge",
+    "upgrade_project_state": "preserve_or_migration_review",
+    "requirements_83_96": "preserve_verified_evidence_and_reverify_material_ai_drift",
+    "mcp_output": "bounded_action_preview_full_plan_encrypted_server_side",
+    "full_mode_apply": "pending_sandbox_runtime"
   }
 }
