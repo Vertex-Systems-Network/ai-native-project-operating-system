@@ -521,7 +521,7 @@ def main() -> int:
             "target_head_changed_replan_required", "commercial_release_changed_replan_required",
             "full_plan_conflict_resolution_required", "empty_repository_initialization_pending",
             "full_plan_apply_recovery_required", "make_interval", "cleanupBranch",
-            "customer", "source: undefined",
+            "materializeTemplateReleaseFiles", "source: undefined", "environment_variable_names: []",
         ),
         "Repository Supervisor sandbox-backed full apply runtime",
     )
