@@ -206,9 +206,9 @@ This bridge does not make ANPOS core child development, Requirements 1–96, chi
 The generic write path is deliberately narrower than the full ANPOS adoption/bootstrap contract.
 
 - `repository_plan_change` accepts at most 40 bounded file upserts/deletes, rejects secret-bearing paths and obvious credential material, and is available only after the target re-audits as `active_project` with provider-reported write permission.
-- The plan is encrypted server-side, expires after 30 minutes, and is bound to repository numeric identity, default branch, exact target head, each existing blob SHA, each existing regular-file Git mode, commit message and change digest.
+- The plan is encrypted server-side, expires after 30 minutes, and is bound to the selected billing account, repository numeric identity, default branch, exact target head, each existing blob SHA, each existing regular-file Git mode, commit message and change digest.
 - `repository_apply_change` rechecks the target head and all path preconditions, preserves executable mode, requires explicit deletion confirmation where applicable, and creates a new `anpos/*` feature branch. It never updates the default branch or force-pushes.
-- Applied plans are durably bound to the exact feature branch and resulting commit before `repository_open_change_request` can create a PR.
+- Applied plans are durably bound to the exact feature branch and resulting commit before `repository_open_change_request` can create a PR. The created PR ID is then recorded on that same plan; later merge authorization must use the same billing account, plan ID, PR ID, branch and expected head.
 - `repository_get_ci` reports exact-commit check runs. `repository_merge_change_request` requires explicit confirmation, exact PR head, default-branch base, provider `mergeability=clean`, green observed checks and a provider merge call with the expected head; GitHub branch/review policy remains final authority.
 - After merge, the server rereads the default branch and returns the observed resulting head.
 - `repository_plan_anpos_change` / `repository_apply_anpos_change` for bootstrap, adoption, repair and upgrade remain separate pending work; the generic write path cannot be used to bypass those flows.
