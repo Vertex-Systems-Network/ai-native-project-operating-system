@@ -14,12 +14,16 @@ class MarketplaceStagedLaunchTests(unittest.TestCase):
         self.assertEqual(strategy["activation_scope"], "vendor_marketplace_launch_only")
         self.assertEqual(strategy["strategy"], "free_first_then_paid")
         self.assertEqual(strategy["source_checked_at"], "2026-09-04")
+        self.assertEqual(strategy["schema_version"], 2)
 
         architecture = strategy["github_app_architecture"]
         self.assertEqual(architecture["marketplace_app_reference"], "blueprints/commercial/github-marketplace-app-manifest.example.json")
+        self.assertEqual(architecture["supervisor_app_reference"], "blueprints/commercial/github-supervisor-app-manifest.example.json")
         self.assertEqual(architecture["vendor_app_reference"], "blueprints/commercial/github-vendor-app-manifest.example.json")
         self.assertTrue(architecture["marketplace_app_must_be_public"])
         self.assertTrue(architecture["apps_must_remain_distinct"])
+        self.assertTrue(architecture["all_three_apps_must_remain_distinct"])
+        self.assertTrue(architecture["marketplace_app_permissions_must_not_be_widened_for_supervisor_writes"])
         self.assertTrue(architecture["vendor_administration_must_not_be_requested_from_customer_installations"])
 
         free = strategy["phase_1_free_listing"]
@@ -60,7 +64,7 @@ class MarketplaceStagedLaunchTests(unittest.TestCase):
         self.assertTrue(publication["operator_override_allowed"])
         gate_ids = {gate["id"] for gate in checklist["required_gates"]}
         self.assertTrue(
-            {"github_marketplace_app", "github_vendor_app", "github_app_role_separation", "vendor_app_installation"}.issubset(gate_ids)
+            {"github_marketplace_app", "github_supervisor_app", "github_vendor_app", "github_app_role_separation", "supervisor_app_installation_e2e", "vendor_app_installation"}.issubset(gate_ids)
         )
         self.assertNotIn("github_app", gate_ids)
         self.assertNotIn("app_installation", gate_ids)
