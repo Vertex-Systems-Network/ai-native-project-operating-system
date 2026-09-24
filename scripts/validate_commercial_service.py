@@ -64,6 +64,7 @@ def main() -> int:
         "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
         "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
         "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+        "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
         "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
         "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
@@ -93,12 +94,16 @@ def main() -> int:
         (
             "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
             "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+            "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
             "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
-            "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
+            "communityLaunchConfigurationProblems", "marketplaceAppConfig", "supervisorAppConfigurationProblems", "supervisorAppConfig", "databaseConfig", "webhookConfig",
             "mcpOAuthConfigurationProblems", "mcpOAuthConfig", "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS",
             "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
             "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
-            "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
+            "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_ROLE_COLLAPSE",
+            "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_OAUTH_CLIENT_REUSE",
+            "unsafe:GITHUB_SUPERVISOR_VENDOR_APP_ROLE_COLLAPSE",
+            "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:GITHUB_SUPERVISOR_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
         ),
         "commercial configuration",
     )
@@ -234,6 +239,7 @@ def main() -> int:
             "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "redeemMcpAuthorizationCode",
             "authenticateMcpRequest", "mcpBearerChallenge", "code_challenge_method", "S256",
             "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "anpos:profile", "anpos:repo:read", "anpos:repo:write",
+            "supervisorAppConfig", "githubSupervisorClientId",
         ),
         "Repository Supervisor MCP OAuth broker",
     )
@@ -278,7 +284,7 @@ def main() -> int:
         "app/api/auth/mcp/github/callback/route.ts",
         (
             "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "githubUserFromToken",
-            "code_verifier", "access_denied", "destination.searchParams.set(\"iss\"",
+            "supervisorAppConfig", "githubSupervisorClientId", "githubSupervisorClientSecret", "code_verifier", "access_denied", "destination.searchParams.set(\"iss\"",
             "does not persist GitHub refresh_token",
         ),
         "MCP GitHub OAuth callback",
@@ -489,7 +495,7 @@ def main() -> int:
         "tests/security.test.ts",
         (
             "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
-            "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
+            "weak:GITHUB_WEBHOOK_SECRET", "Marketplace, Supervisor and vendor GitHub App roles cannot collapse",
             "legacy single-app credentials do not satisfy split configuration", "Community OAuth state uses PKCE",
             "Community browser session is encrypted", "ANPOS_COMMERCIAL_RELEASE_REF", "mutable production controls",
         ),
