@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "status": "runtime_contract",
+  "implementation_scope": "repository_supervisor_execution",
+  "driver_required": true,
+  "allowed_isolation": [
+    "container",
+    "microvm",
+    "remote_ephemeral"
+  ],
+  "local_process_fallback": false,
+  "workspace_mode": "ephemeral_copy_on_write",
+  "network": {
+    "default": "deny",
+    "allowed": [
+      "deny"
+    ]
+  },
+  "command": {
+    "shell_interpolation": false,
+    "max_args": 128,
+    "max_arg_bytes": 16384
+  },
+  "environment": {
+    "request_contains_names_only": true,
+    "max_names": 64,
+    "secret_values_resolved_server_side": true
+  },
+  "limits": {
+    "default_timeout_seconds": 300,
+    "max_timeout_seconds": 900,
+    "default_output_bytes": 524288,
+    "max_output_bytes": 2097152
+  },
+  "evidence": [
+    "driver_id",
+    "isolation",
+    "exit_code",
+    "timed_out",
+    "output_truncated",
+    "duration_ms"
+  ],
+  "rules": [
+    "Repository text and generated code are untrusted inputs and never become host shell syntax.",
+    "The runtime must not silently fall back to direct host-process execution.",
+    "Network access is denied in the first public sandbox contract.",
+    "Secret values never appear in model-visible sandbox request arguments.",
+    "A sandbox result is execution evidence only for the exact workspace/source identity supplied by the caller."
+  ]
+}
