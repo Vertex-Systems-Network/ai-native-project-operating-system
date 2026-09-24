@@ -14,7 +14,7 @@ REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
@@ -53,9 +53,11 @@ def main() -> int:
     package = json.loads(text("package.json") or "{}")
     if package.get("private") is not True:
         fail("commercial-service/package.json must remain private:true")
-    for script in ("build", "typecheck", "test:unit", "migrate", "certify", "verify:e2e"):
+    for script in ("prebuild", "build", "typecheck", "test:unit", "migrate", "certify", "verify:e2e"):
         if script not in (package.get("scripts") or {}):
             fail(f"commercial service missing npm script: {script}")
+    if (package.get("scripts") or {}).get("prebuild") != "tsx scripts/guarded-build-migrate.ts":
+        fail("commercial service prebuild must remain the guarded build migration hook")
     if package.get("devDependencies", {}).get("tsx") != "4.23.13":
         fail("commercial service test/migration TypeScript runner must remain explicitly pinned")
 
@@ -565,6 +567,16 @@ def main() -> int:
             "accepts only anpos feature branches and rejects default branch",
         ),
         "Repository Supervisor guarded write unit tests",
+    )
+    require_markers(
+        "scripts/guarded-build-migrate.ts",
+        (
+            "ANPOS_PRODUCTION_MIGRATE_ON_BUILD", "VERCEL_ENV", "production",
+            "EXPORT-MANIFEST.json", "source_revision", 'export_mode !== "service"',
+            "DATABASE_URL_UNPOOLED", "DATABASE_URL", "guarded production migration pass",
+            "complete and idempotency re-run passed",
+        ),
+        "guarded production build migration",
     )
     require_markers(
         "scripts/migrate.ts",
