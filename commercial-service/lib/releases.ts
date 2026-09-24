@@ -7,6 +7,15 @@ type ManifestFile = {
   sha256?: unknown;
 };
 
+export type VerifiedTemplateReleaseFile = {
+  path: string;
+  origin: string;
+  git_mode: "100644" | "100755";
+  git_object: string | null;
+  size: number;
+  sha256: string;
+};
+
 export type VerifiedTemplateRelease = {
   schema_version: 1;
   export_mode: "template";
@@ -18,6 +27,10 @@ export type VerifiedTemplateRelease = {
   contains_secrets: false;
   file_count: number;
   total_bytes: number;
+};
+
+export type VerifiedTemplateReleasePlan = VerifiedTemplateRelease & {
+  files: VerifiedTemplateReleaseFile[];
 };
 
 const SHA40 = /^[0-9a-f]{40}$/;
@@ -40,7 +53,7 @@ function safePath(value: unknown): value is string {
     && !/[\r\n]/.test(value);
 }
 
-export function parseTemplateReleaseManifest(value: unknown): VerifiedTemplateRelease {
+export function parseTemplateReleasePlanManifest(value: unknown): VerifiedTemplateReleasePlan {
   const manifest = record(value);
   if (manifest.schema_version !== 1 || manifest.export_mode !== "template") {
     throw new Error("INVALID_COMMERCIAL_RELEASE_MANIFEST");
@@ -67,6 +80,7 @@ export function parseTemplateReleaseManifest(value: unknown): VerifiedTemplateRe
 
   let summedBytes = 0;
   const seen = new Set<string>();
+  const normalized: VerifiedTemplateReleaseFile[] = [];
   for (const raw of files as ManifestFile[]) {
     const row = record(raw);
     if (!safePath(row.path) || seen.has(row.path)) throw new Error("INVALID_COMMERCIAL_RELEASE_FILE_PATH");
@@ -87,9 +101,19 @@ export function parseTemplateReleaseManifest(value: unknown): VerifiedTemplateRe
     if (!Number.isSafeInteger(size) || size < 0) throw new Error("INVALID_COMMERCIAL_RELEASE_FILE_SIZE");
     summedBytes += size;
     if (!Number.isSafeInteger(summedBytes)) throw new Error("INVALID_COMMERCIAL_RELEASE_TOTAL_BYTES");
+
+    normalized.push({
+      path: row.path,
+      origin: row.origin,
+      git_mode: row.git_mode as "100644" | "100755",
+      git_object: row.git_object == null ? null : row.git_object,
+      size,
+      sha256: row.sha256,
+    });
   }
   if (summedBytes !== totalBytes) throw new Error("COMMERCIAL_RELEASE_TOTAL_BYTES_MISMATCH");
 
+  normalized.sort((a, b) => a.path.localeCompare(b.path));
   return {
     schema_version: 1,
     export_mode: "template",
@@ -101,5 +125,11 @@ export function parseTemplateReleaseManifest(value: unknown): VerifiedTemplateRe
     contains_secrets: false,
     file_count: fileCount,
     total_bytes: totalBytes,
+    files: normalized,
   };
+}
+
+export function parseTemplateReleaseManifest(value: unknown): VerifiedTemplateRelease {
+  const { files: _files, ...release } = parseTemplateReleasePlanManifest(value);
+  return release;
 }
