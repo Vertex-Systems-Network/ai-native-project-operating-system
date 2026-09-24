@@ -62,16 +62,26 @@ test("MCP OAuth start enforces exact client, redirect, resource and PKCE S256", 
   assert.throws(() => createMcpAuthorizationStart(badResource), /MCP_OAUTH_RESOURCE_MISMATCH/);
 });
 
-test("MCP OAuth scope surface is read-only until guarded write runtime exists", () => {
-  assert.deepEqual(MCP_SCOPES, ["anpos:profile", "anpos:repo:read"]);
+test("MCP OAuth write scope is available only after guarded write runtime exists", () => {
+  assert.deepEqual(MCP_SCOPES, ["anpos:profile", "anpos:repo:read", "anpos:repo:write"]);
   configure();
   const url = new URL("https://license.example.test/oauth/authorize");
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", "https://chatgpt.com/oauth/client.json");
   url.searchParams.set("redirect_uri", "https://chatgpt.com/connector_platform_oauth_redirect");
   url.searchParams.set("resource", "https://license.example.test/mcp");
-  url.searchParams.set("scope", "anpos:repo:write");
+  url.searchParams.set("scope", "anpos:profile anpos:repo:read anpos:repo:write");
   url.searchParams.set("code_challenge", "a".repeat(43));
   url.searchParams.set("code_challenge_method", "S256");
-  assert.throws(() => createMcpAuthorizationStart(url), /MCP_OAUTH_SCOPE_INVALID/);
+  const start = createMcpAuthorizationStart(url);
+  const request = new Request("https://license.example.test/callback", {
+    headers: { Cookie: start.stateCookie.split(";", 1)[0] },
+  });
+  const state = new URL(start.githubAuthorizeUrl).searchParams.get("state")!;
+  const pending = consumeMcpAuthorizationState(request, state);
+  assert.deepEqual(pending.scopes, ["anpos:profile", "anpos:repo:read", "anpos:repo:write"]);
+
+  const unknown = new URL(url);
+  unknown.searchParams.set("scope", "anpos:repo:admin");
+  assert.throws(() => createMcpAuthorizationStart(unknown), /MCP_OAUTH_SCOPE_INVALID/);
 });
