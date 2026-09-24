@@ -131,7 +131,8 @@ def main() -> int:
     require_markers(
         "lib/releases.ts",
         (
-            "parseTemplateReleaseManifest", "canonical-minus-vendor-only-paths", "committed_git_blobs_at_head",
+            "parseTemplateReleaseManifest", "parseTemplateReleasePlanManifest", "VerifiedTemplateReleasePlan",
+            "canonical-minus-vendor-only-paths", "committed_git_blobs_at_head",
             "tracked_source_only", "contains_secrets", "COMMERCIAL_RELEASE_FILE_COUNT_MISMATCH",
             "COMMERCIAL_RELEASE_TOTAL_BYTES_MISMATCH", "INVALID_COMMERCIAL_RELEASE_FILE_DIGEST",
         ),
@@ -147,7 +148,8 @@ def main() -> int:
             "removeTemplateCollaborator", "codeload.github.com", "verifyMarketplaceRepositoryAuditInstallation",
             "MARKETPLACE_APP_SINGLE_FILE_READ_REQUIRED", "MARKETPLACE_APP_AUDIT_PATHS_NOT_GRANTED",
             "/user/installations/", "listMarketplaceUserInstallationRepositories", "verifyMarketplaceUserInstallationAccess",
-            "templateReleaseManifest", "EXPORT-MANIFEST.json", "application/vnd.github.raw+json", "commercialReleaseRef",
+            "templateReleaseManifest", "templateReleasePlanSnapshot", "parseTemplateReleasePlanManifest",
+            "EXPORT-MANIFEST.json", "application/vnd.github.raw+json", "commercialReleaseRef",
         ),
         "GitHub client",
     )
@@ -201,8 +203,9 @@ def main() -> int:
         "lib/repository-supervisor-runtime.ts",
         (
             "normalizeGithubRepositoryLocator", "resolveGithubRepository", "profileGithubAccount",
-            "readGithubRepositoryFiles", "auditGithubRepository", "getGithubRepositoryAssurance",
-            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "summarizeAssurance(assurance, 83, 96)",
+            "readGithubRepositoryFiles", "listGithubRepositoryTree", "auditGithubRepository", "getGithubRepositoryAssurance",
+            "SUPERVISOR_AUDIT_PATHS", "immutable_ref_required", "github_repository_tree_truncated",
+            "summarizeAssurance(assurance, 83, 96)",
         ),
         "Repository Supervisor GitHub runtime foundation",
     )
@@ -486,8 +489,9 @@ def main() -> int:
     require_markers(
         "lib/repository-supervisor-write.ts",
         (
-            "createGithubWritePlan", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
+            "createGithubWritePlan", "persistGithubSupervisorPlan", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
             "getGithubWritePlanPullRequest", "getGithubWritePlanCi", "mergeGithubWritePlanPullRequest",
+            "full_plan_sandbox_apply_not_implemented", "planner_payload_too_large",
             "validatePlannedChanges", "validateFeatureBranchName", "target_head_changed_replan_required",
             "canonical_source_write_forbidden", "planned_change_contains_secret_material",
             "refs/heads/", "git/blobs", "git/trees", "git/commits", "check-runs",
