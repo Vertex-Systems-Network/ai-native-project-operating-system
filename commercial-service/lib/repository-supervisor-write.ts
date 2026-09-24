@@ -30,6 +30,14 @@ export type PlannedChange = {
   content?: string;
 };
 
+export type SupervisorPlanMode =
+  | "bounded_change"
+  | "bootstrap_empty"
+  | "bootstrap_child"
+  | "adopt_existing"
+  | "repair_partial"
+  | "upgrade_active";
+
 type StoredPlanPayload = {
   v: 1;
   mode: "bounded_change";
@@ -43,6 +51,23 @@ type StoredPlanPayload = {
   }>;
 };
 
+export type StoredSupervisorPlanEnvelope = {
+  v: 1;
+  mode: SupervisorPlanMode;
+  [key: string]: unknown;
+};
+
+export type PersistedSupervisorPlanSummary = {
+  plan_id: string;
+  plan_hash: string;
+  mode: SupervisorPlanMode;
+  canonical_repository_id: string;
+  repository_full_name: string;
+  default_branch: string;
+  expected_target_head_sha: string | null;
+  expires_at: string;
+};
+
 export type WritePlanSummary = {
   plan_id: string;
   plan_hash: string;
@@ -50,7 +75,7 @@ export type WritePlanSummary = {
   canonical_repository_id: string;
   repository_full_name: string;
   default_branch: string;
-  expected_target_head_sha: string;
+  expected_target_head_sha: string | null;
   expires_at: string;
   safe_to_apply: true;
   changes: Array<{
@@ -316,6 +341,63 @@ function decodePayload(row: PlanRow): StoredPlanPayload {
   return payload;
 }
 
+export async function persistGithubSupervisorPlan(input: {
+  mode: Exclude<SupervisorPlanMode, "bounded_change">;
+  canonical_repository_id: string;
+  repository_full_name: string;
+  default_branch: string;
+  expected_target_head_sha: string | null;
+  payload: StoredSupervisorPlanEnvelope;
+}, principal: { id: number; login: string }, billingAccountId: number): Promise<PersistedSupervisorPlanSummary> {
+  if (input.payload.v !== 1 || input.payload.mode !== input.mode) {
+    throw new RepositorySupervisorError(500, "planner_payload_mode_mismatch");
+  }
+  if (
+    input.expected_target_head_sha !== null
+    && !/^[0-9a-f]{40}$/i.test(input.expected_target_head_sha)
+  ) throw new RepositorySupervisorError(500, "planner_expected_head_invalid");
+  const planHash = sha256(stableJson({
+    canonical_repository_id: input.canonical_repository_id,
+    repository_full_name: input.repository_full_name,
+    default_branch: input.default_branch,
+    expected_target_head_sha: input.expected_target_head_sha?.toLowerCase() ?? null,
+    payload: input.payload,
+  }));
+  const planId = randomUUID();
+  const expiresAt = new Date(Date.now() + PLAN_TTL_SECONDS * 1000);
+  await db().query(
+    `INSERT INTO repository_supervisor_write_plans(
+      plan_id,github_user_id,github_login,billing_account_id,canonical_repository_id,
+      repository_full_name,default_branch,expected_target_head_sha,mode,plan_hash,
+      payload_ciphertext,status,expires_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'planned',$12)`,
+    [
+      planId,
+      principal.id,
+      principal.login,
+      billingAccountId,
+      input.canonical_repository_id,
+      input.repository_full_name,
+      input.default_branch,
+      input.expected_target_head_sha?.toLowerCase() ?? null,
+      input.mode,
+      planHash,
+      seal(JSON.stringify(input.payload)),
+      expiresAt,
+    ],
+  );
+  return {
+    plan_id: planId,
+    plan_hash: planHash,
+    mode: input.mode,
+    canonical_repository_id: input.canonical_repository_id,
+    repository_full_name: input.repository_full_name,
+    default_branch: input.default_branch,
+    expected_target_head_sha: input.expected_target_head_sha?.toLowerCase() ?? null,
+    expires_at: expiresAt.toISOString(),
+  };
+}
+
 async function idempotentResult(
   client: { query: (sql: string, values?: unknown[]) => Promise<{ rowCount: number | null; rows: any[] }> },
   key: string,
@@ -435,6 +517,12 @@ export async function applyGithubWritePlan(input: {
       };
     }
     throw new RepositorySupervisorError(409, "write_plan_not_applicable");
+  }
+  if (row.mode !== "bounded_change") {
+    throw new RepositorySupervisorError(409, "full_plan_sandbox_apply_not_implemented");
+  }
+  if (!row.expected_target_head_sha) {
+    throw new RepositorySupervisorError(409, "bounded_change_expected_head_missing");
   }
   const payload = decodePayload(row);
   const branch = validateFeatureBranchName(input.branch_name, row.default_branch);
