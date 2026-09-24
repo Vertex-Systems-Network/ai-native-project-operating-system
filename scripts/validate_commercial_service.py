@@ -320,8 +320,10 @@ def main() -> int:
     require_markers(
         "tests/mcp-auth.test.ts",
         (
-            "exact client, redirect, resource and PKCE S256",
+            "exact allowlist, CIMD metadata, resource and PKCE S256",
+            "CIMD validation binds exact client identity, redirect and public-client token method",
             "write scope is available only through the dedicated Supervisor App flow", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
+            "MCP_OAUTH_CLIENT_METADATA_ID_MISMATCH", "MCP_OAUTH_CLIENT_METADATA_REDIRECT_MISMATCH",
             "MCP_OAUTH_RESOURCE_MISMATCH", "Iv1.supervisor-client-123456",
         ),
         "MCP OAuth unit tests",
