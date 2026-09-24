@@ -31,6 +31,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             service_base_url="https://license.example.test",
             homepage_url="https://example.test/anpos",
             marketplace_app_name="ANPOS Marketplace Test",
+            supervisor_app_name="ANPOS Supervisor Test",
             vendor_app_name="ANPOS Vendor Test",
             collaborator_provisioning=False,
         )
@@ -77,6 +78,32 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertNotIn("contents", query)
         self.assertEqual(len(self.renderer.COMMUNITY_AUDIT_PATHS), 10)
 
+    def test_supervisor_registration_is_public_and_write_scoped_without_administration(self) -> None:
+        data = self.renderer.render(self.inputs)
+        supervisor = data["github_apps"]["repository_supervisor"]
+        query = self.query(supervisor["registration_url"])
+        self.assertTrue(supervisor["public"])
+        self.assertEqual(query["public"], ["true"])
+        self.assertEqual(query["webhook_active"], ["false"])
+        self.assertEqual(query["request_oauth_on_install"], ["false"])
+        self.assertEqual(query["callback_urls[]"], ["https://license.example.test/api/auth/mcp/github/callback"])
+        self.assertEqual(query["contents"], ["write"])
+        self.assertEqual(query["pull_requests"], ["write"])
+        self.assertEqual(query["checks"], ["read"])
+        self.assertNotIn("administration", query)
+        self.assertEqual(
+            supervisor["permissions"],
+            {
+                "metadata": "read",
+                "contents": "write",
+                "pull_requests": "write",
+                "checks": "read",
+            },
+        )
+        self.assertFalse(supervisor["administration_permission_requested"])
+        self.assertEqual(supervisor["generic_write_boundary"], "active_project_only_anpos_feature_branch")
+        self.assertEqual(supervisor["mcp_auth_flow"], "mcp_oauth_broker_then_supervisor_github_app_oauth")
+
     def test_vendor_registration_is_private_archive_only_by_default(self) -> None:
         data = self.renderer.render(self.inputs)
         vendor = data["github_apps"]["vendor_distribution"]
@@ -99,12 +126,17 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
     def test_split_environment_contract_and_legacy_rejection_are_explicit(self) -> None:
         data = self.renderer.render(self.inputs)
         marketplace_keys = set(data["github_apps"]["marketplace"]["environment_keys"])
+        supervisor_keys = set(data["github_apps"]["repository_supervisor"]["environment_keys"])
         vendor_keys = set(data["github_apps"]["vendor_distribution"]["environment_keys"])
         service_keys = set(data["service_environment_keys"])
         self.assertIn("GITHUB_MARKETPLACE_APP_ID", marketplace_keys)
         self.assertIn("GITHUB_MARKETPLACE_APP_PRIVATE_KEY", marketplace_keys)
         self.assertIn("GITHUB_MARKETPLACE_CLIENT_ID", marketplace_keys)
         self.assertIn("GITHUB_MARKETPLACE_CLIENT_SECRET", marketplace_keys)
+        self.assertIn("GITHUB_SUPERVISOR_APP_ID", supervisor_keys)
+        self.assertIn("GITHUB_SUPERVISOR_CLIENT_ID", supervisor_keys)
+        self.assertIn("GITHUB_SUPERVISOR_CLIENT_SECRET", supervisor_keys)
+        self.assertTrue(marketplace_keys.isdisjoint(supervisor_keys))
         self.assertIn("GITHUB_VENDOR_APP_ID", vendor_keys)
         self.assertIn("GITHUB_VENDOR_APP_PRIVATE_KEY", vendor_keys)
         self.assertIn("ANPOS_PUBLIC_BASE_URL", service_keys)
@@ -119,6 +151,9 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertIn("marketplace_purchase", sequence)
         self.assertIn("keep Community outside ANPOS_MARKETPLACE_PLAN_MAP", sequence)
         self.assertIn("ANPOS_COMMERCIAL_RELEASE_REF", sequence)
+        self.assertIn("Repository Supervisor App", sequence)
+        self.assertIn("GITHUB_SUPERVISOR_APP_ID", sequence)
+        self.assertIn("anpos/* feature branches", sequence)
         self.assertIn("exact 40-character commit SHA", sequence)
         self.assertIn("/api/v1/releases/current", sequence)
         self.assertIn("/api/v1/template/archive", sequence)
@@ -141,7 +176,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
             "source_protocol_version": package["anpos"]["source_protocol_version"],
             "runtime_contract": package["anpos"]["runtime_contract"],
         }
-        self.assertEqual(data["schema_version"], 6)
+        self.assertEqual(data["schema_version"], 7)
         self.assertEqual(data["artifact_identity"], expected)
         self.assertEqual(expected["source_protocol_version"], protocol["version"])
         self.assertEqual(
