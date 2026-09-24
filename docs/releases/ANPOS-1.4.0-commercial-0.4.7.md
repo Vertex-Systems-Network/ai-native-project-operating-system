@@ -2,7 +2,7 @@
 
 Status: **customer-facing release draft; not publication evidence**.
 
-Commercial service 0.4.7 adds source-implemented sandbox-backed apply for **non-empty conflict-free** full Repository Supervisor plans. Verified private-template Git blobs are re-materialized server-side, staged into a signed remote-ephemeral artifact channel, transformed only inside an isolated Python 3.12+ sandbox, SHA-256/output-path verified on return, and committed to one expected-head feature branch without forwarding the customer GitHub token to the sandbox gateway. Full-plan merge additionally requires a persisted sandbox receipt digest.
+Commercial service 0.4.7 retains sandbox-backed apply for conflict-free non-empty Repository Supervisor plans and adds the guarded empty-repository initialization path described below. Verified private-template Git blobs are re-materialized server-side, staged into a signed remote-ephemeral artifact channel, transformed only inside an isolated Python 3.12+ sandbox, SHA-256/output-path verified on return, and committed to one expected-head feature branch without forwarding the customer GitHub token to the sandbox gateway. Full-plan merge additionally requires a persisted sandbox receipt digest.
 
 Commercial service 0.4.7 also implements guarded `bootstrap_empty` source behavior for GitHub's empty-repository constraint. After explicit confirmation and sandbox verification, the service creates one deterministic inert `.anpos-bootstrap-seed` root commit through the Contents API, verifies zero parents and exact default-branch head, creates the full ANPOS feature-branch commit on that seed while deleting the seed, and retains PR/CI/merge gates. Any post-seed failure becomes recovery-required rather than silently resetting the plan.
 
