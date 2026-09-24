@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_protocol_version": "1.3.13",
+  "current_protocol_version": "1.4.0",
   "applied_migrations": [
     {
       "id": "ANPOS-1.0.0-to-1.0.1",
@@ -540,12 +540,41 @@
         "config/licensing/vendor-source-boundary.json strips all three source continuous-certification assets from customer/template exports",
         "GitHub branch protection/ruleset enforcement remains external evidence and is not marked verified by this migration"
       ]
+    },
+    {
+      "id": "ANPOS-1.3.13-to-1.4.0",
+      "from_version": "1.3.13",
+      "to_version": "1.4.0",
+      "detected_at": "2026-09-24T00:00:00+05:00",
+      "impact": [
+        "Promote capability-aware product assurance Requirements 83-88 into the active ANPOS protocol baseline",
+        "Promote governance assurance Requirements 89-96 covering responsible AI/human oversight, compliance evidence, ADRs, AI asset identity, deprecation/EOL, resilience runbooks/drills, tamper-evident audit evidence and unified risk/exception lifecycle",
+        "Expand persistent assurance state to Requirements 83-96 while keeping provider-neutral runtime executor contracts scoped to executable product-assurance Requirements 83-88",
+        "Add specialized Draft 2020-12 schemas and dedicated regression tests for product/governance assurance state and policy contracts",
+        "Extend conformance catalog through CONF-038",
+        "Initialize new assurance/governance registries and policies safely during child bootstrap without inheriting source evidence or claiming pass state",
+        "Bump deployable commercial service identity from 0.3.9 to 0.4.0 so /api/version and deterministic vendor handoff attest ANPOS 1.4.0 exactly",
+        "Preserve historical 1.3.x release/migration evidence and keep external publication/production provenance fail-closed"
+      ],
+      "project_conflicts": [],
+      "requires_owner_consent": false,
+      "child_migration_rule": "Existing child projects must adopt 1.4.0 non-destructively: preserve application code, approved architecture, CI/deployment behavior, project legal/commercial terms and project-specific state; add or reconcile missing 83-96 control files; reset no verified project evidence; classify each new assurance/governance requirement as applicable, optional, pending_detection or not_applicable with project-specific rationale; do not infer legal conclusions, AI pass status, production readiness or product success from the protocol upgrade itself.",
+      "status": "applied",
+      "applied_at": "2026-09-24T00:00:00+05:00",
+      "verification_evidence": [
+        "Requirements 83-96 are routed through the ANPOS lifecycle/agent manifest and protected ownership model",
+        "config/assurance/assurance-state.json plus specialized schemas validate the active 83-96 template blueprint",
+        "tests/test_product_assurance.py and tests/test_governance_assurance.py cover schema, bootstrap, evidence and governance invariants",
+        "config/testing/conformance-scenarios.json includes CONF-025 through CONF-038",
+        "commercial-service/package.json and package-lock.json attest service 0.4.0 / protocol 1.4.0 / split-github-app-v1",
+        "Source continuous certification, deterministic vendor export/handoff verification and commercial service certification must pass on the exact release candidate head before promotion"
+      ]
     }
   ],
   "pending_migrations": [],
   "migration_record_template": {
-    "id": "ANPOS-1.3.13-to-NEXT",
-    "from_version": "1.3.13",
+    "id": "ANPOS-1.4.0-to-NEXT",
+    "from_version": "1.4.0",
     "to_version": "NEXT",
     "detected_at": null,
     "impact": [],

@@ -1,18 +1,9 @@
 {
   "schema_version": 1,
-  "status": "planned_not_released",
-  "current_version": "1.3.13",
-  "planned_version": "1.4.0",
-  "release_reason": "Requirements 83-96 add capability-aware product and governance assurance layers with machine-readable evidence, evaluation, human-oversight, compliance, architecture-decision, AI-asset, compatibility, resilience, audit and risk contracts.",
-  "required_before_release": [
-    "PRs containing Requirements 83-96 are merged from exact reviewed heads.",
-    "Source continuous certification runs and passes on the release candidate.",
-    "Specialized schemas and assurance-state validation pass for Requirements 83-96.",
-    "Conformance scenarios CONF-025 through CONF-038 are present and applicable static/unit/runtime enforcement is certified.",
-    "Child bootstrap initializes product assurance, governance assurance and research/evidence state safely.",
-    "Current canonical main governance is reconciled, including required branch/ruleset enforcement where externally configurable.",
-    "Commercial/runtime protocol identity references are updated consistently in the dedicated release migration.",
-    "Deterministic vendor exports and handoff verification pass after version migration."
-  ],
-  "release_rule": "Do not change config/protocol/version.json, source instance version, commercial runtime protocol identity, or migrations.current_protocol_version until the dedicated 1.4.0 release migration is executed and certified."
+  "status": "unplanned",
+  "current_version": "1.4.0",
+  "planned_version": null,
+  "release_reason": "ANPOS 1.4.0 has consumed the previously planned Requirements 83-96 release boundary; the next protocol release is not yet planned.",
+  "required_before_release": [],
+  "release_rule": "Future protocol work must create a new explicit release plan before changing the active version beyond 1.4.0."
 }

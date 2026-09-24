@@ -8,7 +8,7 @@ function manifest() {
     schema_version: 1,
     pack_id: "anpos-premium-pro",
     pack_version: "1.0.0",
-    source_protocol_compatibility: { minimum: "1.3.13", maximum: "1.3.13" },
+    source_protocol_compatibility: { minimum: "1.4.0", maximum: "1.4.0" },
     capabilities: [
       {
         id: "premium_delivery_workflow",
@@ -57,7 +57,7 @@ function manifest() {
 }
 
 test("premium release manifest produces deterministic immutable release metadata", () => {
-  const parsed = parsePremiumReleaseManifest(manifest(), "1.3.13");
+  const parsed = parsePremiumReleaseManifest(manifest(), "1.4.0");
   assert.equal(parsed.pack_id, "anpos-premium-pro");
   assert.equal(parsed.pack_version, "1.0.0");
   assert.deepEqual(parsed.capability_ids, ["premium_delivery_workflow", "premium_provider_automation"]);
@@ -72,7 +72,7 @@ test("premium release manifest produces deterministic immutable release metadata
   const reordered = manifest();
   reordered.files.reverse();
   assert.equal(
-    parsePremiumReleaseManifest(reordered, "1.3.13").content_set_sha256,
+    parsePremiumReleaseManifest(reordered, "1.4.0").content_set_sha256,
     parsed.content_set_sha256,
   );
 });
@@ -80,45 +80,45 @@ test("premium release manifest produces deterministic immutable release metadata
 test("premium release manifest rejects incompatible ANPOS protocol", () => {
   const value = manifest();
   value.source_protocol_compatibility = { minimum: "1.3.10", maximum: "1.3.12" };
-  assert.throws(() => parsePremiumReleaseManifest(value, "1.3.13"), /PREMIUM_RELEASE_PROTOCOL_NOT_COMPATIBLE/);
+  assert.throws(() => parsePremiumReleaseManifest(value, "1.4.0"), /PREMIUM_RELEASE_PROTOCOL_NOT_COMPATIBLE/);
 });
 
 test("premium release manifest rejects invalid provenance and provider claims", () => {
   const provenance = manifest();
   provenance.provenance.derived_only_from_public_core = true;
-  assert.throws(() => parsePremiumReleaseManifest(provenance, "1.3.13"), /UNVERIFIED_PREMIUM_PROVENANCE/);
+  assert.throws(() => parsePremiumReleaseManifest(provenance, "1.4.0"), /UNVERIFIED_PREMIUM_PROVENANCE/);
 
   const partnership = manifest();
   partnership.providers[0].partnership_or_certification_claim = true;
-  assert.throws(() => parsePremiumReleaseManifest(partnership, "1.3.13"), /PREMIUM_PROVIDER_PARTNERSHIP_CLAIM_FORBIDDEN/);
+  assert.throws(() => parsePremiumReleaseManifest(partnership, "1.4.0"), /PREMIUM_PROVIDER_PARTNERSHIP_CLAIM_FORBIDDEN/);
 });
 
 test("premium provider adapter requires matching provider capability mapping", () => {
   const missingProvider = manifest();
   missingProvider.providers = [];
-  assert.throws(() => parsePremiumReleaseManifest(missingProvider, "1.3.13"), /PREMIUM_PROVIDER_MANIFEST_ENTRY_REQUIRED/);
+  assert.throws(() => parsePremiumReleaseManifest(missingProvider, "1.4.0"), /PREMIUM_PROVIDER_MANIFEST_ENTRY_REQUIRED/);
 
   const wrongCapability = manifest();
   wrongCapability.providers[0].capability_ids = ["premium_delivery_workflow"];
-  assert.throws(() => parsePremiumReleaseManifest(wrongCapability, "1.3.13"), /PREMIUM_PROVIDER_CAPABILITY_MISMATCH/);
+  assert.throws(() => parsePremiumReleaseManifest(wrongCapability, "1.4.0"), /PREMIUM_PROVIDER_CAPABILITY_MISMATCH/);
 });
 
 test("premium manifest binds path class digest and byte constraints", () => {
   const unsafePath = manifest();
   unsafePath.files[0].path = "../premium.md";
-  assert.throws(() => parsePremiumReleaseManifest(unsafePath, "1.3.13"), /INVALID_PREMIUM_FILE_PATH/);
+  assert.throws(() => parsePremiumReleaseManifest(unsafePath, "1.4.0"), /INVALID_PREMIUM_FILE_PATH/);
 
   const wrongClass = manifest();
   wrongClass.files[0].asset_class = "premium_documentation";
-  assert.throws(() => parsePremiumReleaseManifest(wrongClass, "1.3.13"), /PREMIUM_ASSET_CLASS_PATH_MISMATCH/);
+  assert.throws(() => parsePremiumReleaseManifest(wrongClass, "1.4.0"), /PREMIUM_ASSET_CLASS_PATH_MISMATCH/);
 
   const badDigest = manifest();
   badDigest.files[0].sha256 = "bad";
-  assert.throws(() => parsePremiumReleaseManifest(badDigest, "1.3.13"), /INVALID_PREMIUM_FILE_DIGEST/);
+  assert.throws(() => parsePremiumReleaseManifest(badDigest, "1.4.0"), /INVALID_PREMIUM_FILE_DIGEST/);
 
   const badBytes = manifest();
   badBytes.files[0].bytes = 0;
-  assert.throws(() => parsePremiumReleaseManifest(badBytes, "1.3.13"), /INVALID_PREMIUM_FILE_SIZE/);
+  assert.throws(() => parsePremiumReleaseManifest(badBytes, "1.4.0"), /INVALID_PREMIUM_FILE_SIZE/);
 });
 
 test("Developer stays non-premium while Pro Team Enterprise include both premium entitlements", () => {

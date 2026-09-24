@@ -70,7 +70,7 @@ python scripts/verify_premium_pack.py \
   --repository /path/to/private-premium-checkout \
   --expected-pack-id anpos-premium-pro \
   --expected-pack-version X.Y.Z \
-  --expected-protocol-version 1.3.13
+  --expected-protocol-version 1.4.0
 ```
 
 The verifier fails closed on:
@@ -90,7 +90,7 @@ A successful receipt includes pack/version, file count, total bytes, manifest/co
 
 ## Source-side distribution runtime
 
-Commercial service **0.3.9** adds conditional premium delivery plumbing while leaving Developer-only operation independent from premium configuration.
+Commercial service **0.4.0** retains conditional premium delivery plumbing and attests the ANPOS 1.4.0 protocol identity while leaving Developer-only operation independent from premium configuration.
 
 When `ANPOS_MARKETPLACE_PLAN_MAP` contains `pro`, `team`, or `enterprise`, full `/api/ready` fails closed unless all of these real external values are configured:
 
@@ -130,7 +130,7 @@ The operator flow is:
 Current canonical source truth for this lane is:
 
 - premium contract/schema/offline verifier: **implemented**;
-- entitlement-gated immutable premium distribution source: **implemented in commercial service 0.3.9**;
+- entitlement-gated immutable premium distribution source: **implemented in commercial service 0.4.0**;
 - conditional higher-tier readiness configuration: **implemented in source**;
 - private premium repository: **not evidenced**;
 - premium blueprint payload: **not implemented/evidenced**;

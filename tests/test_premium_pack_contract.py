@@ -31,7 +31,7 @@ class PremiumPackContractTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def manifest(self, files: list[dict], *, providers: list[dict] | None = None, minimum: str = "1.3.13", maximum: str = "1.3.13") -> dict:
+    def manifest(self, files: list[dict], *, providers: list[dict] | None = None, minimum: str = "1.4.0", maximum: str = "1.4.0") -> dict:
         return {
             "schema_version": 1,
             "pack_id": "anpos-premium-pro",
@@ -85,7 +85,7 @@ class PremiumPackContractTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def assert_error(self, expected: str, *, protocol: str = "1.3.13") -> None:
+    def assert_error(self, expected: str, *, protocol: str = "1.4.0") -> None:
         with self.assertRaises(verifier.VerificationError) as ctx:
             verifier.verify(self.repo, expected_pack_id="anpos-premium-pro", expected_pack_version="1.0.0", expected_protocol_version=protocol)
         self.assertIn(expected, str(ctx.exception))
@@ -158,13 +158,13 @@ class PremiumPackContractTests(unittest.TestCase):
             self.repo,
             expected_pack_id="anpos-premium-pro",
             expected_pack_version="1.0.0",
-            expected_protocol_version="1.3.13",
+            expected_protocol_version="1.4.0",
         )
         self.assertTrue(receipt["ok"])
         self.assertEqual(receipt["verification"], "anpos_private_premium_pack_contract_v1")
         self.assertEqual(receipt["file_count"], 2)
         self.assertFalse(receipt["pro_sale_ready"])
-        self.assertEqual(receipt["verified_protocol_version"], "1.3.13")
+        self.assertEqual(receipt["verified_protocol_version"], "1.4.0")
         self.assertRegex(receipt["manifest_sha256"], r"^[a-f0-9]{64}$")
         self.assertRegex(receipt["content_set_sha256"], r"^[a-f0-9]{64}$")
 
@@ -208,14 +208,14 @@ class PremiumPackContractTests(unittest.TestCase):
             }
         ]
         self.write_manifest(self.manifest([row], providers=providers))
-        receipt = verifier.verify(self.repo, expected_protocol_version="1.3.13")
+        receipt = verifier.verify(self.repo, expected_protocol_version="1.4.0")
         self.assertTrue(receipt["ok"])
         self.assertFalse(receipt["pro_sale_ready"])
 
     def test_protocol_outside_compatibility_range_is_rejected(self) -> None:
         row = self.write_payload("premium/blueprints/delivery.md", b"protocol bounded premium payload\n")
         self.write_manifest(self.manifest([row], minimum="1.3.10", maximum="1.3.12"))
-        self.assert_error("PREMIUM_PROTOCOL_NOT_COMPATIBLE", protocol="1.3.13")
+        self.assert_error("PREMIUM_PROTOCOL_NOT_COMPATIBLE", protocol="1.4.0")
 
     @unittest.skipIf(os.name == "nt", "symlink creation requires platform privileges on some Windows runners")
     def test_symlink_payload_is_rejected(self) -> None:

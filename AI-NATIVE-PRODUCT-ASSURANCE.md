@@ -197,11 +197,11 @@ A blueprint/configuration is not completion evidence. Mark a requirement satisfi
 
 ## Persistent assurance state and evidence
 
-Requirements 83–88 are tracked in `config/assurance/assurance-state.json`. A requirement may be `pending_detection`, `applicable`, `optional`, or `not_applicable`; completion states are separately tracked and require evidence.
+Requirements 83–88 are tracked inside the unified Requirements 83–96 `config/assurance/assurance-state.json`. A requirement may be `pending_detection`, `applicable`, `optional`, or `not_applicable`; completion states are separately tracked and require evidence.
 
 Research and market evidence that materially informs requirements, options, modules, architecture, design or product decisions is recorded in `config/research/evidence-registry.json` with provenance, validation state and explicit fact/inference classification.
 
-Specialized JSON Schemas under `schemas/` validate the assurance state, research registry and each Requirements 83–88 policy.
+Specialized JSON Schemas under `schemas/` validate the unified assurance state, research registry and Requirements 83–96 policy surfaces.
 
 ## Runtime executor contract
 
@@ -209,4 +209,4 @@ Specialized JSON Schemas under `schemas/` validate the assurance state, research
 
 ## Protocol release preparation
 
-`config/protocol/next-release.json` records the planned ANPOS 1.4.0 boundary. The current protocol remains 1.3.13 until a dedicated version migration updates all source, child-upgrade and commercial identity references and passes deterministic source certification.
+ANPOS 1.4.0 is the active protocol baseline for Requirements 83–96. `config/protocol/next-release.json` now resets to an unplanned future-release state; future protocol changes must create a new explicit release plan.

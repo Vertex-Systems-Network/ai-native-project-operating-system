@@ -28,9 +28,9 @@ function controlFiles(overrides: Partial<Record<CommunityAuditPath, ControlFileO
   files["config/protocol/instance.json"] = observation({
     instance_status: "active_project",
     bootstrap_completed: true,
-    source_protocol_version: "1.3.13",
+    source_protocol_version: "1.4.0",
   });
-  files["config/protocol/version.json"] = observation({ version: "1.3.13" });
+  files["config/protocol/version.json"] = observation({ version: "1.4.0" });
   Object.assign(files, overrides);
   return files;
 }
@@ -77,7 +77,7 @@ test("initialized ANPOS child reports baseline present without persisting source
   assert.equal(audit.classification, "active_child");
   assert.equal(audit.readiness.level, "baseline_present");
   assert.equal(audit.protocol.detected, true);
-  assert.equal(audit.protocol.version, "1.3.13");
+  assert.equal(audit.protocol.version, "1.4.0");
   assert.equal(audit.readiness.control_files_present, 10);
   assert.deepEqual(audit.gaps, []);
   assert.equal(audit.privacy_scope.source_code_read, false);
@@ -89,7 +89,7 @@ test("copied template source is identified as an uninitialized child", () => {
     "config/protocol/instance.json": observation({
       instance_status: "template_source",
       bootstrap_completed: false,
-      source_protocol_version: "1.3.13",
+      source_protocol_version: "1.4.0",
     }),
   });
   const audit = buildRepositoryAudit(childRepo, files);
@@ -103,7 +103,7 @@ test("canonical source is not misreported as an uninitialized customer child", (
     "config/protocol/instance.json": observation({
       instance_status: "template_source",
       bootstrap_completed: false,
-      source_protocol_version: "1.3.13",
+      source_protocol_version: "1.4.0",
     }),
   });
   const audit = buildRepositoryAudit({
