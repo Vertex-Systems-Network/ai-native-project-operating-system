@@ -357,7 +357,7 @@
     "Adoption never automatically overwrites a mismatched existing target path.",
     "Upgrade/repair never blindly resets project-specific Requirements 83-96 evidence or child runtime state.",
     "Every full-mode plan binds to the verified private-template release ref/source revision/source tree and immutable target head when one exists.",
-    "Only non-empty conflict-free full plans may enter sandbox-backed apply; manual_merge and migration_review remain hard stops.",
+    "Conflict-free non-empty full plans use sandbox_full_plan_v1; verified empty repositories use only guarded_empty_repository_v1 with explicit confirmation and root-seed verification; manual_merge and migration_review remain hard stops.",
     "Customer GitHub provider credentials are not forwarded to the sandbox gateway; the sandbox receives only verified release artifacts and plan metadata.",
     "Sandbox full apply uses exact-path input/output artifacts with SHA-256 integrity and signed gateway response verification.",
     "Full-plan GitHub merge requires the persisted sandbox receipt digest in addition to exact PR head and CI checks.",
