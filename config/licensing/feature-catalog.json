@@ -298,9 +298,10 @@
         "commercial-service/lib/repository-supervisor-full-apply.ts",
         "commercial-service/lib/full-plan-sandbox-runner.ts",
         "commercial-service/migrations/005_repository_supervisor_full_apply.sql",
-        "commercial-service/tests/repository-supervisor-full-apply.test.ts"
+        "commercial-service/tests/repository-supervisor-full-apply.test.ts",
+        "commercial-service/migrations/006_guarded_empty_repository_initialization.sql"
       ],
-      "notes": "GitHub Repository Supervisor source includes deterministic full planning plus sandbox-backed apply for non-empty conflict-free full plans. Verified private-template blobs are staged into a signed remote-ephemeral artifact channel, Python bootstrap transformations execute only inside the sandbox, customer GitHub tokens are not forwarded to the gateway, exact output artifacts are SHA-256 checked, and the resulting single feature-branch commit is expected-head guarded. Conflict-resolution apply, bootstrap-empty initialization, live gateway/GitHub E2E, public plugin activation and GitLab parity remain incomplete."
+      "notes": "GitHub Repository Supervisor source includes deterministic full planning, sandbox-backed full apply, and guarded empty-repository bootstrap. Empty repositories require explicit confirmation, one deterministic zero-parent .anpos-bootstrap-seed root commit to satisfy GitHub initialization semantics, sandbox-verified ANPOS output on an anpos/* feature branch that removes the seed, PR/CI review, and recovery-required state after any post-seed failure. Manual/migration conflict resolution, live gateway/GitHub E2E, public plugin activation and GitLab parity remain incomplete."
     }
   ]
 }
