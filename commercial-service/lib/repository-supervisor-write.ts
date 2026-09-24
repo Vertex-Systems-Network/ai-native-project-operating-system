@@ -761,7 +761,13 @@ export async function mergeGithubWritePlanPullRequest(input: {
   if (row.status === "merged" && row.merge_commit_sha) {
     return { plan_id: row.plan_id, merged: true, merge_commit_sha: row.merge_commit_sha, resulting_default_branch_head_sha: row.merge_commit_sha };
   }
-  if (row.status !== "pr_open" || !row.pull_request_number || !row.applied_head_sha) {
+  if (
+    row.mode !== "bounded_change"
+    || !row.expected_target_head_sha
+    || row.status !== "pr_open"
+    || !row.pull_request_number
+    || !row.applied_head_sha
+  ) {
     throw new RepositorySupervisorError(409, "write_plan_pull_request_not_mergeable");
   }
   if (input.expected_head_sha !== row.applied_head_sha) throw new RepositorySupervisorError(409, "planned_branch_head_mismatch");
