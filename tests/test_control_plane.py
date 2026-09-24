@@ -270,6 +270,7 @@ class TemplatePolicyTests(unittest.TestCase):
         allowed = {
             "source-continuous-certification.yml",
             "immutable-vendor-handoff.yml",
+            "commercial-production-deploy.yml",
         }
         self.assertTrue(set(active).issubset(allowed))
         for name in active:
