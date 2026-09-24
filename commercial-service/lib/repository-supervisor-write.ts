@@ -76,7 +76,7 @@ export type WritePlanSummary = {
   canonical_repository_id: string;
   repository_full_name: string;
   default_branch: string;
-  expected_target_head_sha: string | null;
+  expected_target_head_sha: string;
   expires_at: string;
   safe_to_apply: true;
   changes: Array<{
@@ -95,7 +95,7 @@ type PlanRow = {
   canonical_repository_id: string;
   repository_full_name: string;
   default_branch: string;
-  expected_target_head_sha: string;
+  expected_target_head_sha: string | null;
   mode: string;
   plan_hash: string;
   payload_ciphertext: string;
