@@ -13,11 +13,13 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/plugin-entitlements.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/plugin-entitlements.test.ts", "tests/execution-sandbox.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
-    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts",
-    "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts",
+    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts",
+    "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
+    "app/.well-known/oauth-protected-resource/route.ts", "app/.well-known/oauth-authorization-server/route.ts",
+    "app/oauth/authorize/route.ts", "app/oauth/token/route.ts", "app/api/auth/mcp/github/callback/route.ts",
     "app/api/auth/github/callback/route.ts", "app/setup/github/route.ts", "app/community/page.tsx", "app/community/CommunityClient.tsx",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts", "app/api/v1/releases/current/route.ts",
@@ -68,6 +70,7 @@ def main() -> int:
         "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
         "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
+        "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS", "ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS",
     ):
         if name not in env_example:
             fail(f"commercial service environment contract missing {name}")
@@ -92,6 +95,7 @@ def main() -> int:
             "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
             "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
             "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
+            "mcpOAuthConfigurationProblems", "mcpOAuthConfig", "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS",
             "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
             "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
             "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
@@ -155,7 +159,7 @@ def main() -> int:
     )
     require_markers(
         "lib/auth.ts",
-        ("githubSessionTokenFromRequest", "githubUserFromToken", "authenticatedGithubContext"),
+        ("githubSessionTokenFromRequest", "githubUserFromToken", "authenticatedGithubContext", "requireGithubAccountAccessForContext"),
         "GitHub authentication",
     )
     require_markers(
@@ -224,6 +228,94 @@ def main() -> int:
         "Plugin entitlement bridge API",
     )
     require_markers(
+        "lib/mcp-auth.ts",
+        (
+            "MCP_OAUTH_STATE_COOKIE_NAME", "MCP_SCOPES", "createMcpAuthorizationStart",
+            "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "redeemMcpAuthorizationCode",
+            "authenticateMcpRequest", "mcpBearerChallenge", "code_challenge_method", "S256",
+            "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "anpos:profile", "anpos:repo:read",
+        ),
+        "Repository Supervisor MCP OAuth broker",
+    )
+    require_markers(
+        "lib/mcp-runtime.ts",
+        (
+            "MCP_TOOL_DEFINITIONS", "server/discover", "2026-07-28", "repository_profile",
+            '"openai/profile": true', "repository_resolve", "repository_audit", "repository_get_assurance",
+            "billing_account_id", "authorizeRepositorySupervisorRead", "requireMcpScope",
+        ),
+        "Repository Supervisor MCP runtime",
+    )
+    require_markers(
+        "app/mcp/route.ts",
+        (
+            "authenticateMcpRequest", "mcpBearerChallenge", "handleMcpRpc", "WWW-Authenticate",
+            "readJsonBody", "65_536", "Allow", "POST",
+        ),
+        "Repository Supervisor MCP HTTP route",
+    )
+    require_markers(
+        "app/.well-known/oauth-protected-resource/route.ts",
+        ("authorization_servers", "bearer_methods_supported", "anpos:profile", "anpos:repo:read"),
+        "MCP protected resource metadata",
+    )
+    require_markers(
+        "app/.well-known/oauth-authorization-server/route.ts",
+        (
+            "authorization_endpoint", "token_endpoint", "authorization_code", "S256",
+            "client_id_metadata_document_supported", "authorization_response_iss_parameter_supported",
+        ),
+        "MCP authorization server metadata",
+    )
+    require_markers(
+        "app/oauth/authorize/route.ts",
+        ("createMcpAuthorizationStart", "Set-Cookie", "Referrer-Policy", "no-store"),
+        "MCP OAuth authorization route",
+    )
+    require_markers(
+        "app/api/auth/mcp/github/callback/route.ts",
+        (
+            "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "githubUserFromToken",
+            "code_verifier", "access_denied", "destination.searchParams.set(\"iss\"",
+            "does not persist GitHub refresh_token",
+        ),
+        "MCP GitHub OAuth callback",
+    )
+    require_markers(
+        "app/oauth/token/route.ts",
+        (
+            "application/x-www-form-urlencoded", "authorization_code", "redeemMcpAuthorizationCode",
+            "code_verifier", "resource", "access_token", "Bearer", "no-store",
+        ),
+        "MCP OAuth token route",
+    )
+    require_markers(
+        "app/api/ready/mcp/route.ts",
+        (
+            "mcpOAuthConfigurationProblems", "ensureSchema", "repository_supervisor_mcp",
+            "protected_resource_metadata", "authorization_server_metadata", "write_scope_available: false",
+        ),
+        "MCP readiness gate",
+    )
+    require_markers(
+        "tests/mcp-auth.test.ts",
+        (
+            "exact client, redirect, resource and PKCE S256",
+            "read-only until guarded write runtime exists", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
+            "MCP_OAUTH_RESOURCE_MISMATCH", "MCP_OAUTH_SCOPE_INVALID",
+        ),
+        "MCP OAuth unit tests",
+    )
+    require_markers(
+        "tests/mcp-runtime.test.ts",
+        (
+            "MCP discovery advertises modern stateless tool capability",
+            "authenticated OpenAI profile metadata and no write tool",
+            "stable opaque profile", "OAuth challenge metadata on insufficient scope",
+        ),
+        "MCP runtime unit tests",
+    )
+    require_markers(
         "lib/execution-sandbox.ts",
         (
             "SandboxDriver", "normalizeSandboxRequest", "executeWithSandboxDriver",
@@ -279,7 +371,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "001_baseline.sql", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "002_mcp_oauth.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -289,6 +381,14 @@ def main() -> int:
         "migrations/001_baseline.sql",
         ("marketplace_deliveries", "rate_limit_windows", "organization_seat_assignments", "template_access_grants", "access_reconciliation_jobs", "commercial_audit_log"),
         "commercial baseline migration",
+    )
+    require_markers(
+        "migrations/002_mcp_oauth.sql",
+        (
+            "mcp_oauth_authorization_codes", "code_hash", "code_challenge", "consumed_at",
+            "mcp_oauth_access_tokens", "token_hash", "github_access_token_ciphertext", "revoked_at",
+        ),
+        "MCP OAuth migration",
     )
     require_markers(
         "scripts/migrate.ts",
@@ -394,14 +494,18 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 6:
-        fail("commercial service API contract must be schema_version 6")
+    if api_contract.get("schema_version") != 7:
+        fail("commercial service API contract must be schema_version 7")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
+        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/api/ready/mcp",
         "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
         "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
+        "mcp_oauth_pkce_s256_required", "mcp_resource_parameter_binding_required",
+        "mcp_access_tokens_opaque_short_lived_and_server_side_hashed",
+        "mcp_write_scope_forbidden_until_guarded_write_runtime_exists",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
