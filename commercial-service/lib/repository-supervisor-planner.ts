@@ -242,7 +242,6 @@ function actionFor(
   target: RepositoryTreeEntry | undefined,
 ): { action: PlannerActionKind; reason: string; confirmation: boolean } {
   const same = Boolean(target && releaseObject && target.sha === releaseObject);
-  if (same) return { action: "unchanged", reason: "target_git_object_matches_verified_release", confirmation: false };
 
   if (mode === "bootstrap_empty") {
     if (isBootstrapTransform(path)) {
@@ -253,8 +252,9 @@ function actionFor(
 
   if (mode === "bootstrap_child") {
     if (isBootstrapTransform(path)) {
-      return { action: "bootstrap_transform", reason: "template_child_requires_deterministic_runtime_reset", confirmation: false };
+      return { action: "bootstrap_transform", reason: "template_child_requires_deterministic_runtime_reset_even_when_template_blob_matches", confirmation: false };
     }
+    if (same) return { action: "unchanged", reason: "target_git_object_matches_verified_release", confirmation: false };
     if (!target) return { action: "add_from_release", reason: "missing_in_uninitialized_child", confirmation: false };
     if (isSharedMerge(path)) {
       return { action: "manual_merge", reason: "shared_template_file_changed_before_bootstrap_requires_review", confirmation: true };
@@ -263,18 +263,26 @@ function actionFor(
   }
 
   if (mode === "adopt_existing") {
-    if (!target) {
-      if (isBootstrapTransform(path)) {
-        return { action: "bootstrap_transform", reason: "new_anpos_child_state_must_be_initialized_without_pass_claims", confirmation: false };
+    if (isBootstrapTransform(path)) {
+      if (!target || same) {
+        return { action: "bootstrap_transform", reason: "adopted_repository_requires_child_runtime_initialization", confirmation: false };
       }
-      return { action: "add_from_release", reason: "safe_new_anpos_release_path", confirmation: false };
+      return {
+        action: "manual_merge",
+        reason: "existing_bootstrap_target_collision_requires_review_before_child_runtime_initialization",
+        confirmation: true,
+      };
     }
+    if (same) return { action: "unchanged", reason: "target_git_object_matches_verified_release", confirmation: false };
+    if (!target) return { action: "add_from_release", reason: "safe_new_anpos_release_path", confirmation: false };
     return {
       action: "manual_merge",
       reason: "existing_repository_collision_is_never_auto_overwritten_during_adoption",
       confirmation: true,
     };
   }
+
+  if (same) return { action: "unchanged", reason: "target_git_object_matches_verified_release", confirmation: false };
 
   if (mode === "repair_partial") {
     if (PROJECT_PRESERVE.has(path)) {
