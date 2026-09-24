@@ -210,6 +210,16 @@ Apply creates one Git Data tree/commit and then one new `anpos/*` branch ref. It
 
 This foundation does **not** yet generate complete bootstrap/adoption/repair/upgrade plans from sanitized ANPOS releases. Those planner modes remain pending and must preserve child application code and verified Requirements 83–96 evidence.
 
+## Production sandbox and live E2E boundary
+
+The production sandbox driver is `commercial-service/lib/remote-sandbox-driver.ts`. It sends only normalized argv, working directory, environment-variable **names**, immutable GitHub repository/commit source identity, and bounded resource limits to an HTTPS remote-ephemeral gateway. Exact request bytes are HMAC-bound to a timestamp and nonce, redirects are forbidden, and the gateway response must be signed and prove network deny plus workspace destruction.
+
+`/api/ready/sandbox` validates source configuration only. It intentionally does **not** claim that a live gateway probe succeeded.
+
+Live Repository Supervisor certification uses `commercial-service/scripts/verify-repository-supervisor-e2e.ts` and `config/runtime/repository-supervisor-e2e.json`. Read certification binds resolve/audit/assurance to one immutable repository head. Write certification is split into `write_prepare` and `write_verify_merge`; it is limited to explicitly named disposable e2e/sandbox/test repositories, requires explicit confirmation, and exits when CI is pending rather than polling.
+
+Mocked tests, static validators, and source readiness are never valid substitutes for live production sandbox or GitHub E2E evidence.
+
 ## Repository URL safety
 
 A repository URL is untrusted input. Before any network call:
@@ -277,8 +287,9 @@ Current source implementation status:
 - ✅ server-issued encrypted `bounded_change` plans bound to canonical repository identity, exact default-branch head SHA and deterministic plan hash;
 - ✅ atomic Git Data commit apply to a new `anpos/*` feature branch, PR creation/re-read, exact commit CI inspection, and guarded merge with resulting-main verification;
 - ⏳ full bootstrap/adoption/repair/upgrade plan generation from sanitized ANPOS release contracts;
-- ⏳ production container/microVM/remote sandbox driver;
-- ⏳ GitHub runtime E2E certification.
+- ✅ signed remote-ephemeral production sandbox driver **source** with immutable GitHub commit binding, request/response HMAC authentication, network deny, no redirect fallback and workspace-destruction evidence;
+- ✅ fail-closed live GitHub runtime E2E verifier source with read / write_prepare / write_verify_merge phases and no CI busy-wait;
+- ⏳ live sandbox-gateway deployment evidence and live GitHub read/write E2E receipts.
 
 Implementation references:
 
@@ -299,6 +310,10 @@ Implementation references:
 - `commercial-service/tests/repository-supervisor-write.test.ts`
 - `commercial-service/tests/mcp-runtime.test.ts`
 - `commercial-service/lib/execution-sandbox.ts`
+- `commercial-service/lib/remote-sandbox-driver.ts`
+- `commercial-service/app/api/ready/sandbox/route.ts`
+- `commercial-service/scripts/verify-repository-supervisor-e2e.ts`
+- `config/runtime/repository-supervisor-e2e.json`
 - `config/runtime/execution-sandbox.json`
 - `commercial-service/tests/repository-supervisor-runtime.test.ts`
 - `commercial-service/tests/execution-sandbox.test.ts`
