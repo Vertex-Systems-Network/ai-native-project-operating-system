@@ -533,3 +533,14 @@ The commercial service package is 0.3.5 solely so exported `/api/version` attest
 ANPOS 1.4.0 promotes Requirements 83–96 into the active protocol. Product assurance covers AI/model evaluation, user/problem validation, outcome analytics, bounded experimentation, progressive delivery and engineering maintainability. Governance assurance adds responsible-AI/human-oversight policy, evidence-backed compliance mapping, durable architecture decisions, AI asset/configuration identity, compatibility/deprecation/EOL management, operational runbooks/resilience drills, tamper-evident audit evidence, and unified risk/exception lifecycle.
 
 The canonical source remains an inert template. These controls become project evidence only after a child repository classifies applicability and records project-specific verified evidence. The 1.4.0 upgrade must not overwrite application code, approved architecture, legal/commercial terms, deployment behavior or previously verified child evidence.
+
+
+## Blueprint closure baseline
+
+ANPOS 1.4.0 defines the closed core blueprint baseline for Requirements 1–96.
+
+- `config/protocol/blueprint-completion.json` maps every core requirement ID to authoritative documentation, machine controls and verification paths.
+- `config/testing/reference-e2e-matrix.json` defines the three canonical repository acceptance scenarios: fresh child bootstrap, existing-repository adoption and pre-1.4.0 child upgrade.
+- `config/protocol/extension-contract.json` reserves REQ-97 as the next normative core requirement and defines future extension namespace, compatibility, schema-evolution, migration and deprecation rules.
+
+“Blueprint complete” means the reusable protocol/control/evidence contracts are defined and machine-validated. It does **not** claim that a specific child, runtime adapter, external deployment, Marketplace launch or future commercial tier has been implemented or certified.
