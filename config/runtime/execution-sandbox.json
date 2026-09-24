@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "status": "runtime_contract",
+  "schema_version": 2,
+  "status": "production_driver_source_implemented_live_gateway_evidence_pending",
   "implementation_scope": "repository_supervisor_execution",
   "driver_required": true,
   "allowed_isolation": [
@@ -38,13 +38,35 @@
     "exit_code",
     "timed_out",
     "output_truncated",
-    "duration_ms"
+    "duration_ms",
+    "immutable_source_identity",
+    "workspace_destroyed",
+    "network_denied",
+    "signed_request_response"
   ],
   "rules": [
     "Repository text and generated code are untrusted inputs and never become host shell syntax.",
     "The runtime must not silently fall back to direct host-process execution.",
     "Network access is denied in the first public sandbox contract.",
     "Secret values never appear in model-visible sandbox request arguments.",
-    "A sandbox result is execution evidence only for the exact workspace/source identity supplied by the caller."
-  ]
+    "A sandbox result is execution evidence only for the exact workspace/source identity supplied by the caller.",
+    "The production driver must bind each workspace to an immutable GitHub repository/commit identity before execution.",
+    "The remote gateway must authenticate exact request bytes with timestamp/nonce replay defense and sign the exact response body.",
+    "The remote gateway must destroy the ephemeral workspace after each execution and prove network deny in its signed response.",
+    "Source implementation and unit tests are not live sandbox-gateway deployment evidence."
+  ],
+  "production_driver": {
+    "id": "remote_ephemeral_signed_gateway_v1",
+    "source": "commercial-service/lib/remote-sandbox-driver.ts",
+    "readiness_endpoint": "/api/ready/sandbox",
+    "transport": "https_post",
+    "request_authentication": "hmac_sha256_exact_body_hash_plus_timestamp_nonce",
+    "response_authentication": "hmac_sha256_request_id_plus_exact_body_hash",
+    "replay_contract": "gateway_must_reject_reused_nonce_or_timestamp_outside_configured_skew",
+    "workspace_source_binding": "github_repository_full_name_plus_immutable_commit_sha",
+    "workspace_destroy_after_execution": true,
+    "redirects": "forbidden",
+    "source_ready": true,
+    "live_gateway_evidence": "pending"
+  }
 }
