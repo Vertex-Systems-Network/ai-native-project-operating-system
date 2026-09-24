@@ -15,16 +15,25 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.3.0")
+        self.assertEqual(plugin["version"], "0.4.0")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 2)
+        self.assertEqual(contract["schema_version"], 3)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
+        for guarded in [
+            "repository_plan_change",
+            "repository_apply_change",
+            "repository_open_change_request",
+            "repository_get_change_request",
+            "repository_get_ci",
+            "repository_merge_change_request",
+        ]:
+            self.assertIn(guarded, names)
         audit = next(tool for tool in contract["tools"] if tool["name"] == "repository_audit")
         self.assertIn("anpos_protocol_version", audit["required_outputs"])
         self.assertIn("assurance_state_summary", audit["required_outputs"])
@@ -54,8 +63,15 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         ]:
             self.assertIn(marker, implementation["implemented_support"])
         transport = contract["mcp_transport"]
-        self.assertEqual(transport["issued_scopes"], ["anpos:profile", "anpos:repo:read"])
-        self.assertFalse(transport["write_scope_available"])
+        self.assertEqual(transport["issued_scopes"], ["anpos:profile", "anpos:repo:read", "anpos:repo:write"])
+        self.assertTrue(transport["write_scope_available"])
+        guarded = transport["guarded_write_runtime"]
+        self.assertTrue(guarded["active_project_only"])
+        self.assertEqual(guarded["feature_branch_prefix"], "anpos/")
+        self.assertFalse(guarded["default_branch_direct_write"])
+        self.assertTrue(guarded["expected_head_required"])
+        self.assertIn("repository_plan_anpos_change", implementation["not_yet_implemented"])
+        self.assertIn("repository_apply_anpos_change", implementation["not_yet_implemented"])
 
     def test_plugin_assets_are_vendor_only(self) -> None:
         boundary = load("config/licensing/vendor-source-boundary.json")
