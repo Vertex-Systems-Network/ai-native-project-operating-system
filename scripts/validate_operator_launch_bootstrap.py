@@ -362,6 +362,9 @@ def main() -> int:
         "JSON receipt",
         "public Marketplace App",
         "Marketplace listing webhook",
+        "Repository Supervisor App",
+        "GITHUB_SUPERVISOR_APP_ID",
+        "/api/ready/mcp",
         "private Vendor Distribution App",
         "GITHUB_MARKETPLACE_APP_ID",
         "GITHUB_VENDOR_APP_ID",
@@ -389,6 +392,8 @@ def main() -> int:
 
     for marker in (
         "test_split_environment_contract_and_legacy_rejection_are_explicit",
+        "test_supervisor_registration_is_public_and_write_scoped_without_administration",
+        "GITHUB_SUPERVISOR_APP_ID",
         "ANPOS_COMMERCIAL_RELEASE_REF",
         "/api/v1/releases/current",
         "test_artifact_identity_and_verifier_args_are_package_derived",
