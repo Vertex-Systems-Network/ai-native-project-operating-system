@@ -15,7 +15,7 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.2.0")
+        self.assertEqual(plugin["version"], "0.3.0")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
@@ -40,10 +40,22 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertIn("repository_plan_anpos_change", skill)
         self.assertIn("upgrade_active", skill)
 
-    def test_mcp_endpoint_is_still_inert_blueprint(self) -> None:
+    def test_mcp_blueprint_remains_placeholder_while_runtime_source_is_implemented(self) -> None:
         mcp = load("blueprints/plugins/anpos-repository-supervisor/mcp.json")
         server = mcp["mcpServers"]["anpos-repository-service"]
         self.assertEqual(server["url"], "https://replace-me.invalid/mcp")
+        contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
+        implementation = contract["implementation"]
+        self.assertNotIn("supervisor_specific_oauth_and_mcp_transport", implementation["not_yet_implemented"])
+        for marker in [
+            "github_backed_mcp_oauth_2_1_authorization_code_pkce",
+            "stateless_streamable_http_post_mcp_transport",
+            "openai_compatible_authenticated_profile_tool",
+        ]:
+            self.assertIn(marker, implementation["implemented_support"])
+        transport = contract["mcp_transport"]
+        self.assertEqual(transport["issued_scopes"], ["anpos:profile", "anpos:repo:read"])
+        self.assertFalse(transport["write_scope_available"])
 
     def test_plugin_assets_are_vendor_only(self) -> None:
         boundary = load("config/licensing/vendor-source-boundary.json")
