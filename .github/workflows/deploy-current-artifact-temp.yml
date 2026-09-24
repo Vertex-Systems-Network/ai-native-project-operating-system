@@ -1,0 +1,82 @@
+name: ANPOS Current Artifact Production Deploy
+
+on:
+  push:
+    branches:
+      - ops/deploy-commercial-cee6e63d
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy-production:
+    if: github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
+      VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      ARTIFACT_NAME: anpos-vendor-handoff-cee6e63d838ad3f753647008deb55791e263bacf
+      ARTIFACT_RUN_ID: "36058295849"
+      CANONICAL_SOURCE_SHA: cee6e63d838ad3f753647008deb55791e263bacf
+
+    steps:
+      - name: Checkout deployment controller only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Vercel credential availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN secret is not configured for this repository" >&2
+            exit 2
+          fi
+
+      - name: Download exact canonical handoff artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: handoff
+          github-token: ${{ github.token }}
+          repository: Vertex-Systems-Network/ai-native-project-operating-system
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+
+      - name: Verify artifact checksums and canonical binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd handoff
+          sha256sum -c SHA256SUMS
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          manifest = json.loads(Path("handoff-manifest.json").read_text())
+          expected = os.environ["CANONICAL_SOURCE_SHA"]
+          if manifest.get("source_revision") != expected:
+              raise SystemExit(f"canonical source mismatch: {manifest.get('source_revision')} != {expected}")
+          service = manifest["artifacts"]["service"]["file"]
+          if not Path(service).is_file():
+              raise SystemExit(f"service archive missing: {service}")
+          print(service)
+          PY
+
+      - name: Extract exact service artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          service_zip="$(python -c 'import json; print(json.load(open("handoff/handoff-manifest.json"))["artifacts"]["service"]["file"])')"
+          mkdir -p deploy/service
+          unzip -q "handoff/$service_zip" -d deploy/service
+
+      - name: Deploy exact service artifact to Vercel production
+        working-directory: deploy/service
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@59.11.7 deploy --prod --yes --force --token "$VERCEL_TOKEN"
