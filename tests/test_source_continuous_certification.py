@@ -156,19 +156,22 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             "ref: main",
             "persist-credentials: false",
             "contents: read",
-            "vercel@59.11.7 curl",
-            "--deployment",
-            "anpos-commercial-service.vercel.app",
+            "id-token: write",
+            "ACTIONS_ID_TOKEN_REQUEST_URL",
+            "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+            "x-vercel-trusted-oidc-idp-token",
+            "https://anpos-commercial-service.vercel.app",
             "/api/ready/community",
             "/api/ready/mcp",
             "/api/ready/sandbox",
             "READINESS_SUMMARY=",
-            'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}',
         ):
             self.assertIn(marker, source)
         self.assertNotIn("contents: write", source)
         self.assertNotIn("pull_request_target:", source)
         self.assertNotIn("DATABASE_URL", source)
+        self.assertNotIn("VERCEL_TOKEN", source)
+        self.assertNotIn("x-vercel-protection-bypass", source)
 
     def test_source_only_ci_assets_are_stripped_from_customer_template_boundary(self):
         boundary = json.loads((ROOT / "config" / "licensing" / "vendor-source-boundary.json").read_text())

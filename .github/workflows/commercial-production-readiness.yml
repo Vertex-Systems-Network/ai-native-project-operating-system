@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: anpos-commercial-production-readiness
@@ -18,10 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      VERCEL_ORG_ID: team_iCcbZCZb9Swe59vWrh9iaddM
-      VERCEL_PROJECT_ID: prj_zsV5QWRGFAe7TP7wBzrkWcSDcG0w
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      PRODUCTION_DEPLOYMENT: anpos-commercial-service.vercel.app
+      PRODUCTION_DEPLOYMENT: https://anpos-commercial-service.vercel.app
 
     steps:
       - name: Checkout exact canonical main
@@ -31,26 +29,31 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Verify canonical identity and Vercel credential
+      - name: Verify canonical identity
         shell: bash
         run: |
           set -euo pipefail
           test "$(git branch --show-current)" = "main"
           test -z "$(git status --porcelain)"
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "VERCEL_TOKEN secret is not configured for this repository" >&2
-            exit 2
-          fi
           echo "CANONICAL_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "EXPECTED_SERVICE_VERSION=$(python -c "import json; print(json.load(open('commercial-service/package.json'))['version'])")" >> "$GITHUB_ENV"
           echo "EXPECTED_PROTOCOL_VERSION=$(python -c "import json; print(json.load(open('config/protocol/version.json'))['version'])")" >> "$GITHUB_ENV"
 
-      - name: Set up Node 22
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22.x'
+      - name: Request short-lived GitHub Actions OIDC token
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
+          token_json="$(curl --silent --show-error --fail-with-body \
+            --max-time 15 \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL")"
+          oidc_token="$(python -c 'import json,sys; token=json.load(sys.stdin).get("value"); assert isinstance(token,str) and token.count(".")==2; print(token)' <<<"$token_json")"
+          echo "::add-mask::$oidc_token"
+          echo "ANPOS_GITHUB_OIDC_TOKEN=$oidc_token" >> "$GITHUB_ENV"
 
-      - name: Probe protected production routes with Vercel authentication
+      - name: Probe protected production routes with trusted OIDC
         shell: bash
         run: |
           set -euo pipefail
@@ -59,15 +62,22 @@ jobs:
           probe() {
             path="$1"
             name="$2"
+            body="$RUNNER_TEMP/readiness/$name.body"
+            headers="$RUNNER_TEMP/readiness/$name.headers"
+
             set +e
-            output="$(npx --yes vercel@59.11.7 curl "$path" \
-              --deployment "$PRODUCTION_DEPLOYMENT" \
-              --token "$VERCEL_TOKEN" \
-              --no-color 2>&1)"
+            status="$(curl --silent --show-error \
+              --max-time 20 \
+              --output "$body" \
+              --dump-header "$headers" \
+              --write-out '%{http_code}' \
+              --header "x-vercel-trusted-oidc-idp-token: $ANPOS_GITHUB_OIDC_TOKEN" \
+              "$PRODUCTION_DEPLOYMENT$path")"
             rc=$?
             set -e
-            printf '%s\n' "$output" > "$RUNNER_TEMP/readiness/$name.raw"
+
             printf '%s\n' "$rc" > "$RUNNER_TEMP/readiness/$name.rc"
+            printf '%s\n' "$status" > "$RUNNER_TEMP/readiness/$name.status"
           }
 
           probe "/api/version" "version"
@@ -83,63 +93,72 @@ jobs:
           python - <<'PY'
           import json
           import os
-          import re
           from pathlib import Path
 
           root = Path(os.environ["RUNNER_TEMP"]) / "readiness"
 
           def load(name):
-              raw = (root / f"{name}.raw").read_text(errors="replace")
               rc = int((root / f"{name}.rc").read_text().strip())
-              ansi = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
-              clean = ansi.sub("", raw)
+              status_text = (root / f"{name}.status").read_text().strip()
+              if not status_text.isdigit():
+                  raise SystemExit(f"{name}: invalid HTTP status output {status_text!r}")
+              status = int(status_text)
+              body = (root / f"{name}.body").read_text(errors="replace").strip()
+
               payload = None
-              for line in reversed(clean.splitlines()):
-                  line = line.strip()
-                  if not line:
-                      continue
-                  if line.startswith("{") and line.endswith("}"):
-                      try:
-                          payload = json.loads(line)
-                          break
-                      except Exception:
-                          pass
-              print(f"READINESS_{name.upper()}_CLI_RC={rc}")
-              print(f"READINESS_{name.upper()}_RAW_BEGIN")
-              print(clean)
-              print(f"READINESS_{name.upper()}_RAW_END")
-              if payload is None:
-                  raise SystemExit(f"{name}: no JSON payload found in vercel curl output")
-              print(f"READINESS_{name.upper()}_JSON={json.dumps(payload, sort_keys=True, separators=(',', ':'))}")
-              return payload
+              if body:
+                  try:
+                      payload = json.loads(body)
+                  except Exception:
+                      payload = None
+
+              print(f"READINESS_{name.upper()}_CURL_RC={rc}")
+              print(f"READINESS_{name.upper()}_HTTP_STATUS={status}")
+              if payload is not None:
+                  print(f"READINESS_{name.upper()}_JSON={json.dumps(payload, sort_keys=True, separators=(',', ':'))}")
+              else:
+                  print(f"READINESS_{name.upper()}_BODY_CLASS=non_json_or_empty")
+
+              return {"curl_rc": rc, "http_status": status, "payload": payload}
 
           version = load("version")
+          if version["curl_rc"] != 0 or version["http_status"] != 200 or not isinstance(version["payload"], dict):
+              raise SystemExit("version: protected production request did not return JSON HTTP 200")
+          payload = version["payload"]
           expected_service = os.environ["EXPECTED_SERVICE_VERSION"]
           expected_protocol = os.environ["EXPECTED_PROTOCOL_VERSION"]
-          if version.get("ok") is not True:
+          if payload.get("ok") is not True:
               raise SystemExit("version: ok must be true")
-          if version.get("service") != "anpos-commercial-service":
+          if payload.get("service") != "anpos-commercial-service":
               raise SystemExit("version: unexpected service")
-          if version.get("service_version") != expected_service:
+          if payload.get("service_version") != expected_service:
               raise SystemExit("version: service version mismatch")
-          if version.get("source_protocol_version") != expected_protocol:
+          if payload.get("source_protocol_version") != expected_protocol:
               raise SystemExit("version: protocol version mismatch")
-          if version.get("runtime_contract") != "split-github-app-v1":
+          if payload.get("runtime_contract") != "split-github-app-v1":
               raise SystemExit("version: runtime contract mismatch")
 
-          community = load("community")
-          mcp = load("mcp")
-          sandbox = load("sandbox")
-          full = load("full")
+          results = {
+              "community": load("community"),
+              "mcp": load("mcp"),
+              "sandbox": load("sandbox"),
+              "full": load("full"),
+          }
+
+          for name, result in results.items():
+              if result["curl_rc"] != 0:
+                  raise SystemExit(f"{name}: transport failure")
+              if result["http_status"] not in {200, 503}:
+                  raise SystemExit(f"{name}: unexpected HTTP status {result['http_status']}; trusted OIDC bypass may not be configured")
+              if not isinstance(result["payload"], dict):
+                  raise SystemExit(f"{name}: expected JSON readiness payload")
 
           summary = {
               "canonical_source_sha": os.environ["CANONICAL_SOURCE_SHA"],
               "service_version": expected_service,
               "protocol_version": expected_protocol,
-              "community": community,
-              "mcp": mcp,
-              "sandbox": sandbox,
-              "full": full,
+              "runtime_contract": "split-github-app-v1",
+              **results,
           }
           (root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
           print("READINESS_SUMMARY=" + json.dumps(summary, sort_keys=True, separators=(',', ':')))
