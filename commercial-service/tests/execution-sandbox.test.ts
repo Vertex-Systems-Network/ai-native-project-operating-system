@@ -70,3 +70,44 @@ test("sandbox execution requires an isolated driver and validates driver evidenc
     (error: unknown) => error instanceof SandboxRequestError && error.code === "isolated_sandbox_driver_required",
   );
 });
+
+test("sandbox artifact channel validates canonical base64, digest and output path boundaries", () => {
+  const payload = Buffer.from("safe\n", "utf8");
+  const request = normalizeSandboxRequest({
+    workspace_id: "repo",
+    command: ["python3", "runner.py"],
+    input_files: [{
+      path: ".anpos-input/file.txt",
+      mode: "100644",
+      content_base64: payload.toString("base64"),
+      sha256: "53e8c5e8b03d2f433a6ab6e94aa2b26070a4da5da0c3e9738f573f196c046c9e",
+      bytes: payload.length,
+    }],
+    output_paths: ["config/result.json"],
+  });
+  assert.equal(request.input_files[0].path, ".anpos-input/file.txt");
+  assert.deepEqual(request.output_paths, ["config/result.json"]);
+
+  assert.throws(
+    () => normalizeSandboxRequest({
+      workspace_id: "repo",
+      command: ["true"],
+      output_paths: [".git/config"],
+    }),
+    (error: unknown) => error instanceof SandboxRequestError && error.code === "invalid_output_path",
+  );
+  assert.throws(
+    () => normalizeSandboxRequest({
+      workspace_id: "repo",
+      command: ["true"],
+      input_files: [{
+        path: "input.txt",
+        mode: "100644",
+        content_base64: payload.toString("base64"),
+        sha256: "0".repeat(64),
+        bytes: payload.length,
+      }],
+    }),
+    (error: unknown) => error instanceof SandboxRequestError && error.code === "artifact_integrity_mismatch",
+  );
+});
