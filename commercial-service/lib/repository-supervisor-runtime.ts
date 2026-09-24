@@ -61,6 +61,25 @@ type GithubContent = {
   sha?: string;
 };
 
+type GithubGitCommit = { tree?: { sha?: string } };
+type GithubRecursiveTree = {
+  truncated?: boolean;
+  tree?: Array<{
+    path?: string;
+    mode?: string;
+    type?: string;
+    sha?: string;
+    size?: number;
+  }>;
+};
+
+export type RepositoryTreeEntry = {
+  path: string;
+  mode: string;
+  sha: string;
+  size: number | null;
+};
+
 export type RepositoryFileObservation = {
   path: string;
   present: boolean;
@@ -343,6 +362,63 @@ export async function readGithubRepositoryFiles(
   return Object.fromEntries(entries);
 }
 
+export async function listGithubRepositoryTree(
+  fullName: string,
+  ref: string,
+  userToken: string,
+  fetchImpl: FetchLike = fetch,
+): Promise<RepositoryTreeEntry[]> {
+  if (!/^[0-9a-f]{40}$/i.test(ref)) throw new RepositorySupervisorError(400, "immutable_ref_required");
+  const [owner, repo, ...rest] = fullName.split("/");
+  if (!owner || !repo || rest.length) throw new RepositorySupervisorError(400, "invalid_canonical_repository");
+  const repoPath = `${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+
+  const commitResponse = await githubGet(
+    `/repos/${repoPath}/git/commits/${ref}`,
+    userToken,
+    fetchImpl,
+  );
+  if (commitResponse.status === 404) throw new RepositorySupervisorError(404, "repository_commit_not_found");
+  if (commitResponse.status === 401) throw new RepositorySupervisorError(401, "github_authentication_required");
+  if (commitResponse.status === 403) throw new RepositorySupervisorError(403, "repository_read_forbidden");
+  if (!commitResponse.ok) throw new RepositorySupervisorError(502, "github_repository_commit_read_failed");
+  const commit = await readJsonResponse<GithubGitCommit>(commitResponse, "github_repository_commit_invalid");
+  const treeSha = stringValue(commit.tree?.sha);
+  if (!treeSha || !/^[0-9a-f]{40}$/i.test(treeSha)) {
+    throw new RepositorySupervisorError(502, "github_repository_tree_identity_invalid");
+  }
+
+  const treeResponse = await githubGet(
+    `/repos/${repoPath}/git/trees/${treeSha}?recursive=1`,
+    userToken,
+    fetchImpl,
+  );
+  if (!treeResponse.ok) throw new RepositorySupervisorError(502, "github_repository_tree_read_failed");
+  const tree = await readJsonResponse<GithubRecursiveTree>(treeResponse, "github_repository_tree_invalid");
+  if (tree.truncated === true) throw new RepositorySupervisorError(422, "github_repository_tree_truncated");
+  if (!Array.isArray(tree.tree) || tree.tree.length > 20_000) {
+    throw new RepositorySupervisorError(422, "github_repository_tree_too_large");
+  }
+
+  const entries: RepositoryTreeEntry[] = [];
+  for (const row of tree.tree) {
+    if (row.type !== "blob") continue;
+    const path = stringValue(row.path);
+    const mode = stringValue(row.mode);
+    const sha = stringValue(row.sha);
+    if (!path || !safeRepositoryPath(path) || !mode || !/^(100644|100755)$/.test(mode) || !sha || !/^[0-9a-f]{40}$/i.test(sha)) {
+      throw new RepositorySupervisorError(502, "github_repository_tree_invalid");
+    }
+    const size = row.size == null ? null : Number(row.size);
+    if (size !== null && (!Number.isSafeInteger(size) || size < 0)) {
+      throw new RepositorySupervisorError(502, "github_repository_tree_invalid");
+    }
+    entries.push({ path, mode, sha: sha.toLowerCase(), size });
+  }
+  entries.sort((a, b) => a.path.localeCompare(b.path));
+  return entries;
+}
+
 function requirementRows(value: unknown): Array<Record<string, unknown>> {
   const root = objectValue(value);
   return Array.isArray(root?.requirements)
@@ -476,7 +552,7 @@ export async function auditGithubRepository(
     assurance_state_summary: assurance ? summarizeAssurance(assurance, 83, 96) : null,
     governance_state_summary: assurance ? summarizeAssurance(assurance, 89, 96) : null,
     limitations: [
-      "This foundation is read-only and does not create branches, commits, pull requests, checks, or merges.",
+      "Audit output is read-only; write planning/apply/PR/CI/merge authorization is enforced by separate Supervisor runtime modules.",
       "Repository content is untrusted data and is returned only as structured observations/summaries.",
       "Permission metadata is provider-reported capability evidence, not authorization for a future write operation.",
     ],
