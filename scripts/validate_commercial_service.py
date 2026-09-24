@@ -13,8 +13,8 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
@@ -257,7 +257,7 @@ def main() -> int:
             "billing_account_id", "authorizeRepositorySupervisorCapability", "requireMcpScope",
             "repository_plan_anpos_change", "repository_apply_anpos_change", "repository_open_change_request",
             "repository_get_change_request", "repository_get_ci", "repository_merge_change_request",
-            "createGithubFullAnposPlan", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active",
+            "createGithubFullAnposPlan", "applyGithubSupervisorPlan", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active",
         ),
         "Repository Supervisor MCP runtime",
     )
@@ -333,8 +333,9 @@ def main() -> int:
     require_markers(
         "lib/execution-sandbox.ts",
         (
-            "SandboxDriver", "normalizeSandboxRequest", "executeWithSandboxDriver",
+            "SandboxDriver", "SandboxFileArtifact", "normalizeSandboxRequest", "normalizeSandboxFileArtifacts", "executeWithSandboxDriver",
             'network: "deny"', "isolated_sandbox_driver_required", "network_access_not_supported",
+            "artifact_integrity_mismatch", "unexpected_output_artifact_path", "sandbox_output_artifact_set_mismatch",
         ),
         "Repository Supervisor execution sandbox contract",
     )
@@ -344,8 +345,9 @@ def main() -> int:
             "RemoteEphemeralSandboxDriver", "productionSandboxDriver", "buildRemoteSandboxSignature",
             "buildRemoteSandboxResponseSignature", "remoteSandboxConfig", "remote_ephemeral",
             "workspace_destroyed", "network", "deny", "redirect: \"error\"",
+            "X-Anpos-Sandbox-Protocol", "protocol_version: 2", "artifacts", "output_files",
             "X-Anpos-Sandbox-Timestamp", "X-Anpos-Sandbox-Nonce", "X-Anpos-Sandbox-Signature",
-            "remote_sandbox_response_signature_invalid", "sandbox_source_identity_required",
+            "remote_sandbox_response_signature_invalid", "remote_sandbox_artifact_limit_exceeded",
         ),
         "Remote production sandbox driver",
     )
@@ -364,7 +366,8 @@ def main() -> int:
         (
             "remoteSandboxConfigurationProblems", "repository_supervisor_sandbox", "remote_ephemeral",
             "source_driver_ready", "live_gateway_probe", "not_performed_by_readiness_endpoint",
-            "secret_values_in_model_request: false",
+            "protocol_version: 2", "signed_bounded_input_files_plus_exact_output_allowlist",
+            "python3>=3.12", "secret_values_in_model_request: false",
         ),
         "Sandbox readiness gate",
     )
@@ -392,6 +395,7 @@ def main() -> int:
         "tests/execution-sandbox.test.ts",
         (
             "bounded network-denied execution", "rejects host paths", "requires an isolated driver",
+            "artifact channel validates canonical base64, digest and output path boundaries",
         ),
         "Repository Supervisor sandbox unit tests",
     )
@@ -428,7 +432,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "004_repository_supervisor_planner.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "005_repository_supervisor_full_apply.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -466,13 +470,23 @@ def main() -> int:
         "Repository Supervisor planner migration",
     )
     require_markers(
+        "migrations/005_repository_supervisor_full_apply.sql",
+        (
+            "apply_operation_id", "apply_lease_expires_at", "sandbox_receipt_sha256",
+            "repository_supervisor_write_plans_apply_lease_idx",
+            "repository_supervisor_write_plans_sandbox_receipt_shape",
+        ),
+        "Repository Supervisor full-apply migration",
+    )
+    require_markers(
         "lib/repository-supervisor-planner.ts",
         (
             "buildFullPlannerPayload", "createGithubFullAnposPlan", "templateReleasePlanSnapshot",
             "listGithubRepositoryTree", "bootstrap_empty", "bootstrap_child", "adopt_existing",
             "repair_partial", "upgrade_active", "target_only_digest",
             "preserve_verified_evidence_never_reset_on_adoption_or_upgrade",
-            "sandbox_full_plan_pending", "action_preview_truncated",
+            "sandbox_full_plan_v1", "conflict_resolution_required", "empty_repository_initialization_pending",
+            "validateStoredFullPlannerPayload", "release_bytes", "action_preview_truncated",
         ),
         "Repository Supervisor full planner runtime",
     )
@@ -489,15 +503,45 @@ def main() -> int:
     require_markers(
         "lib/repository-supervisor-write.ts",
         (
-            "createGithubWritePlan", "persistGithubSupervisorPlan", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
+            "createGithubWritePlan", "persistGithubSupervisorPlan", "loadGithubSupervisorPlanForApply", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
             "getGithubWritePlanPullRequest", "getGithubWritePlanCi", "mergeGithubWritePlanPullRequest",
-            "full_plan_sandbox_apply_not_implemented", "planner_payload_too_large",
+            "planner_payload_too_large", "sandbox_receipt_sha256",
             "validatePlannedChanges", "validateFeatureBranchName", "target_head_changed_replan_required",
             "canonical_source_write_forbidden", "planned_change_contains_secret_material",
             "refs/heads/", "git/blobs", "git/trees", "git/commits", "check-runs",
             "repository_policy_rejected_merge", "resulting_default_branch_verification_failed",
         ),
         "Repository Supervisor guarded write runtime",
+    )
+    require_markers(
+        "lib/repository-supervisor-full-apply.ts",
+        (
+            "applyGithubSupervisorPlan", "buildFullApplySandboxRequest", "verifyFullApplySandboxOutputs",
+            "materializeTemplateReleaseFiles", "productionSandboxDriver", "sandbox_receipt_sha256",
+            "target_head_changed_replan_required", "commercial_release_changed_replan_required",
+            "full_plan_conflict_resolution_required", "empty_repository_initialization_pending",
+            "full_plan_apply_recovery_required", "make_interval", "cleanupBranch",
+            "customer", "source: undefined",
+        ),
+        "Repository Supervisor sandbox-backed full apply runtime",
+    )
+    require_markers(
+        "lib/full-plan-sandbox-runner.ts",
+        (
+            "FULL_PLAN_SANDBOX_RUNNER", "subprocess.run", "shell=False",
+            "bootstrap_child", "adopt_existing", "release_input_digest_mismatch",
+            "unresolved_plan_conflict", "expected_regular_file",
+        ),
+        "Repository Supervisor isolated full-plan runner",
+    )
+    require_markers(
+        "tests/repository-supervisor-full-apply.test.ts",
+        (
+            "empty isolated workspace and exact output allowlist",
+            "accepts exact release output and rejects non-transform drift",
+            "rejects timeout or truncated sandbox evidence",
+        ),
+        "Repository Supervisor sandbox full-apply unit tests",
     )
     require_markers(
         "tests/repository-supervisor-write.test.ts",
@@ -614,8 +658,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 10:
-        fail("commercial service API contract must be schema_version 10")
+    if api_contract.get("schema_version") != 11:
+        fail("commercial service API contract must be schema_version 11")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -642,15 +686,21 @@ def main() -> int:
         "supervisor_full_planner_requirements_83_96_evidence_preserved",
         "supervisor_full_planner_material_ai_drift_requires_reverification",
         "supervisor_full_planner_mcp_output_bounded",
-        "supervisor_full_plan_apply_remains_fail_closed_until_sandbox_runtime",
+        "sandbox_protocol_version", "sandbox_artifact_channel", "sandbox_runtime_requirement",
+        "supervisor_full_plan_apply_source", "supervisor_full_plan_apply_requires_conflict_free",
+        "supervisor_full_plan_apply_requires_non_empty_target", "supervisor_full_plan_apply_reverifies_release_and_target_head",
+        "supervisor_full_plan_apply_customer_provider_token_never_forwarded_to_sandbox",
+        "supervisor_full_plan_apply_signed_receipt_required_for_merge",
+        "supervisor_full_plan_apply_uses_operation_lease",
+        "supervisor_full_plan_apply_conflict_resolution_pending", "supervisor_bootstrap_empty_apply_pending",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
 
     sandbox_policy = json.loads((ROOT / "config/runtime/execution-sandbox.json").read_text(encoding="utf-8"))
-    if sandbox_policy.get("schema_version") != 2:
-        fail("execution sandbox policy must be schema_version 2")
-    if sandbox_policy.get("status") != "production_driver_source_implemented_live_gateway_evidence_pending":
+    if sandbox_policy.get("schema_version") != 3:
+        fail("execution sandbox policy must be schema_version 3")
+    if sandbox_policy.get("status") != "artifact_channel_source_implemented_live_gateway_evidence_pending":
         fail("execution sandbox policy must preserve source-ready/live-evidence-pending boundary")
     production_driver = sandbox_policy.get("production_driver", {})
     for key, expected in (
@@ -658,7 +708,9 @@ def main() -> int:
         ("source", "commercial-service/lib/remote-sandbox-driver.ts"),
         ("readiness_endpoint", "/api/ready/sandbox"),
         ("transport", "https_post"),
-        ("workspace_source_binding", "github_repository_full_name_plus_immutable_commit_sha"),
+        ("protocol_version", 2),
+        ("workspace_source_binding", "github_repository_full_name_plus_immutable_commit_sha_or_explicit_empty"),
+        ("artifact_channel", "signed_bounded_input_files_plus_exact_output_allowlist"),
         ("workspace_destroy_after_execution", True),
         ("redirects", "forbidden"),
         ("source_ready", True),
@@ -668,7 +720,7 @@ def main() -> int:
             fail(f"execution sandbox production driver mismatch: {key}")
 
     planner_policy = json.loads((ROOT / "config/runtime/repository-supervisor-planner.json").read_text(encoding="utf-8"))
-    if planner_policy.get("schema_version") != 1 or planner_policy.get("status") != "source_planner_policy":
+    if planner_policy.get("schema_version") != 2 or planner_policy.get("status") != "source_planner_policy":
         fail("Repository Supervisor planner policy identity is invalid")
     if planner_policy.get("modes") != ["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"]:
         fail("Repository Supervisor planner policy must define the exact full planner modes")
@@ -678,6 +730,19 @@ def main() -> int:
         fail("Repository Supervisor adoption collisions must remain manual-merge")
     if planner_policy.get("requirements_83_96_rule") != "preserve_verified_evidence_never_reset_on_adoption_or_upgrade":
         fail("Repository Supervisor planner must preserve Requirements 83-96 evidence")
+    planner_apply = planner_policy.get("apply_runtime") or {}
+    if planner_apply.get("source") != "commercial-service/lib/repository-supervisor-full-apply.ts":
+        fail("Repository Supervisor planner apply runtime source is invalid")
+    if planner_apply.get("sandbox_protocol_version") != 2:
+        fail("Repository Supervisor full apply must require sandbox protocol v2")
+    if planner_apply.get("conflict_free_required") is not True:
+        fail("Repository Supervisor full apply must require conflict-free plans")
+    if planner_apply.get("bootstrap_empty") != "pending_guarded_initialization":
+        fail("Repository Supervisor empty-repository apply must remain pending")
+    if planner_apply.get("customer_provider_token_forwarded_to_sandbox") is not False:
+        fail("Repository Supervisor must never forward customer provider token to sandbox")
+    if planner_apply.get("merge_requires_sandbox_receipt") is not True:
+        fail("Repository Supervisor full-plan merge must require sandbox receipt")
     planner_vendor_boundary = json.loads((ROOT / "config/licensing/vendor-source-boundary.json").read_text(encoding="utf-8"))
     if "config/runtime/repository-supervisor-planner.json" not in planner_vendor_boundary.get("vendor_only_paths", []):
         fail("Repository Supervisor planner policy must remain vendor-only")
