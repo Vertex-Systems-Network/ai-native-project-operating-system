@@ -143,6 +143,7 @@ def validate_required_files() -> None:
         "CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "AI-NATIVE-PRODUCT-ASSURANCE.md", "AI-NATIVE-GOVERNANCE-ASSURANCE.md", "README.md",
         "PROJECT-IDEA.md", "requirements-anpos.txt",
         "config/protocol/version.json", "config/protocol/instance.json", "config/protocol/migrations.json", "config/protocol/state-machine.json",
+        "config/protocol/blueprint-completion.json", "config/protocol/extension-contract.json",
         "config/traceability/requirements-traceability.json", "config/integrations/project-management.json",
         "config/integrations/linear-sync.json", "config/integrations/sync-authority.json", "config/ai/agent-catalog.json",
         "config/ai/memory-provenance.json", "config/ai/ai-evaluation-policy.json", "config/ai/responsible-ai-policy.json", "config/ai/asset-registry.json", "config/github/ruleset-policy.json", "config/github/path-ownership.json",
@@ -151,6 +152,7 @@ def validate_required_files() -> None:
         "config/data/data-governance.json", "config/product/product-validation.json", "config/product/product-analytics.json",
         "config/product/experimentation-policy.json", "config/quality/engineering-review-policy.json", "config/operations/operations-policy.json", "config/operations/runbooks-and-drills.json", "config/contracts/migration-policy.json", "config/contracts/deprecation-policy.json",
         "config/design/design-intake.json", "config/design/design-assurance.json", "config/testing/conformance-scenarios.json",
+        "config/testing/reference-e2e-matrix.json",
         "config/assurance/assurance-state.json", "config/assurance/runtime-executors.json", "config/research/evidence-registry.json",
         "config/compliance/compliance-profile.json", "config/architecture/decision-records.json", "config/audit/audit-journal.json", "config/risk/risk-register.json",
         "config/consent/consent-requests.json", "config/coordination/agent-work-queue.json",
@@ -164,10 +166,11 @@ def validate_required_files() -> None:
         "schemas/responsible-ai-policy.schema.json", "schemas/compliance-profile.schema.json", "schemas/decision-records.schema.json",
         "schemas/ai-asset-registry.schema.json", "schemas/deprecation-policy.schema.json", "schemas/runbooks-and-drills.schema.json",
         "schemas/audit-journal.schema.json", "schemas/risk-register.schema.json",
+        "schemas/blueprint-completion.schema.json", "schemas/reference-e2e-matrix.schema.json", "schemas/extension-contract.schema.json",
         "scripts/bootstrap_instance.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
         "scripts/lease_control.py", "scripts/coordination_mutation.py", "scripts/consent_guard.py",
         "scripts/install_quality_capabilities.py", "scripts/configure_dependabot.py", "scripts/validate_ai_native_repo.py",
-        "tests/test_control_plane.py", "tests/test_product_assurance.py", "tests/test_governance_assurance.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
+        "tests/test_control_plane.py", "tests/test_product_assurance.py", "tests/test_governance_assurance.py", "tests/test_blueprint_closure.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
         "blueprints/github/dependabot.yml", "blueprints/github/workflows/codeql-actions.yml",
         "blueprints/github/workflows/dependency-review.yml", "blueprints/github/workflows/governance-audit.yml",
         "blueprints/github/workflows/innovation-scout.yml", "blueprints/github/workflows/protocol-update-watch.yml",
@@ -229,6 +232,9 @@ def validate_json_schemas() -> None:
         "config/operations/runbooks-and-drills.json": "schemas/runbooks-and-drills.schema.json",
         "config/audit/audit-journal.json": "schemas/audit-journal.schema.json",
         "config/risk/risk-register.json": "schemas/risk-register.schema.json",
+        "config/protocol/blueprint-completion.json": "schemas/blueprint-completion.schema.json",
+        "config/testing/reference-e2e-matrix.json": "schemas/reference-e2e-matrix.schema.json",
+        "config/protocol/extension-contract.json": "schemas/extension-contract.schema.json",
     }
     for instance_path, schema_path in mapping.items():
         schema = load_json(schema_path)
@@ -760,6 +766,68 @@ def validate_governance_assurance() -> None:
                 fail(f"template source: {label} must remain empty")
 
 
+def validate_blueprint_closure() -> None:
+    version = load_json("config/protocol/version.json").get("version")
+    completion = load_json("config/protocol/blueprint-completion.json")
+    if completion.get("protocol_version") != version:
+        fail("blueprint completion manifest protocol_version must match active protocol version")
+    rows = completion.get("requirements", [])
+    expected_ids = {f"REQ-{n:02d}" for n in range(1, 97)}
+    actual_ids = {row.get("requirement_id") for row in rows if isinstance(row, dict)}
+    if actual_ids != expected_ids:
+        fail("blueprint completion manifest must cover every requirement REQ-01 through REQ-96 exactly once")
+    if len(rows) != 96:
+        fail("blueprint completion manifest must contain exactly 96 requirement rows")
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        for field in ["authoritative_docs", "machine_controls", "verification_refs"]:
+            refs = row.get(field, [])
+            if not isinstance(refs, list) or not refs:
+                fail(f"{row.get('requirement_id')}: {field} must be a non-empty list")
+                continue
+            for relative in refs:
+                if not isinstance(relative, str) or not (ROOT / relative).exists():
+                    fail(f"{row.get('requirement_id')}: {field} references missing path {relative}")
+        if row.get("coverage_status") != "covered_by_blueprint":
+            fail(f"{row.get('requirement_id')}: blueprint coverage status must remain covered_by_blueprint")
+        if row.get("runtime_evidence_required_in_child") is not True:
+            fail(f"{row.get('requirement_id')}: child runtime evidence boundary must remain true")
+
+    matrix = load_json("config/testing/reference-e2e-matrix.json")
+    if matrix.get("protocol_version") != version:
+        fail("reference E2E matrix protocol_version must match active protocol version")
+    expected_scenarios = {"E2E-FRESH-CHILD", "E2E-EXISTING-ADOPTION", "E2E-PRE14-UPGRADE"}
+    scenarios = matrix.get("scenarios", [])
+    scenario_ids = {row.get("id") for row in scenarios if isinstance(row, dict)}
+    if scenario_ids != expected_scenarios or len(scenarios) != 3:
+        fail("reference E2E matrix must define exactly fresh-child, existing-adoption and pre-1.4-upgrade scenarios")
+    for row in scenarios if isinstance(scenarios, list) else []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("certification_status") != "reference_only":
+            fail(f"{row.get('id')}: reference E2E scenario must not claim execution certification")
+        for field in ["required_operations", "expected_invariants", "required_evidence", "failure_gates"]:
+            if not isinstance(row.get(field), list) or not row.get(field):
+                fail(f"{row.get('id')}: {field} must remain non-empty")
+
+    extension = load_json("config/protocol/extension-contract.json")
+    if extension.get("protocol_version") != version:
+        fail("extension contract protocol_version must match active protocol version")
+    if extension.get("current_core_requirement_ceiling") != 96:
+        fail("extension contract core requirement ceiling must remain 96 for ANPOS 1.4.0")
+    core_rule = extension.get("core_requirement_rule") or {}
+    if core_rule.get("next_requirement_id") != "REQ-97":
+        fail("extension contract next normative core requirement must be REQ-97")
+    if core_rule.get("requirement_ids_are_append_only") is not True or core_rule.get("requirement_ids_must_not_be_reused") is not True:
+        fail("extension contract must keep requirement IDs append-only and non-reusable")
+    namespace = extension.get("extension_namespace_rule") or {}
+    if namespace.get("extensions_must_not_claim_core_requirement_numbers") is not True:
+        fail("extensions must not claim core ANPOS requirement numbers")
+    if not isinstance(namespace.get("registered_extensions"), list):
+        fail("extension registry must remain a list")
+
+
 def validate_conformance() -> None:
     doc = load_json("config/testing/conformance-scenarios.json")
     scenarios = doc.get("scenarios", [])
@@ -839,6 +907,7 @@ def main() -> int:
     validate_assurance_policies()
     validate_product_assurance()
     validate_governance_assurance()
+    validate_blueprint_closure()
     validate_conformance()
     validate_workflows()
 

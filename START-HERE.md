@@ -322,3 +322,12 @@ After technology approval, the AI also completes the stack-specific Code Quality
 Security requirements influence every lifecycle stage; Stage 15 is the dedicated final hardening/adversarial verification pass.
 
 Do not skip the technology-consent gate unless the user has already explicitly approved a concrete stack for the child project.
+
+
+### Blueprint closure and extension boundary
+
+The ANPOS 1.4.0 canonical blueprint is closed at Requirements 1–96. Read `config/protocol/blueprint-completion.json` when auditing completeness. It proves reusable blueprint coverage only; child implementation/pass claims still require project-specific evidence.
+
+For repository-level acceptance, use `config/testing/reference-e2e-matrix.json` and execute only the scenario applicable to the real repository state. A reference scenario marked `reference_only` is not runtime certification evidence.
+
+Do not append REQ-97+ or introduce a core-semantic extension ad hoc. Future normative requirements and extensions must follow `config/protocol/extension-contract.json`, including explicit release planning, compatibility, migration, schema evolution and deprecation.
