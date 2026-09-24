@@ -58,6 +58,13 @@ jobs:
           test "$(npm --version)" = "11.19.1"
           npm ci
 
+      - name: Bind Vercel project context
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s","projectName":"anpos-commercial-service"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+
       - name: Verify production database environment is injectable
         shell: bash
         run: |
