@@ -133,6 +133,8 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             "contents: read",
             'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}',
             "vercel@59.11.7",
+            ".vercel/project.json",
+            "VERCEL_PROJECT_ID",
             "env run -e production",
             "npm --prefix commercial-service run migrate",
             "Re-run migrator to prove idempotent complete state",
