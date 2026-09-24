@@ -7,7 +7,7 @@
       "id": "github",
       "canonical_host": "github.com",
       "authentication": "oauth_2_1_via_mcp",
-      "support_status": "adapter_required"
+      "support_status": "source_implemented_live_e2e_pending"
     },
     {
       "id": "gitlab",
