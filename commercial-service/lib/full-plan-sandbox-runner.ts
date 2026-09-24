@@ -16,7 +16,7 @@ RELEASE_ROOT = INPUT_ROOT / "release"
 PLAN_PATH = INPUT_ROOT / "plan.json"
 WRITE_ACTIONS = {"add_from_release", "replace_from_release", "bootstrap_transform"}
 NO_WRITE_ACTIONS = {"unchanged", "preserve_project_state"}
-BOOTSTRAP_MODES = {"bootstrap_child", "adopt_existing"}
+BOOTSTRAP_MODES = {"bootstrap_empty", "bootstrap_child", "adopt_existing"}
 
 
 def safe_relative(value: str) -> Path:
@@ -35,7 +35,7 @@ def ensure_regular(path: Path) -> None:
 
 plan = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
 mode = str(plan.get("mode") or "")
-if mode not in {"bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"}:
+if mode not in {"bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"}:
     raise RuntimeError("unsupported_full_apply_mode")
 if plan.get("conflict_free") is not True or plan.get("safe_to_apply") is not True:
     raise RuntimeError("unsafe_full_plan")
