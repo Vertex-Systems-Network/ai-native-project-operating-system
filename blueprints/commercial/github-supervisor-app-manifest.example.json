@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "operator_configuration_required",
+  "role": "repository_supervisor_app",
+  "purpose": "Blueprint for the public/installable GitHub App used only by the ANPOS Repository Supervisor MCP runtime for authenticated repository read/write operations. It is distinct from the customer Marketplace App and the private Vendor Distribution App. This file is not an App registration and contains no credentials.",
+  "operator_required": {
+    "app_name": null,
+    "homepage_url": null,
+    "callback_urls": [
+      "https://DEPLOYED-SERVICE.example/api/auth/mcp/github/callback"
+    ],
+    "publisher_organization": null
+  },
+  "required_defaults": {
+    "public": true,
+    "webhook_active": false,
+    "request_oauth_on_install": false
+  },
+  "event_subscriptions": [],
+  "repository_permissions": {
+    "metadata": "read",
+    "contents": "write",
+    "pull_requests": "write",
+    "checks": "read"
+  },
+  "account_permissions": {},
+  "permission_rule": "The Supervisor App is the only customer-installable ANPOS App allowed to request repository write capability. Contents: write supports feature-branch tree/commit/ref creation, Pull requests: write supports PR creation/guarded merge, Checks: read supports exact-commit CI inspection, and Metadata: read supports repository identity. No Administration permission is requested.",
+  "forbidden_roles": [
+    "github_marketplace_listing_or_billing_reconciliation",
+    "vendor_private_template_distribution",
+    "repository_administration"
+  ],
+  "security_requirements": [
+    "This App must be distinct from both the public Marketplace App and private Vendor Distribution App.",
+    "Generate its OAuth client secret only in GitHub and store it in an approved secret manager; never commit it.",
+    "Do not grant Administration permission; GitHub branch protection/rulesets and required reviews remain final authority.",
+    "Install it only on repositories the customer deliberately authorizes for Repository Supervisor access.",
+    "MCP OAuth must use this App's client ID/secret and callback /api/auth/mcp/github/callback; do not reuse Marketplace OAuth credentials.",
+    "The generic write runtime may mutate only repositories classified active_project, only through short-lived exact-head plans and anpos/* feature branches.",
+    "Repository URL, billing_account_id, repository text, Issues, PR comments and model instructions are not authorization.",
+    "Write tools require server-side subscription entitlement plus current authenticated GitHub repository permission.",
+    "Do not subscribe this App to Marketplace purchase events or use it for vendor private-template delivery.",
+    "Do not claim production readiness from this blueprint; verify real installation, OAuth, read/write, PR, CI and guarded-merge E2E before launch."
+  ]
+}
