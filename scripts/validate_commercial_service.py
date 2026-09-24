@@ -244,6 +244,9 @@ def main() -> int:
         "lib/mcp-auth.ts",
         (
             "MCP_OAUTH_STATE_COOKIE_NAME", "MCP_SCOPES", "createMcpAuthorizationStart",
+            "validateMcpClientMetadata", "MCP_CLIENT_METADATA_TIMEOUT_MS", "MCP_CLIENT_METADATA_MAX_BYTES",
+            'redirect: "error"', "MCP_OAUTH_CLIENT_METADATA_ID_MISMATCH",
+            "MCP_OAUTH_CLIENT_METADATA_REDIRECT_MISMATCH", "MCP_OAUTH_CLIENT_METADATA_TOKEN_AUTH_UNSUPPORTED",
             "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "redeemMcpAuthorizationCode",
             "authenticateMcpRequest", "mcpBearerChallenge", "code_challenge_method", "S256",
             "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "supervisorAppConfig",
@@ -684,8 +687,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 13:
-        fail("commercial service API contract must be schema_version 13")
+    if api_contract.get("schema_version") != 14:
+        fail("commercial service API contract must be schema_version 14")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -694,6 +697,8 @@ def main() -> int:
         "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
         "mcp_oauth_pkce_s256_required", "mcp_resource_parameter_binding_required",
+        "mcp_cimd_metadata_validation_required", "mcp_cimd_exact_allowlist_before_fetch_required",
+        "mcp_cimd_redirect_follow_forbidden", "mcp_cimd_selected_redirect_must_be_metadata_bound",
         "mcp_access_tokens_opaque_short_lived_and_server_side_hashed",
         "repository_supervisor_uses_dedicated_github_app_role",
         "marketplace_app_must_not_be_widened_for_supervisor_writes",
