@@ -7,7 +7,7 @@ import {
 } from "node:crypto";
 import type { PoolClient } from "pg";
 import { db, ensureSchema, transaction } from "./db";
-import { marketplaceAppConfig, mcpOAuthConfig } from "./env";
+import { mcpOAuthConfig, supervisorAppConfig } from "./env";
 
 export const MCP_OAUTH_STATE_COOKIE_NAME = "__Host-anpos_mcp_oauth_state";
 export const MCP_SCOPES = ["anpos:profile", "anpos:repo:read", "anpos:repo:write"] as const;
@@ -45,7 +45,7 @@ function nowSeconds(): number {
 
 function secretKey(label: string): Buffer {
   return createHash("sha256")
-    .update(marketplaceAppConfig().sessionSecret, "utf8")
+    .update(supervisorAppConfig().sessionSecret, "utf8")
     .update("\0", "utf8")
     .update(label, "utf8")
     .digest();
@@ -150,9 +150,9 @@ export function createMcpAuthorizationStart(url: URL): {
     expires_at: nowSeconds() + OAUTH_STATE_TTL_SECONDS,
   };
   const sealed = seal(JSON.stringify(pending), "mcp-oauth-state");
-  const app = marketplaceAppConfig();
+  const app = supervisorAppConfig();
   const githubUrl = new URL("https://github.com/login/oauth/authorize");
-  githubUrl.searchParams.set("client_id", app.githubMarketplaceClientId);
+  githubUrl.searchParams.set("client_id", app.githubSupervisorClientId);
   githubUrl.searchParams.set("redirect_uri", `${app.publicBaseUrl}/api/auth/mcp/github/callback`);
   githubUrl.searchParams.set("state", githubState);
   githubUrl.searchParams.set("code_challenge", pkceChallenge(githubVerifier));
@@ -317,7 +317,7 @@ export function requireMcpScope(principal: McpPrincipal, required: McpScope): vo
 }
 
 export function mcpBearerChallenge(error = "invalid_token", description = "Authentication is required"): string {
-  const metadata = `${marketplaceAppConfig().publicBaseUrl}/.well-known/oauth-protected-resource`;
+  const metadata = `${supervisorAppConfig().publicBaseUrl}/.well-known/oauth-protected-resource`;
   const safeDescription = description.replace(/[\r\n"]/g, " ").slice(0, 200);
   return `Bearer resource_metadata="${metadata}", error="${error}", error_description="${safeDescription}"`;
 }
