@@ -564,7 +564,8 @@ Implemented and source-certified:
 - dedicated Repository Supervisor GitHub App role, separate from the read-only Marketplace billing/Community App and private Vendor Distribution App;
 - guarded write foundation: encrypted server-issued expected-head-bound `bounded_change` plans, atomic Git Data feature-branch commits, PR creation/re-read, exact commit CI inspection, destructive host-confirmed guarded merge, and resulting-main verification;
 - commercial service 0.4.4 signed remote-ephemeral sandbox driver source with immutable GitHub repository/commit workspace binding, HTTPS-only request transport, exact-body HMAC request/response authentication, replay metadata, network deny and workspace-destruction evidence;
-- fail-closed production Repository Supervisor E2E verifier with separate `read`, `write_prepare`, and `write_verify_merge` phases and no CI busy-wait.
+- fail-closed production Repository Supervisor E2E verifier with separate `read`, `write_prepare`, and `write_verify_merge` phases and no CI busy-wait;
+- vendor/operator launch bootstrap upgraded to the three-App trust model (Marketplace + Repository Supervisor + Vendor Distribution), signed sandbox environment handoff, and deterministic private service/template export verification so production activation cannot silently fall back to the public canonical source.
 
 Community remains restricted to the separate bounded readiness audit. The commercial bridge, MCP transport, guarded write runtime, sandbox driver and E2E harness do not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint.
 
