@@ -15,6 +15,7 @@ const MANAGED_ENV = [
   "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
   "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
   "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+  "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
   "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
   "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS",
   "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
@@ -47,6 +48,7 @@ test("Community launch config is independent from paid and vendor secrets", () =
 
   const fullProblems = configurationProblems();
   assert.ok(fullProblems.includes("missing:ANPOS_MARKETPLACE_PLAN_MAP"));
+  assert.ok(fullProblems.includes("missing:GITHUB_SUPERVISOR_APP_ID"));
   assert.ok(fullProblems.includes("missing:GITHUB_VENDOR_APP_ID"));
   assert.ok(fullProblems.includes("missing:ANPOS_ENTITLEMENT_PRIVATE_KEY"));
   assert.ok(fullProblems.includes("missing:ANPOS_ORG_SEAT_LIMITS"));
