@@ -41,7 +41,7 @@ test("MCP discovery advertises modern stateless tool capability", async () => {
   assert.equal(body.result._meta["io.modelcontextprotocol/serverInfo"].name, "anpos-repository-supervisor");
 });
 
-test("tool list exposes authenticated OpenAI profile metadata and no write tool", async () => {
+test("tool list exposes profile plus bounded guarded-write tools", async () => {
   const result = await handleMcpRpc({
     jsonrpc: "2.0",
     id: 1,
@@ -55,8 +55,20 @@ test("tool list exposes authenticated OpenAI profile metadata and no write tool"
   assert.equal(profile._meta["openai/profile"], true);
   assert.equal(profile.annotations.readOnlyHint, true);
   assert.deepEqual(profile.securitySchemes, [{ type: "oauth2", scopes: ["anpos:profile"] }]);
-  assert.equal(tools.some((tool: any) => tool.name.includes("write") || tool.name.includes("merge")), false);
-  assert.equal(MCP_TOOL_DEFINITIONS.length, 4);
+  const plan = tools.find((tool: any) => tool.name === "repository_plan_change");
+  const apply = tools.find((tool: any) => tool.name === "repository_apply_change");
+  const merge = tools.find((tool: any) => tool.name === "repository_merge_change_request");
+  assert.ok(plan);
+  assert.ok(apply);
+  assert.ok(merge);
+  assert.equal(plan.annotations.destructiveHint, false);
+  assert.equal(apply.annotations.destructiveHint, false);
+  assert.equal(merge.annotations.destructiveHint, true);
+  assert.deepEqual(merge.securitySchemes, [{
+    type: "oauth2",
+    scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
+  }]);
+  assert.equal(MCP_TOOL_DEFINITIONS.length, 10);
 });
 
 test("repository_profile returns one stable opaque profile from validated credentials", async () => {
