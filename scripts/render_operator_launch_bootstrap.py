@@ -456,7 +456,7 @@ def render(
             "Require full /api/ready plus applicable paid/vendor/premium E2E evidence before paid launch authorization.",
         ],
         "safety": [
-            "This output contains no credentials and is not proof that either GitHub App or any private vendor/premium repository exists.",
+            "This output contains no credentials and is not proof that any GitHub App, sandbox gateway, or private vendor/premium repository exists.",
             "Registration URLs are prefilled operator aids; GitHub remains the authority for the final App configuration.",
             "Artifact identity is read from committed deployable package metadata and checked against canonical protocol metadata; do not replace it with hand-maintained expected versions.",
             "Vendor export identity is read from canonical Git commit/tree identity; handoff verification reconstructs expected bytes from committed canonical blobs and rejects extra, missing, dirty, tampered, stale, or wrong-mode vendor checkouts.",
