@@ -425,7 +425,6 @@ test("guarded merge requires clean exact-head PR and green checks then rereads m
     confirmMerge: true,
     idempotencyKey: "merge:milestone:001",
     githubUserId: 42,
-    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
   assert.equal(merged.merged, true);
