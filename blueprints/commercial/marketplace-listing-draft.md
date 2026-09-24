@@ -18,14 +18,15 @@ Core customer projects are not remotely disabled when a commercial entitlement e
 
 ## GitHub App trust architecture
 
-ANPOS commercial production uses **two distinct GitHub Apps**:
+ANPOS commercial production uses **three distinct GitHub App roles**:
 
-1. **Marketplace App — public/customer-facing.** This App owns the GitHub Marketplace listing, is installable by customer accounts, receives Marketplace events, and is used for Marketplace account reconciliation. It must not be granted vendor private-template Administration permission merely to support vendor-side delivery.
-2. **Vendor Distribution App — private/vendor-only.** This App is installed only on the vendor-controlled private commercial-template repository. Archive-first delivery requires Contents: read. Optional collaborator provisioning may require Administration: write on the vendor repository only.
+1. **Marketplace App — public/customer-facing.** This App owns the GitHub Marketplace listing, Community consent/readiness flow, and Marketplace reconciliation. Its customer-repository permission surface remains bounded and is not widened for Repository Supervisor writes.
+2. **Repository Supervisor App — public/installable paid runtime.** This separate App owns paid customer-repository supervision. Its minimum source contract is Metadata: read, Contents: write, Pull requests: write, Checks: read, and Commit statuses: read, with no Administration permission by default.
+3. **Vendor Distribution App — private/vendor-only.** This App is installed only on the vendor-controlled private commercial-template repository. Archive-first delivery requires Contents: read. Optional collaborator provisioning may require Administration: write on the vendor repository only.
 
-The two App IDs and private keys must be different. Production readiness fails closed if the roles collapse or the same private key is reused. The deprecated single-App blueprint is retained only as a migration marker.
+The three App roles must remain distinct and their identity/credential material must not collapse across trust boundaries. Production readiness fails closed when role separation is not evidenced. The deprecated single-App blueprint is retained only as a migration marker.
 
-This separation keeps customer installation consent independent from privileged vendor repository access and reduces the blast radius of either App credential.
+This separation keeps Community/billing consent, paid customer-repository mutation, and privileged vendor repository access independent and reduces the blast radius of any one credential.
 
 ## GitHub Marketplace compliance baseline
 
@@ -34,7 +35,7 @@ The machine-readable baseline is `blueprints/commercial/github-marketplace-compl
 For Marketplace publication and paid conversion, the current baseline requires or records:
 
 - the customer-facing Marketplace GitHub App is public/installable by other GitHub accounts;
-- the Marketplace App is separate from the private Vendor Distribution App;
+- the Marketplace App is separate from both the Repository Supervisor App and private Vendor Distribution App;
 - customer installations are not asked for vendor-template Administration permission;
 - the paid Marketplace App is owned by an organization;
 - an organization owner controls/submits the Marketplace listing;
@@ -132,17 +133,20 @@ All published links must resolve to relevant working pages.
 
 ## Required Marketplace configuration
 
-- organization-owned **public Marketplace GitHub App** for customer installation/listing;
+- organization-owned **public Marketplace GitHub App** for customer installation/listing and Community/billing scope;
+- separate **public/installable Repository Supervisor GitHub App** for paid customer-repository supervision;
 - separate **private Vendor Distribution GitHub App** for vendor private-template access;
-- distinct App IDs and private keys; no role/key reuse;
+- distinct role identities/credentials; no trust-boundary reuse;
 - organization-owner control of listing submission;
 - verified publisher prerequisites and approval before paid publication;
 - current minimum-installation threshold for paid GitHub Apps;
 - financial onboarding before paid publication;
 - actual monthly and annual USD price decisions for each paid plan;
 - real Marketplace plan IDs;
-- Marketplace App ID/private key and strong Marketplace webhook secret;
+- Marketplace App ID/private key/OAuth client credentials and strong Marketplace webhook secret;
+- Repository Supervisor App ID/OAuth client ID/client secret, with exact guarded-write permissions and no Administration by default;
 - Vendor App ID/private key, vendor installation ID, and private commercial-template repository;
+- signed remote-ephemeral sandbox gateway configuration and live evidence before Repository Supervisor production execution is claimed;
 - production issuer/base URL;
 - customer billing/status experience;
 - support/refund/cancellation/trial policy;
@@ -155,6 +159,6 @@ All published links must resolve to relevant working pages.
 - Existing generated customer projects are not deleted, encrypted, remotely modified, or intentionally broken when an entitlement expires or is cancelled.
 - Organization membership alone is not a licensed seat.
 - Archive-first private delivery is preferred; collaborator provisioning is optional and disabled by default.
-- Vendor repository Administration permission belongs only to the private Vendor Distribution App when explicitly required; it must not be added to the customer-facing Marketplace App merely for vendor delivery.
+- Vendor repository Administration permission belongs only to the private Vendor Distribution App when explicitly required; it must not be added to the Marketplace or Repository Supervisor App merely for vendor delivery.
 - A free-first listing must deliver real product value and cannot be used as an installation-count shell.
 - No final price, legal promise, uptime SLA, tax treatment, refund right, warranty, installation count, publisher verification, or Marketplace approval is created by this draft.

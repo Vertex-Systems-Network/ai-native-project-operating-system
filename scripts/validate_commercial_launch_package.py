@@ -12,6 +12,7 @@ ERRORS: list[str] = []
 
 LEGACY_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-app-manifest.example.json"
 MARKETPLACE_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json"
+SUPERVISOR_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json"
 VENDOR_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json"
 COMPLIANCE = ROOT / "blueprints/commercial/github-marketplace-compliance.json"
 CHECKLIST = ROOT / "blueprints/commercial/production-launch-checklist.json"
@@ -55,6 +56,7 @@ def main() -> int:
     for path in (
         LEGACY_APP_BLUEPRINT,
         MARKETPLACE_APP_BLUEPRINT,
+        SUPERVISOR_APP_BLUEPRINT,
         VENDOR_APP_BLUEPRINT,
         COMPLIANCE,
         CHECKLIST,
@@ -74,6 +76,7 @@ def main() -> int:
     replacements = set(legacy.get("replacements") or [])
     expected_replacements = {
         "blueprints/commercial/github-marketplace-app-manifest.example.json",
+        "blueprints/commercial/github-supervisor-app-manifest.example.json",
         "blueprints/commercial/github-vendor-app-manifest.example.json",
     }
     if expected_replacements - replacements:
@@ -103,6 +106,26 @@ def main() -> int:
     marketplace_text = json.dumps(marketplace_app, sort_keys=True)
     if "administration:write_for_private_template_distribution" not in marketplace_text:
         fail("Marketplace App blueprint must explicitly forbid vendor Administration scope")
+
+    supervisor_app = load_json(SUPERVISOR_APP_BLUEPRINT) if SUPERVISOR_APP_BLUEPRINT.is_file() else {}
+    if supervisor_app.get("status") != "operator_configuration_required":
+        fail("Repository Supervisor App blueprint must remain operator_configuration_required")
+    if supervisor_app.get("role") != "repository_supervisor_app":
+        fail("Repository Supervisor App blueprint role must remain repository_supervisor_app")
+    supervisor_defaults = supervisor_app.get("required_defaults") or {}
+    if supervisor_defaults.get("public") is not True or supervisor_defaults.get("webhook_active") is not False:
+        fail("Repository Supervisor App must remain public/installable with ordinary webhook disabled")
+    expected_supervisor_permissions = {
+        "metadata": "read",
+        "contents": "write",
+        "pull_requests": "write",
+        "checks": "read",
+        "statuses": "read",
+    }
+    if supervisor_app.get("repository_permissions") != expected_supervisor_permissions:
+        fail("Repository Supervisor App blueprint permissions drifted")
+    if "administration" in (supervisor_app.get("repository_permissions") or {}):
+        fail("Repository Supervisor App must not request Administration by default")
 
     vendor_app = load_json(VENDOR_APP_BLUEPRINT) if VENDOR_APP_BLUEPRINT.is_file() else {}
     if vendor_app.get("status") != "operator_configuration_required":
@@ -231,8 +254,10 @@ def main() -> int:
         "vendor_service_repo",
         "vendor_template_repo",
         "github_marketplace_app",
+        "github_supervisor_app",
         "github_vendor_app",
         "github_app_role_separation",
+        "supervisor_app_installation",
         "vendor_app_installation",
         "marketplace_publisher",
         "marketplace_installation_threshold",
@@ -243,6 +268,7 @@ def main() -> int:
         "free_trial_privacy",
         "legal_pack",
         "vercel_production_env",
+        "sandbox_gateway",
         "webhook_public_reachability",
         "ready_endpoint",
         "real_marketplace_events",
@@ -271,8 +297,9 @@ def main() -> int:
         LISTING,
         (
             "Draft only",
-            "two distinct GitHub Apps",
+            "three distinct GitHub App roles",
             "Marketplace App — public/customer-facing",
+            "Repository Supervisor App — public/installable paid runtime",
             "Vendor Distribution App — private/vendor-only",
             "minimum of **100 GitHub App installations**",
             "monthly and annual price in USD",
@@ -371,6 +398,7 @@ def main() -> int:
         "commercial-service",
         "blueprints/commercial/github-app-manifest.example.json",
         "blueprints/commercial/github-marketplace-app-manifest.example.json",
+        "blueprints/commercial/github-supervisor-app-manifest.example.json",
         "blueprints/commercial/github-vendor-app-manifest.example.json",
         "blueprints/commercial/github-marketplace-compliance.json",
         "blueprints/commercial/legal-pack.template.md",

@@ -152,8 +152,9 @@ def main() -> int:
         "Recommended staged publication path",
         "free-first then paid",
         "real free offering",
-        "two distinct GitHub Apps",
+        "three distinct GitHub App roles",
         "Marketplace App — public/customer-facing",
+        "Repository Supervisor App — public/installable paid runtime",
         "never manufacture or buy installations",
         "does **not** alter the draft Developer, Pro, Team, or Enterprise product catalog",
     ):

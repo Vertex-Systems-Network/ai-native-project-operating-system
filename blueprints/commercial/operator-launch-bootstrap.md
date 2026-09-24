@@ -21,6 +21,7 @@ The renderer accepts only non-secret configuration:
 - HTTPS commercial-service base URL;
 - HTTPS product/application homepage URL;
 - optional Marketplace App display name;
+- optional Repository Supervisor App display name;
 - optional Vendor Distribution App display name;
 - optional explicit collaborator-provisioning switch.
 
@@ -117,6 +118,24 @@ The operator must review GitHub's registration form before creating the App. Git
 
 `marketplace_purchase` is configured separately from the GitHub App registration. After a draft GitHub Marketplace listing exists, open the listing's **Webhook** settings and configure `<service-base-url>/api/webhooks/github/marketplace` with a strong secret stored as `GITHUB_WEBHOOK_SECRET`. Subscribe/process `marketplace_purchase` on that Marketplace listing webhook surface. Do **not** represent the purchase event as a normal GitHub App event subscription.
 
+## Generated Repository Supervisor App registration
+
+The Repository Supervisor App registration URL is prefilled as a separate public/installable trust boundary:
+
+- organization-owned registration page;
+- `public=true`;
+- ordinary GitHub App webhooks disabled;
+- OAuth-on-install enabled for the paid MCP authorization flow;
+- callback `<service-base-url>/api/auth/mcp/github/callback`;
+- Metadata: read;
+- Contents: write;
+- Pull requests: write;
+- Checks: read;
+- Commit statuses: read;
+- no `Administration` permission by default.
+
+The Supervisor App must not reuse Marketplace or Vendor Distribution identity/credential material. Marketplace permissions must not be widened merely to implement Repository Supervisor writes.
+
 ## Generated Vendor Distribution App registration
 
 The Vendor Distribution App registration URL is prefilled as:
@@ -147,7 +166,24 @@ Marketplace / Community role:
 
 `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID` must be the **real operator-approved free Marketplace plan ID after that plan exists**. It must remain separate from `ANPOS_MARKETPLACE_PLAN_MAP`; Community has zero paid entitlements and must not be smuggled into the paid mapping merely to make a listing look configured.
 
-With the Marketplace/Community values above and the required database migration present, `/api/ready/community` can become HTTP 200 without any Vendor App, entitlement-signing key, paid plan map, organization-seat configuration, or private-template repository. That narrower readiness result is evidence only for the Community runtime configuration. It is not paid/vendor launch evidence.
+With the Marketplace/Community values above and the required database migration present, `/api/ready/community` can become HTTP 200 without any Supervisor App, Vendor App, entitlement-signing key, paid plan map, organization-seat configuration, private-template repository, or sandbox gateway. That narrower readiness result is evidence only for the Community runtime configuration. It is not paid/vendor launch evidence.
+
+Repository Supervisor role:
+
+- `GITHUB_SUPERVISOR_APP_ID`
+- `GITHUB_SUPERVISOR_CLIENT_ID`
+- `GITHUB_SUPERVISOR_CLIENT_SECRET`
+
+The Supervisor App is the only customer-facing write-capable GitHub App in this architecture. It must remain distinct from Marketplace and Vendor Distribution roles, and branch/ruleset policy remains authoritative.
+
+Production sandbox role:
+
+- `ANPOS_SANDBOX_ENDPOINT`
+- `ANPOS_SANDBOX_DRIVER_ID`
+- `ANPOS_SANDBOX_SIGNING_SECRET`
+- `ANPOS_SANDBOX_REQUEST_SKEW_SECONDS`
+
+`/api/ready/sandbox` proves only source/config readiness. It is not evidence that the remote gateway was reached, that network deny was enforced live, or that a workspace was destroyed.
 
 Vendor Distribution role:
 
@@ -184,15 +220,19 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 10. Create the private vendor repositories and populate them only from verified deterministic exports.
 11. Clone/check out each new private repository cleanly and run the same handoff verification again before accepting it as vendor source.
 12. Set `ANPOS_COMMERCIAL_RELEASE_REF` to the exact 40-character commit SHA of the verified private template checkout; never use a mutable ref.
-13. Register the private Vendor Distribution App from its generated prefilled URL.
-14. Generate/store a distinct Vendor App private key; never reuse Marketplace App identity/key material.
-15. Install only the Vendor Distribution App on the vendor private template repository.
-16. Populate the remaining paid/full production environment with real external values listed by the handoff.
-17. Deploy the exact service artifact represented by `artifact_identity` from a verified immutable source.
-18. Run `scripts/verify_commercial_production.py` with `production_verifier_arguments` plus the required base URL and separately supplied secret environment-variable names.
-19. Exercise `GET /api/v1/releases/current` and verify its canonical source revision/tree against the retained template-handoff evidence.
-20. Exercise `GET /api/v1/template/archive` and verify it serves the same exact `ANPOS_COMMERCIAL_RELEASE_REF` release.
-21. Require full `/api/ready` HTTP 200 plus applicable paid Marketplace/vendor E2E evidence before paid production launch authorization.
+13. Register the dedicated public/installable Repository Supervisor App from its generated prefilled URL and verify the exact write/read permission set with no Administration by default.
+14. Generate/store distinct Supervisor OAuth client credentials; never reuse Marketplace or Vendor Distribution identity/secret material.
+15. Register the private Vendor Distribution App from its generated prefilled URL.
+16. Generate/store a distinct Vendor App private key; never reuse Marketplace or Supervisor identity/key material.
+17. Install only the Vendor Distribution App on the vendor private template repository.
+18. Deploy/configure the signed remote-ephemeral sandbox gateway and record live gateway evidence separately from `/api/ready/sandbox`.
+19. Populate the remaining paid/full production environment with real external values listed by the handoff.
+20. Deploy the exact service artifact represented by `artifact_identity` from a verified immutable source.
+21. Run `scripts/verify_commercial_production.py` with `production_verifier_arguments` plus the required base URL and separately supplied secret environment-variable names.
+22. Require `/api/ready/mcp` and `/api/ready/sandbox` before live Repository Supervisor E2E; then record read E2E and disposable guarded-write E2E receipts separately.
+23. Exercise `GET /api/v1/releases/current` and verify its canonical source revision/tree against the retained template-handoff evidence.
+24. Exercise `GET /api/v1/template/archive` and verify it serves the same exact `ANPOS_COMMERCIAL_RELEASE_REF` release.
+25. Require full `/api/ready` HTTP 200 plus applicable Marketplace/Supervisor/vendor/sandbox E2E evidence before paid production launch authorization.
 
 ## Safety boundary
 
@@ -203,7 +243,9 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 - Community readiness and full commercial readiness are intentionally separate. `/api/ready/community` must never be represented as proof that paid plans, Vendor App distribution, private template access, organization seats, or entitlement signing are ready.
 - Paid release metadata/archive delivery must be bound to an exact verified `ANPOS_COMMERCIAL_RELEASE_REF`; mutable branches/tags are forbidden.
 - Standard provider compatibility is core/capability-dependent ANPOS behavior and must not be represented as a paid Developer entitlement.
-- Never reuse App IDs or private keys across Marketplace and Vendor Distribution roles.
+- Never reuse App IDs, OAuth client IDs/secrets, or private keys across Marketplace, Repository Supervisor, and Vendor Distribution roles.
+- Marketplace App permissions must never be widened for Repository Supervisor writes.
+- `/api/ready/sandbox` is not a live sandbox-gateway probe; do not substitute source/config readiness for signed execution evidence.
 - Do not add Vendor `Administration: write` unless collaborator provisioning is explicitly approved.
 - Do not infer repository existence, Marketplace approval, publisher verification, installation count, prices, plan IDs, customer billing readiness, or launch authorization from renderer output.
 - Re-check current GitHub App and GitHub Marketplace requirements immediately before registration/submission because platform requirements can change.
