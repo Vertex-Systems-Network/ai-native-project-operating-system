@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "status": "source_planner_policy",
   "protocol_baseline": "1.4.0",
   "modes": [
@@ -137,7 +137,10 @@
     "GitHub empty repositories may receive exactly one deterministic root seed commit only after explicit confirmation because raw Git refs cannot initialize an empty repository.",
     "The guarded empty-repository seed must be the zero-parent root commit on the configured default branch and must be removed by the ANPOS feature-branch commit.",
     "After the seed exists, any apply failure enters recovery-required state and must not silently reset the plan to planned.",
-    "Normal non-empty Repository Supervisor flows continue to forbid direct default-branch writes."
+    "Normal non-empty Repository Supervisor flows continue to forbid direct default-branch writes.",
+    "Conflict-blocked full plans may be resolved only by deriving a new immutable plan from the exact source plan hash while the target head and verified release remain unchanged.",
+    "Every manual_merge or migration_review path requires an explicit keep_target or use_release decision bound to its exact observed target Git object.",
+    "Replacing migration-reviewed project state or evidence with release content requires an explicit project-state replacement acknowledgement."
   ],
   "apply_runtime": {
     "source": "commercial-service/lib/repository-supervisor-full-apply.ts",
@@ -152,7 +155,7 @@
     ],
     "conflict_free_required": true,
     "bootstrap_empty": "guarded_root_seed_then_feature_branch_pr_v1",
-    "conflict_resolution": "pending_user_resolved_plan",
+    "conflict_resolution": "explicit_resolved_plan_v1",
     "customer_provider_token_forwarded_to_sandbox": false,
     "verified_release_materialization": "exact_private_template_git_blobs",
     "output_contract": "exact_planned_paths_sha256_verified",
@@ -162,6 +165,10 @@
     "empty_repository_seed_path": ".anpos-bootstrap-seed",
     "empty_repository_seed_removed_on_feature_branch": true,
     "empty_repository_explicit_confirmation_required": true,
-    "empty_repository_recovery_after_seed_failure": "apply_recovery_required"
+    "empty_repository_recovery_after_seed_failure": "apply_recovery_required",
+    "conflict_resolution_requires_exact_source_plan_hash": true,
+    "conflict_resolution_requires_exact_target_git_object": true,
+    "migration_review_use_release_requires_acknowledgement": true,
+    "resolved_plan_is_new_immutable_plan": true
   }
 }
