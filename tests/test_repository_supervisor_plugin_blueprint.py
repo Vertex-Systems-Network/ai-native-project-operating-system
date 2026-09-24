@@ -15,13 +15,13 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.5.0")
+        self.assertEqual(plugin["version"], "0.6.0")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 5)
+        self.assertEqual(contract["schema_version"], 6)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
@@ -37,13 +37,21 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertIn("plan_hash", plan["required_outputs"])
         self.assertIn("action_preview", plan["required_outputs"])
         self.assertIn("requirements_83_96", plan["required_outputs"])
-        self.assertEqual(plan["full_mode_apply_status"], "sandbox_full_plan_pending")
+        self.assertEqual(plan["full_mode_apply_status"], "sandbox_full_plan_v1_for_non_empty_conflict_free_plans")
         self.assertNotIn(
             "full_anpos_bootstrap_adoption_upgrade_plan_generator",
             contract["implementation"]["not_yet_implemented"],
         )
-        self.assertIn(
+        self.assertNotIn(
             "sandbox_backed_full_plan_apply_runtime",
+            contract["implementation"]["not_yet_implemented"],
+        )
+        self.assertIn(
+            "full_plan_conflict_resolution_runtime",
+            contract["implementation"]["not_yet_implemented"],
+        )
+        self.assertIn(
+            "empty_repository_guarded_initialization_flow",
             contract["implementation"]["not_yet_implemented"],
         )
 
@@ -78,13 +86,18 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         ]:
             self.assertIn(tool, implementation["implemented_tools"])
         self.assertNotIn("full_anpos_bootstrap_adoption_upgrade_plan_generator", implementation["not_yet_implemented"])
-        self.assertIn("sandbox_backed_full_plan_apply_runtime", implementation["not_yet_implemented"])
+        self.assertNotIn("sandbox_backed_full_plan_apply_runtime", implementation["not_yet_implemented"])
+        self.assertIn("full_plan_conflict_resolution_runtime", implementation["not_yet_implemented"])
+        self.assertIn("empty_repository_guarded_initialization_flow", implementation["not_yet_implemented"])
         self.assertNotIn("production_sandbox_driver", implementation["not_yet_implemented"])
         self.assertIn("live_production_sandbox_gateway_evidence", implementation["not_yet_implemented"])
         self.assertIn("live_github_repository_supervisor_read_e2e_receipt", implementation["not_yet_implemented"])
         self.assertIn("live_github_repository_supervisor_write_e2e_receipt", implementation["not_yet_implemented"])
         sandbox = contract["production_sandbox"]
         self.assertEqual(sandbox["isolation"], "remote_ephemeral")
+        self.assertEqual(sandbox["protocol_version"], 2)
+        self.assertEqual(sandbox["artifact_channel"], "signed_bounded_input_files_plus_exact_output_allowlist")
+        self.assertEqual(sandbox["runtime_requirements"], ["python3>=3.12"])
         self.assertEqual(sandbox["network"], "deny")
         self.assertTrue(sandbox["destroy_after_execution"])
         self.assertEqual(sandbox["live_gateway_evidence"], "pending")
