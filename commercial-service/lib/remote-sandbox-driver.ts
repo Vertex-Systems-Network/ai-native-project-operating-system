@@ -234,7 +234,8 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
     const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
     if (contentType !== "application/json") throw new SandboxRequestError("invalid_remote_sandbox_response");
 
-    const maxResponseBytes = request.max_output_bytes + request.max_artifact_bytes + RESPONSE_OVERHEAD_BYTES;
+    const maxArtifactWireBytes = Math.ceil(request.max_artifact_bytes / 3) * 4;
+    const maxResponseBytes = request.max_output_bytes + maxArtifactWireBytes + RESPONSE_OVERHEAD_BYTES;
     const declared = Number(response.headers.get("content-length") ?? "0");
     if (declared && (!Number.isSafeInteger(declared) || declared > maxResponseBytes)) {
       throw new SandboxRequestError("remote_sandbox_response_too_large");
