@@ -94,6 +94,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         self.assertEqual(query["pull_requests"], ["write"])
         self.assertEqual(query["checks"], ["read"])
         self.assertEqual(query["statuses"], ["read"])
+        self.assertEqual(query["workflows"], ["write"])
         self.assertNotIn("administration", query)
         self.assertFalse(supervisor["administration_permission_requested"])
         self.assertEqual(
@@ -104,6 +105,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
                 "pull_requests": "write",
                 "checks": "read",
                 "statuses": "read",
+                "workflows": "write",
             },
         )
         self.assertEqual(
