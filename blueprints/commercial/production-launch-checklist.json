@@ -134,7 +134,7 @@
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 005_repository_supervisor_full_apply.sql, only after exact deployment identity has been confirmed."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 006_guarded_empty_repository_initialization.sql, only after exact deployment identity has been confirmed."
     },
     {
       "id": "real_marketplace_events",
