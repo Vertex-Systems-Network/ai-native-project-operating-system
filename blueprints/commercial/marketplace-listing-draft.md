@@ -18,10 +18,11 @@ Core customer projects are not remotely disabled when a commercial entitlement e
 
 ## GitHub App trust architecture
 
-ANPOS commercial production uses **two distinct GitHub Apps**:
+ANPOS commercial production uses **three distinct GitHub Apps**:
 
-1. **Marketplace App — public/customer-facing.** This App owns the GitHub Marketplace listing, is installable by customer accounts, receives Marketplace events, and is used for Marketplace account reconciliation. It must not be granted vendor private-template Administration permission merely to support vendor-side delivery.
-2. **Vendor Distribution App — private/vendor-only.** This App is installed only on the vendor-controlled private commercial-template repository. Archive-first delivery requires Contents: read. Optional collaborator provisioning may require Administration: write on the vendor repository only.
+1. **Marketplace App — public/customer-facing.** This App owns the GitHub Marketplace listing/reconciliation and the bounded Community readiness audit. It remains limited to the exact ten approved single-file reads and must not be widened for Repository Supervisor writes.
+2. **Repository Supervisor App — public/customer-facing repository access.** This App is installed only on customer repositories deliberately authorized for supervision. It uses Metadata: read, Contents: write, Pull requests: write and Checks: read; it does not receive Administration permission, Marketplace billing authority, or vendor private-template access.
+3. **Vendor Distribution App — private/vendor-only.** This App is installed only on vendor-controlled private commercial-template/premium repositories. Archive-first delivery requires Contents: read. Optional collaborator provisioning may require Administration: write on the vendor repository only.
 
 The two App IDs and private keys must be different. Production readiness fails closed if the roles collapse or the same private key is reused. The deprecated single-App blueprint is retained only as a migration marker.
 
