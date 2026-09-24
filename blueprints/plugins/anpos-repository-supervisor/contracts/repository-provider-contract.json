@@ -169,7 +169,7 @@
           "expected_target_head_sha_optional"
         ]
       },
-      "full_mode_apply_status": "sandbox_full_plan_v1_for_non_empty_conflict_free_plans"
+      "full_mode_apply_status": "sandbox_full_plan_v1_plus_guarded_empty_repository_v1"
     },
     {
       "name": "repository_apply_anpos_change",
@@ -364,7 +364,8 @@
     "Direct default-branch writes remain forbidden for normal non-empty flows; bootstrap_empty has one narrow exception for the deterministic initialization seed required by GitHub.",
     "The empty-repository initialization seed must be the verified zero-parent root commit and the full ANPOS feature-branch commit must delete the seed before PR review.",
     "bootstrap_empty requires explicit host/user confirmation before the seed mutation.",
-    "If any failure occurs after the empty-repository seed mutation, the plan enters recovery-required state rather than silently returning to planned."
+    "If any failure occurs after the empty-repository seed mutation, the plan enters recovery-required state rather than silently returning to planned.",
+    "Repository Supervisor App requires Workflows: write only because ANPOS may create or update .github/workflows files; this permission does not bypass branch or Actions policy."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
