@@ -13,6 +13,15 @@ import {
   profileGithubAccount,
   resolveGithubRepository,
 } from "./repository-supervisor-runtime";
+import {
+  applyGithubWritePlan,
+  createGithubWritePlan,
+  getGithubWritePlanCi,
+  getGithubWritePlanPullRequest,
+  mergeGithubWritePlanPullRequest,
+  openGithubWritePlanPullRequest,
+  type PlannedChange,
+} from "./repository-supervisor-write";
 
 type JsonRpcId = string | number | null;
 type JsonRpcRequest = {
@@ -27,6 +36,7 @@ const LEGACY_PROTOCOLS = new Set(["2025-11-25", "2025-06-18", "2025-03-26"]);
 
 const profileSecurity = [{ type: "oauth2", scopes: ["anpos:profile"] }];
 const readSecurity = [{ type: "oauth2", scopes: ["anpos:profile", "anpos:repo:read"] }];
+const writeSecurity = [{ type: "oauth2", scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"] }];
 
 const profileOutputSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -109,6 +119,142 @@ export const MCP_TOOL_DEFINITIONS = [
     securitySchemes: readSecurity,
     _meta: { securitySchemes: readSecurity },
   },
+  {
+    name: "repository_plan_anpos_change",
+    title: "Plan bounded repository change",
+    description: "Create a deterministic encrypted server-side write plan bound to the exact repository identity and observed default-branch head. This tool does not mutate the repository.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        repository_url: { type: "string", minLength: 1, maxLength: 512 },
+        billing_account_id: { type: "integer", minimum: 1 },
+        expected_target_head_sha: { type: "string", pattern: "^[0-9a-fA-F]{40}$" },
+        commit_message: { type: "string", minLength: 1, maxLength: 160 },
+        changes: {
+          type: "array",
+          minItems: 1,
+          maxItems: 24,
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string", minLength: 1, maxLength: 512 },
+              operation: { type: "string", enum: ["upsert", "delete"] },
+              content: { type: "string" },
+            },
+            required: ["path", "operation"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["repository_url", "billing_account_id", "expected_target_head_sha", "commit_message", "changes"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+  {
+    name: "repository_apply_anpos_change",
+    title: "Apply planned change to feature branch",
+    description: "Apply one exact server-issued plan to a new anpos/* feature branch using the expected default-branch head and plan hash. Direct default-branch writes and force pushes are forbidden.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        billing_account_id: { type: "integer", minimum: 1 },
+        plan_id: { type: "string", minLength: 36, maxLength: 36 },
+        plan_hash: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        branch_name: { type: "string", pattern: "^anpos/[a-z0-9][a-z0-9._-]{1,79}$" },
+        idempotency_key: { type: "string", minLength: 8, maxLength: 100 },
+      },
+      required: ["billing_account_id", "plan_id", "plan_hash", "branch_name", "idempotency_key"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+  {
+    name: "repository_open_change_request",
+    title: "Open pull request for planned change",
+    description: "Open a pull request only for the exact applied feature-branch head recorded by the server-side plan ledger.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        billing_account_id: { type: "integer", minimum: 1 },
+        plan_id: { type: "string", minLength: 36, maxLength: 36 },
+        expected_head_sha: { type: "string", pattern: "^[0-9a-fA-F]{40}$" },
+        title: { type: "string", minLength: 1, maxLength: 200 },
+        body: { type: "string", maxLength: 20000 },
+        idempotency_key: { type: "string", minLength: 8, maxLength: 100 },
+      },
+      required: ["billing_account_id", "plan_id", "expected_head_sha", "title", "body", "idempotency_key"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+  {
+    name: "repository_get_change_request",
+    title: "Inspect planned pull request",
+    description: "Re-read the pull request linked to a server-side write plan and return current head/base/mergeability state.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        billing_account_id: { type: "integer", minimum: 1 },
+        plan_id: { type: "string", minLength: 36, maxLength: 36 },
+      },
+      required: ["billing_account_id", "plan_id"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+  {
+    name: "repository_get_ci",
+    title: "Inspect planned commit checks",
+    description: "Read GitHub checks and legacy statuses for the exact applied plan commit.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        billing_account_id: { type: "integer", minimum: 1 },
+        plan_id: { type: "string", minLength: 36, maxLength: 36 },
+        commit_sha: { type: "string", pattern: "^[0-9a-fA-F]{40}$" },
+      },
+      required: ["billing_account_id", "plan_id", "commit_sha"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+  {
+    name: "repository_merge_change_request",
+    title: "Guarded merge planned pull request",
+    description: "Merge only the exact planned pull-request head after fresh mergeability, CI, entitlement, permission, default-branch-head, and resulting-main verification.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        billing_account_id: { type: "integer", minimum: 1 },
+        plan_id: { type: "string", minLength: 36, maxLength: 36 },
+        expected_head_sha: { type: "string", pattern: "^[0-9a-fA-F]{40}$" },
+        idempotency_key: { type: "string", minLength: 8, maxLength: 100 },
+      },
+      required: ["billing_account_id", "plan_id", "expected_head_sha", "idempotency_key"],
+      additionalProperties: false,
+    },
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    securitySchemes: writeSecurity,
+    _meta: { securitySchemes: writeSecurity },
+  },
+
 ] as const;
 
 function rpcResult(id: JsonRpcId | undefined, result: unknown) {
@@ -136,10 +282,11 @@ function requiredString(value: unknown, code: string, maxLength = 512): string {
   return value.trim();
 }
 
-async function authorizeRepositorySupervisorRead(
+async function authorizeRepositorySupervisorCapability(
   principal: McpPrincipal,
   billingAccountId: number,
   requestId: string,
+  capability: "repository_supervisor_read" | "repository_supervisor_write",
 ): Promise<void> {
   const current = await getEntitlement(billingAccountId);
   if (!current) throw new Error("ENTITLEMENT_NOT_FOUND");
@@ -166,7 +313,7 @@ async function authorizeRepositorySupervisorRead(
   await requirePluginCapability(
     snapshot,
     { id: principal.github_user_id, login: principal.github_login },
-    "repository_supervisor_read",
+    capability,
   );
 }
 
@@ -231,7 +378,7 @@ async function callTool(
     requireMcpScope(principal, "anpos:profile");
     requireMcpScope(principal, "anpos:repo:read");
     const billingAccountId = positiveAccountId(args.billing_account_id);
-    await authorizeRepositorySupervisorRead(principal, billingAccountId, randomUUID());
+    await authorizeRepositorySupervisorCapability(principal, billingAccountId, randomUUID(), "repository_supervisor_read");
 
     if (name === "repository_resolve") {
       const repository = requiredString(args.repository_url, "REPOSITORY_URL_REQUIRED");
@@ -245,6 +392,69 @@ async function callTool(
       const repository = requiredString(args.repository_url, "REPOSITORY_URL_REQUIRED");
       const ref = requiredString(args.ref, "IMMUTABLE_REF_REQUIRED", 40);
       return toolSuccess(await getGithubRepositoryAssurance(repository, ref, principal.github_token, fetchImpl));
+    }
+
+    if ([
+      "repository_plan_anpos_change",
+      "repository_apply_anpos_change",
+      "repository_open_change_request",
+      "repository_get_change_request",
+      "repository_get_ci",
+      "repository_merge_change_request",
+    ].includes(name)) {
+      requireMcpScope(principal, "anpos:repo:write");
+      await authorizeRepositorySupervisorCapability(principal, billingAccountId, randomUUID(), "repository_supervisor_write");
+
+      const identity = { id: principal.github_user_id, login: principal.github_login };
+      if (name === "repository_plan_anpos_change") {
+        return toolSuccess(await createGithubWritePlan({
+          repository_url: args.repository_url,
+          expected_target_head_sha: args.expected_target_head_sha,
+          commit_message: args.commit_message,
+          changes: args.changes as PlannedChange[],
+        }, identity, billingAccountId, principal.github_token, fetchImpl));
+      }
+      if (name === "repository_apply_anpos_change") {
+        return toolSuccess(await applyGithubWritePlan({
+          plan_id: requiredString(args.plan_id, "PLAN_ID_REQUIRED", 36),
+          plan_hash: requiredString(args.plan_hash, "PLAN_HASH_REQUIRED", 64),
+          branch_name: args.branch_name,
+          idempotency_key: args.idempotency_key,
+        }, identity, billingAccountId, principal.github_token, fetchImpl));
+      }
+      if (name === "repository_open_change_request") {
+        return toolSuccess(await openGithubWritePlanPullRequest({
+          plan_id: requiredString(args.plan_id, "PLAN_ID_REQUIRED", 36),
+          expected_head_sha: requiredString(args.expected_head_sha, "EXPECTED_HEAD_SHA_REQUIRED", 40),
+          title: requiredString(args.title, "PULL_REQUEST_TITLE_REQUIRED", 200),
+          body: typeof args.body === "string" ? args.body : "",
+          idempotency_key: args.idempotency_key,
+        }, identity, billingAccountId, principal.github_token, fetchImpl));
+      }
+      if (name === "repository_get_change_request") {
+        return toolSuccess(await getGithubWritePlanPullRequest(
+          requiredString(args.plan_id, "PLAN_ID_REQUIRED", 36),
+          identity,
+          billingAccountId,
+          principal.github_token,
+          fetchImpl,
+        ));
+      }
+      if (name === "repository_get_ci") {
+        return toolSuccess(await getGithubWritePlanCi(
+          requiredString(args.plan_id, "PLAN_ID_REQUIRED", 36),
+          requiredString(args.commit_sha, "COMMIT_SHA_REQUIRED", 40),
+          identity,
+          billingAccountId,
+          principal.github_token,
+          fetchImpl,
+        ));
+      }
+      return toolSuccess(await mergeGithubWritePlanPullRequest({
+        plan_id: requiredString(args.plan_id, "PLAN_ID_REQUIRED", 36),
+        expected_head_sha: requiredString(args.expected_head_sha, "EXPECTED_HEAD_SHA_REQUIRED", 40),
+        idempotency_key: args.idempotency_key,
+      }, identity, billingAccountId, principal.github_token, fetchImpl));
     }
     throw new Error("MCP_TOOL_NOT_FOUND");
   } catch (error) {
@@ -275,7 +485,7 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.2",
+            version: "0.4.3",
           },
         },
         instructions: "Use the authenticated profile first when account identity is unclear. Paid repository tools require an explicit billing_account_id and are always re-authorized server-side.",
@@ -295,7 +505,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.2" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.3" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };
