@@ -429,7 +429,6 @@
     "supervisor_full_plan_apply_customer_provider_token_never_forwarded_to_sandbox": true,
     "supervisor_full_plan_apply_signed_receipt_required_for_merge": true,
     "supervisor_full_plan_apply_uses_operation_lease": true,
-    "supervisor_full_plan_apply_conflict_resolution_pending": true,
     "supervisor_bootstrap_empty_guarded_source": true,
     "supervisor_bootstrap_empty_explicit_confirmation_required": true,
     "supervisor_bootstrap_empty_single_default_branch_seed_exception": true,
@@ -440,6 +439,11 @@
     "supervisor_non_empty_direct_default_branch_write_forbidden": true,
     "supervisor_force_push_forbidden": true,
     "supervisor_normal_non_empty_direct_default_branch_write_forbidden": true,
-    "supervisor_empty_repository_seed_is_only_default_branch_exception": true
+    "supervisor_empty_repository_seed_is_only_default_branch_exception": true,
+    "supervisor_full_plan_conflict_resolution_source": "commercial-service/lib/repository-supervisor-planner.ts",
+    "supervisor_full_plan_conflict_resolution_source_plan_hash_required": true,
+    "supervisor_full_plan_conflict_resolution_target_git_object_required": true,
+    "supervisor_full_plan_conflict_resolution_migration_review_ack_required": true,
+    "supervisor_full_plan_conflict_resolution_source_plan_mutation_forbidden": true
   }
 }
