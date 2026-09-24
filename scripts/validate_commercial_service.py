@@ -13,11 +13,11 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/execution-sandbox.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/plugin-entitlements.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/plugin-entitlements.test.ts", "tests/execution-sandbox.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts",
-    "app/api/webhooks/github/marketplace/route.ts",
+    "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts",
     "app/api/auth/github/callback/route.ts", "app/setup/github/route.ts", "app/community/page.tsx", "app/community/CommunityClient.tsx",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts", "app/api/v1/releases/current/route.ts",
@@ -195,6 +195,35 @@ def main() -> int:
         "Repository Supervisor GitHub runtime foundation",
     )
     require_markers(
+        "lib/plugin-entitlements.ts",
+        (
+            "PLUGIN_CAPABILITIES", "community_repository_readiness_audit", "repository_supervisor_read",
+            "repository_supervisor_write", "protocol_update_channel", "private_template_access",
+            "organization_seat_required", "capability_not_implemented", "requirePluginCapability",
+        ),
+        "Plugin subscription entitlement capability bridge",
+    )
+    require_markers(
+        "tests/plugin-entitlements.test.ts",
+        (
+            "Community stays limited to bounded readiness capability",
+            "Developer entitlement authorizes read-only Repository Supervisor capability",
+            "principal mismatch and inactive billing",
+            "Organization paid capability requires an active assigned seat",
+        ),
+        "Plugin entitlement bridge unit tests",
+    )
+    require_markers(
+        "app/api/v1/plugin/entitlements/current/route.ts",
+        (
+            "x-anpos-account-id", "requireGithubAccountAccess", "reconcileEntitlement",
+            "buildPluginCapabilityMatrix", "plugin_entitlement_bridge",
+            "authenticated_github_principal_plus_x_anpos_account_id", "github_marketplace",
+            "private, no-store",
+        ),
+        "Plugin entitlement bridge API",
+    )
+    require_markers(
         "lib/execution-sandbox.ts",
         (
             "SandboxDriver", "normalizeSandboxRequest", "executeWithSandboxDriver",
@@ -369,7 +398,7 @@ def main() -> int:
         fail("commercial service API contract must be schema_version 6")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
-        "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository",
+        "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
         "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
         "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",

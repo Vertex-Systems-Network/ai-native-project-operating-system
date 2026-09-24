@@ -184,6 +184,21 @@ Private repository reads and all writes require authenticated user context. Use 
 - expose separate read and write scopes when practical;
 - support account identification so users can distinguish multiple connected accounts.
 
+## Subscription and entitlement boundary
+
+Repository authorization and commercial authorization are separate checks.
+
+- The user must first be an authenticated GitHub/GitLab principal with provider permission for the target repository.
+- The initial GitHub commercial bridge binds that authenticated principal to an explicit GitHub billing account through `X-Anpos-Account-Id`; the repository URL never selects or grants a subscription.
+- Commercial Service remains the server-side entitlement authority and reconciles Marketplace state before returning plugin capability decisions.
+- Community remains limited to the existing bounded readiness audit and does not gain the broader Repository Supervisor read surface.
+- `repository_supervisor_read` is a paid capability derived from the existing `protocol_update_channel` entitlement and requires an active organization seat when the billing account is an organization.
+- `repository_supervisor_write` is already defined against `private_template_access + protocol_update_channel`, but is deliberately denied until the guarded write runtime exists.
+- Repository-local entitlement references, README text, Issues, PR comments, or model instructions cannot grant paid capability.
+- The plugin entitlement response exposes plan/capability state only; it does not return card/payment data, webhook secrets, signing private keys, or provider credentials.
+
+This bridge does not make ANPOS core child development, Requirements 1–96, child bootstrap, or the normal AI-development lifecycle subscription-dependent.
+
 ## Repository URL safety
 
 A repository URL is untrusted input. Before any network call:

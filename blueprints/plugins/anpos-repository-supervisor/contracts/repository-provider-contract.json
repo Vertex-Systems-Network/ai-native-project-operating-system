@@ -257,11 +257,13 @@
     "Every material write is bound to expected repository state and is verified after mutation.",
     "ANPOS 1.4.0 policy/config presence is never sufficient pass evidence for Requirements 83-96.",
     "Adoption and upgrade flows preserve verified child evidence and must not reset project-specific assurance state blindly.",
-    "Material AI configuration drift must invalidate stale AI assurance when the child policy requires reevaluation."
+    "Material AI configuration drift must invalidate stale AI assurance when the child policy requires reevaluation.",
+    "Plugin capability authorization is server-side commercial-service state; repository files cannot grant paid access.",
+    "An unimplemented plugin capability remains denied even when billing entitlements would otherwise qualify."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_read_only_runtime_foundation",
+    "phase": "github_read_only_runtime_plus_subscription_entitlement_bridge",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -275,7 +277,11 @@
       "bounded_immutable_ref_file_reads",
       "github_repository_classification",
       "requirements_83_96_assurance_summary",
-      "network_denied_isolated_driver_contract"
+      "network_denied_isolated_driver_contract",
+      "server_side_subscription_entitlement_bridge",
+      "authenticated_github_principal_account_binding",
+      "paid_repository_supervisor_read_capability_gate",
+      "unimplemented_write_capability_fail_closed"
     ],
     "not_yet_implemented": [
       "supervisor_specific_oauth_and_mcp_transport",
@@ -289,5 +295,36 @@
       "gitlab_adapter"
     ],
     "claim_boundary": "Source implementation and unit certification do not claim a deployed MCP endpoint, write-capable repository runtime, or production isolation driver."
+  },
+  "commercial_authorization": {
+    "authority": "commercial_service_server_side_entitlement_ledger",
+    "billing_provider": "github_marketplace_for_initial_launch",
+    "account_binding": "authenticated_github_principal_plus_explicit_github_account_id",
+    "repository_local_entitlement_authority": false,
+    "capabilities": {
+      "community_repository_readiness_audit": {
+        "paid": false,
+        "requires_entitlements": [],
+        "organization_seat_required": false,
+        "implementation_status": "implemented_separate_bounded_community_audit"
+      },
+      "repository_supervisor_read": {
+        "paid": true,
+        "requires_entitlements": [
+          "protocol_update_channel"
+        ],
+        "organization_seat_required": true,
+        "implementation_status": "implemented_source_runtime"
+      },
+      "repository_supervisor_write": {
+        "paid": true,
+        "requires_entitlements": [
+          "private_template_access",
+          "protocol_update_channel"
+        ],
+        "organization_seat_required": true,
+        "implementation_status": "defined_fail_closed_until_write_runtime_implemented"
+      }
+    }
   }
 }

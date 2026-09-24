@@ -84,7 +84,11 @@
       "id": "hosted_orchestrator_when_offered",
       "availability": "planned_not_implemented",
       "commercial_differentiator_status": "blocked_until_hosted_service_exists",
-      "evidence": ["ORCHESTRATOR.md", "MULTI-AGENT-ORCHESTRATION.md", "config/licensing/product-catalog.json"],
+      "evidence": [
+        "ORCHESTRATOR.md",
+        "MULTI-AGENT-ORCHESTRATION.md",
+        "config/licensing/product-catalog.json"
+      ],
       "notes": "Repository-side orchestration protocol exists. No ANPOS-operated hosted orchestrator service is currently implemented or launch-certified."
     },
     {
@@ -120,7 +124,11 @@
       "id": "hosted_or_self_hosted_orchestrator_when_offered",
       "availability": "planned_not_implemented",
       "commercial_differentiator_status": "blocked_until_productized",
-      "evidence": ["ORCHESTRATOR.md", "MULTI-AGENT-ORCHESTRATION.md", "config/licensing/product-catalog.json"],
+      "evidence": [
+        "ORCHESTRATOR.md",
+        "MULTI-AGENT-ORCHESTRATION.md",
+        "config/licensing/product-catalog.json"
+      ],
       "notes": "The orchestration protocol is present, but neither a vendor-hosted service nor an enterprise self-hosting distribution/support package is currently productized."
     },
     {
@@ -152,17 +160,29 @@
     {
       "id": "project_research_and_planning",
       "availability": "implemented_protocol",
-      "evidence": ["START-HERE.md", "PROJECT-INITIALIZATION.md", "DEVELOPMENT-LIFECYCLE.md"]
+      "evidence": [
+        "START-HERE.md",
+        "PROJECT-INITIALIZATION.md",
+        "DEVELOPMENT-LIFECYCLE.md"
+      ]
     },
     {
       "id": "selectable_project_management",
       "availability": "capability_dependent",
-      "evidence": ["config/integrations/project-management.json", "PROJECT-MANAGEMENT.md"]
+      "evidence": [
+        "config/integrations/project-management.json",
+        "PROJECT-MANAGEMENT.md"
+      ]
     },
     {
       "id": "selectable_multi_agent_execution",
       "availability": "capability_dependent",
-      "evidence": ["config/ai/agent-catalog.json", "MULTI-AGENT-ORCHESTRATION.md", "ORCHESTRATOR.md", "SUPERVISOR.md"]
+      "evidence": [
+        "config/ai/agent-catalog.json",
+        "MULTI-AGENT-ORCHESTRATION.md",
+        "ORCHESTRATOR.md",
+        "SUPERVISOR.md"
+      ]
     },
     {
       "id": "provider_compatibility_contracts",
@@ -191,22 +211,37 @@
     {
       "id": "quality_and_security_governance",
       "availability": "implemented_protocol",
-      "evidence": ["config/quality/quality-policy.json", "config/security/control-plane-policy.json", "blueprints/github/workflows/repository-quality.yml"]
+      "evidence": [
+        "config/quality/quality-policy.json",
+        "config/security/control-plane-policy.json",
+        "blueprints/github/workflows/repository-quality.yml"
+      ]
     },
     {
       "id": "design_assurance",
       "availability": "implemented_protocol",
-      "evidence": ["config/design/design-assurance.json", "DESIGN-DATA-OPERATIONS.md"]
+      "evidence": [
+        "config/design/design-assurance.json",
+        "DESIGN-DATA-OPERATIONS.md"
+      ]
     },
     {
       "id": "release_and_operations_governance",
       "availability": "implemented_protocol",
-      "evidence": ["config/release/release-policy.json", "config/operations/operations-policy.json", "PRODUCTION-ASSURANCE.md"]
+      "evidence": [
+        "config/release/release-policy.json",
+        "config/operations/operations-policy.json",
+        "PRODUCTION-ASSURANCE.md"
+      ]
     },
     {
       "id": "continuous_improvement",
       "availability": "implemented_protocol",
-      "evidence": ["CONTINUOUS-IMPROVEMENT.md", "config/maintenance/innovation-scout.json", "config/maintenance/technology-watch.json"]
+      "evidence": [
+        "CONTINUOUS-IMPROVEMENT.md",
+        "config/maintenance/innovation-scout.json",
+        "config/maintenance/technology-watch.json"
+      ]
     },
     {
       "id": "community_repository_readiness_audit",
@@ -225,7 +260,23 @@
     {
       "id": "commercial_entitlement_and_distribution_runtime",
       "availability": "implemented_commercial_runtime",
-      "evidence": ["commercial-service/README.md", "COMMERCIAL-LICENSING.md"]
+      "evidence": [
+        "commercial-service/README.md",
+        "COMMERCIAL-LICENSING.md"
+      ]
+    },
+    {
+      "id": "repository_supervisor_plugin_runtime",
+      "availability": "partial_implementation",
+      "evidence": [
+        "blueprints/plugins/anpos-repository-supervisor/README.md",
+        "blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json",
+        "commercial-service/lib/repository-supervisor-runtime.ts",
+        "commercial-service/lib/plugin-entitlements.ts",
+        "commercial-service/app/api/v1/plugin/entitlements/current/route.ts",
+        "commercial-service/tests/plugin-entitlements.test.ts"
+      ],
+      "notes": "GitHub read-only Repository Supervisor runtime foundation and server-side subscription entitlement bridge are implemented in source. Community remains limited to its bounded readiness audit. Paid Repository Supervisor read access is derived from the existing protocol_update_channel entitlement; write capability is defined but fail-closed until the guarded write runtime exists. This does not make core ANPOS child development billing-dependent and is not production plugin deployment evidence."
     }
   ]
 }
