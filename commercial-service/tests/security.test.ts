@@ -19,6 +19,7 @@ const MANAGED_ENV = [
   "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
   "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
   "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+  "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
   "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
   "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_ENTITLEMENT_ISSUER",
@@ -36,7 +37,20 @@ function configure() {
   process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nmarketplace-placeholder\n-----END RSA PRIVATE KEY-----";
   process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.test-client-123456";
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.GITHUB_SUPERVISOR_APP_ID = "234567";
+  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-234567";
+  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = "u".repeat(48);
   process.env.GITHUB_VENDOR_APP_ID = "654321";
+  process.env.GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
+  assert.ok(configurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_ROLE_COLLAPSE"));
+  process.env.GITHUB_SUPERVISOR_APP_ID = "234567";
+  process.env.GITHUB_SUPERVISOR_CLIENT_ID = process.env.GITHUB_MARKETPLACE_CLIENT_ID;
+  assert.ok(configurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_OAUTH_CLIENT_REUSE"));
+  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-234567";
+  process.env.GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_VENDOR_APP_ID;
+  assert.ok(configurationProblems().includes("unsafe:GITHUB_SUPERVISOR_VENDOR_APP_ROLE_COLLAPSE"));
+  process.env.GITHUB_SUPERVISOR_APP_ID = "234567";
+
   process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nvendor-placeholder\n-----END RSA PRIVATE KEY-----";
   process.env.ANPOS_ENTITLEMENT_PRIVATE_KEY = entitlementPrivateKey;
   process.env.ANPOS_ENTITLEMENT_KEY_ID = "test-key-1";
@@ -111,6 +125,7 @@ test("configuration rejects weak missing or mutable production controls", () => 
   process.env.GITHUB_WEBHOOK_SECRET = "short";
   process.env.ANPOS_OPERATOR_TOKEN = "tiny";
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "tiny";
+  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = "tiny";
   process.env.ANPOS_SESSION_SECRET = "tiny";
   process.env.ANPOS_PUBLIC_BASE_URL = "http://license.example.test";
   process.env.ANPOS_COMMERCIAL_RELEASE_REF = "main";
@@ -118,6 +133,7 @@ test("configuration rejects weak missing or mutable production controls", () => 
   assert.ok(problems.includes("weak:GITHUB_WEBHOOK_SECRET"));
   assert.ok(problems.includes("weak:ANPOS_OPERATOR_TOKEN"));
   assert.ok(problems.includes("weak:GITHUB_MARKETPLACE_CLIENT_SECRET"));
+  assert.ok(problems.includes("weak:GITHUB_SUPERVISOR_CLIENT_SECRET"));
   assert.ok(problems.includes("weak:ANPOS_SESSION_SECRET"));
   assert.ok(problems.includes("invalid:ANPOS_PUBLIC_BASE_URL"));
   assert.ok(problems.includes("invalid:ANPOS_COMMERCIAL_RELEASE_REF"));
@@ -125,7 +141,7 @@ test("configuration rejects weak missing or mutable production controls", () => 
   assert.ok(configurationProblems().includes("missing:ANPOS_ORG_SEAT_LIMITS"));
 });
 
-test("Marketplace and vendor GitHub App roles cannot collapse", () => {
+test("Marketplace, Supervisor and vendor GitHub App roles cannot collapse", () => {
   clearManagedEnv();
   configure();
   process.env.GITHUB_VENDOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
@@ -141,12 +157,16 @@ test("legacy single-app credentials do not satisfy split configuration", () => {
   configure();
   delete process.env.GITHUB_MARKETPLACE_APP_ID;
   delete process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY;
+  delete process.env.GITHUB_SUPERVISOR_APP_ID;
+  delete process.env.GITHUB_SUPERVISOR_CLIENT_ID;
+  delete process.env.GITHUB_SUPERVISOR_CLIENT_SECRET;
   delete process.env.GITHUB_VENDOR_APP_ID;
   delete process.env.GITHUB_VENDOR_APP_PRIVATE_KEY;
   process.env.GITHUB_APP_ID = "123456";
   process.env.GITHUB_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nlegacy-placeholder\n-----END RSA PRIVATE KEY-----";
   const problems = configurationProblems();
   assert.ok(problems.includes("missing:GITHUB_MARKETPLACE_APP_ID"));
+  assert.ok(problems.includes("missing:GITHUB_SUPERVISOR_APP_ID"));
   assert.ok(problems.includes("missing:GITHUB_VENDOR_APP_ID"));
 });
 
