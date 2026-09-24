@@ -32,6 +32,7 @@ export type RepositoryWriteChange = {
   action: "upsert" | "delete";
   content?: string;
   expected_blob_sha: string | null;
+  expected_mode: "100644" | "100755" | null;
 };
 
 export type RepositoryWritePlan = {
@@ -277,6 +278,11 @@ function normalizeChanges(input: unknown): RepositoryWriteChangeInput[] {
     if (item.action !== "upsert" && item.action !== "delete") throw new Error("INVALID_REPOSITORY_WRITE_ACTION");
     if (item.action === "delete") return { path, action: "delete" as const };
     if (typeof item.content !== "string") throw new Error("REPOSITORY_WRITE_CONTENT_REQUIRED");
+    if (
+      item.content.includes("-----BEGIN PRIVATE KEY-----")
+      || /(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}/.test(item.content)
+      || /AKIA[0-9A-Z]{16}/.test(item.content)
+    ) throw new Error("SECRET_LIKE_CONTENT_FORBIDDEN");
     const bytes = Buffer.byteLength(item.content, "utf8");
     if (bytes > MAX_FILE_BYTES) throw new Error("REPOSITORY_WRITE_FILE_TOO_LARGE");
     total += bytes;
@@ -350,28 +356,72 @@ function repoPath(fullName: string): string {
   return `${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 }
 
-async function observedBlobSha(
+async function baseTreeSha(
   fullName: string,
-  path: string,
   ref: string,
   token: string,
   fetchImpl: FetchLike,
-): Promise<string | null> {
-  const encoded = path.split("/").map(encodeURIComponent).join("/");
-  const response = await github(
-    `/repos/${repoPath(fullName)}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
-    token,
-    fetchImpl,
-  );
-  if (response.status === 404) return null;
-  if (response.status === 401) throw new Error("GITHUB_AUTHENTICATION_REQUIRED");
-  if (response.status === 403) throw new Error("REPOSITORY_WRITE_FORBIDDEN");
-  if (!response.ok) throw new Error("REPOSITORY_FILE_PRECONDITION_LOOKUP_FAILED");
-  const body = await json<{ type?: string; sha?: string }>(response, "REPOSITORY_FILE_PRECONDITION_INVALID");
-  if (body.type !== "file" || !body.sha || !/^[0-9a-f]{40}$/i.test(body.sha)) {
-    throw new Error("REPOSITORY_FILE_PRECONDITION_INVALID");
+): Promise<string> {
+  const response = await github(`/repos/${repoPath(fullName)}/git/commits/${ref}`, token, fetchImpl);
+  if (!response.ok) throw new Error("BASE_COMMIT_LOOKUP_FAILED");
+  const commit = await json<{ tree?: { sha?: string } }>(response, "BASE_COMMIT_INVALID");
+  const treeSha = commit.tree?.sha;
+  if (!treeSha || !/^[0-9a-f]{40}$/i.test(treeSha)) throw new Error("BASE_TREE_INVALID");
+  return treeSha;
+}
+
+type TreeEntry = { path?: string; mode?: string; type?: string; sha?: string };
+
+async function treeEntries(
+  fullName: string,
+  treeSha: string,
+  token: string,
+  fetchImpl: FetchLike,
+  cache: Map<string, TreeEntry[]>,
+): Promise<TreeEntry[]> {
+  const cached = cache.get(treeSha);
+  if (cached) return cached;
+  const response = await github(`/repos/${repoPath(fullName)}/git/trees/${treeSha}`, token, fetchImpl);
+  if (!response.ok) throw new Error("REPOSITORY_TREE_LOOKUP_FAILED");
+  const body = await json<{ tree?: TreeEntry[]; truncated?: boolean }>(response, "REPOSITORY_TREE_RESPONSE_INVALID");
+  if (body.truncated === true || !Array.isArray(body.tree)) throw new Error("REPOSITORY_TREE_RESPONSE_INVALID");
+  cache.set(treeSha, body.tree);
+  return body.tree;
+}
+
+async function observedBlobState(
+  fullName: string,
+  path: string,
+  rootTreeSha: string,
+  token: string,
+  fetchImpl: FetchLike,
+  cache: Map<string, TreeEntry[]>,
+): Promise<{ sha: string; mode: "100644" | "100755" } | null> {
+  const parts = path.split("/");
+  let treeSha = rootTreeSha;
+  for (let index = 0; index < parts.length; index += 1) {
+    const entries = await treeEntries(fullName, treeSha, token, fetchImpl, cache);
+    const entry = entries.find((candidate) => candidate.path === parts[index]);
+    if (!entry) return null;
+    const last = index === parts.length - 1;
+    if (!last) {
+      if (entry.type !== "tree" || !entry.sha || !/^[0-9a-f]{40}$/i.test(entry.sha)) {
+        throw new Error("REPOSITORY_WRITE_PATH_COLLISION");
+      }
+      treeSha = entry.sha;
+      continue;
+    }
+    if (
+      entry.type !== "blob"
+      || !entry.sha
+      || !/^[0-9a-f]{40}$/i.test(entry.sha)
+      || !["100644", "100755"].includes(String(entry.mode))
+    ) {
+      throw new Error("UNSUPPORTED_REPOSITORY_WRITE_TARGET");
+    }
+    return { sha: entry.sha, mode: entry.mode as "100644" | "100755" };
   }
-  return body.sha;
+  return null;
 }
 
 async function requireActiveWritableProject(
@@ -404,17 +454,24 @@ export async function createRepositoryWritePlan(input: {
   const audit = await requireActiveWritableProject(input.repository, input.expectedTargetHeadSha, input.token, fetchImpl);
   const resolutionId = repositoryId(audit.canonical_repository_id);
 
+  const rootTreeSha = await baseTreeSha(audit.full_name, input.expectedTargetHeadSha, input.token, fetchImpl);
+  const treeCache = new Map<string, TreeEntry[]>();
   const bound: RepositoryWriteChange[] = [];
   for (const change of changes) {
-    const expected = await observedBlobSha(
+    const expected = await observedBlobState(
       audit.full_name,
       change.path,
-      input.expectedTargetHeadSha,
+      rootTreeSha,
       input.token,
       fetchImpl,
+      treeCache,
     );
     if (change.action === "delete" && expected === null) throw new Error("DELETE_TARGET_NOT_FOUND");
-    bound.push({ ...change, expected_blob_sha: expected });
+    bound.push({
+      ...change,
+      expected_blob_sha: expected?.sha ?? null,
+      expected_mode: expected?.mode ?? null,
+    });
   }
 
   const planId = randomUUID();
@@ -451,6 +508,7 @@ export async function createRepositoryWritePlan(input: {
       path: change.path,
       action: change.action,
       expected_blob_sha: change.expected_blob_sha,
+      expected_mode: change.expected_mode,
       bytes: Buffer.byteLength(change.content ?? "", "utf8"),
     })),
     commit_message: plan.commit_message,
@@ -514,15 +572,21 @@ async function assertPlanStillMatches(plan: RepositoryWritePlan, token: string, 
   if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) {
     throw new Error("REPOSITORY_IDENTITY_CHANGED");
   }
+  const rootTreeSha = await baseTreeSha(plan.repository_full_name, plan.expected_target_head_sha, token, fetchImpl);
+  const treeCache = new Map<string, TreeEntry[]>();
   for (const change of plan.changes) {
-    const observed = await observedBlobSha(
+    const observed = await observedBlobState(
       plan.repository_full_name,
       change.path,
-      plan.expected_target_head_sha,
+      rootTreeSha,
       token,
       fetchImpl,
+      treeCache,
     );
-    if (observed !== change.expected_blob_sha) throw new Error("REPOSITORY_PATH_PRECONDITION_CHANGED");
+    if (
+      (observed?.sha ?? null) !== change.expected_blob_sha
+      || (observed?.mode ?? null) !== change.expected_mode
+    ) throw new Error("REPOSITORY_PATH_PRECONDITION_CHANGED");
   }
   return audit;
 }
@@ -567,8 +631,8 @@ export async function applyRepositoryWritePlan(input: {
     if (!baseTree || !/^[0-9a-f]{40}$/i.test(baseTree)) throw new Error("BASE_TREE_INVALID");
 
     const tree = plan.changes.map((change) => change.action === "delete"
-      ? { path: change.path, mode: "100644", type: "blob", sha: null }
-      : { path: change.path, mode: "100644", type: "blob", content: change.content ?? "" });
+      ? { path: change.path, mode: change.expected_mode ?? "100644", type: "blob", sha: null }
+      : { path: change.path, mode: change.expected_mode ?? "100644", type: "blob", content: change.content ?? "" });
 
     const treeResponse = await github(`/repos/${path}/git/trees`, input.token, fetchImpl, {
       method: "POST",
