@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -263,11 +263,16 @@
     "MCP authorization codes are one-time, short-lived and bound to exact client, redirect, resource and PKCE verifier.",
     "MCP access tokens are opaque, short-lived and store GitHub provider credentials only as encrypted server-side state.",
     "A billing_account_id tool input is only a selector; server-side GitHub principal access, entitlement and organization-seat checks remain authoritative.",
-    "MCP write scope is not issued until the guarded write runtime exists."
+    "MCP write scope is not issued until the guarded write runtime exists.",
+    "Marketplace billing/Community App permissions must never be widened to implement Repository Supervisor writes.",
+    "Repository Supervisor writes use a distinct installable GitHub App and must not reuse Vendor Distribution credentials.",
+    "Every write is bound to a server-issued plan hash, canonical repository identity and exact default-branch head.",
+    "Normal apply creates a new anpos/* feature branch from one atomic Git Data commit; default-branch direct write and force push are forbidden.",
+    "Guarded merge must re-read exact PR head/base, exact commit CI, current default-branch head, repository policy response and resulting default-branch head."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_read_only_runtime_plus_entitlement_bridge_plus_mcp_oauth_transport",
+    "phase": "github_guarded_write_runtime_source_implemented",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -275,7 +280,13 @@
       "repository_resolve",
       "repository_profile",
       "repository_audit",
-      "repository_get_assurance"
+      "repository_get_assurance",
+      "repository_plan_anpos_change",
+      "repository_apply_anpos_change",
+      "repository_open_change_request",
+      "repository_get_change_request",
+      "repository_get_ci",
+      "repository_merge_change_request"
     ],
     "implemented_support": [
       "bounded_immutable_ref_file_reads",
@@ -291,19 +302,21 @@
       "replay_safe_opaque_mcp_access_tokens",
       "stateless_streamable_http_post_mcp_transport",
       "openai_compatible_authenticated_profile_tool",
-      "explicit_billing_account_binding_with_server_side_reauthorization"
+      "explicit_billing_account_binding_with_server_side_reauthorization",
+      "dedicated_repository_supervisor_github_app_role",
+      "server_issued_expected_head_bound_write_plan",
+      "encrypted_write_plan_payload_ledger",
+      "atomic_git_data_feature_branch_apply",
+      "pull_request_open_and_reread",
+      "exact_commit_ci_reread",
+      "guarded_expected_head_merge_and_resulting_main_verification"
     ],
     "not_yet_implemented": [
-      "repository_plan_anpos_change",
-      "repository_apply_anpos_change",
-      "repository_open_change_request",
-      "repository_get_change_request",
-      "repository_get_ci",
-      "repository_merge_change_request",
+      "full_anpos_bootstrap_adoption_upgrade_plan_generator",
       "production_sandbox_driver",
       "gitlab_adapter"
     ],
-    "claim_boundary": "Source implementation and unit certification do not claim a publicly deployed/registered plugin connection, production MCP E2E, write-capable repository runtime, or production isolation driver."
+    "claim_boundary": "Source implementation and unit certification do not claim a publicly deployed/registered plugin connection, production write E2E, production isolation driver, or complete bootstrap/adoption/upgrade plan generation."
   },
   "commercial_authorization": {
     "authority": "commercial_service_server_side_entitlement_ledger",
@@ -332,7 +345,7 @@
           "protocol_update_channel"
         ],
         "organization_seat_required": true,
-        "implementation_status": "defined_fail_closed_until_write_runtime_implemented"
+        "implementation_status": "guarded_write_runtime_source_implemented_production_e2e_pending"
       }
     }
   },
@@ -349,13 +362,15 @@
     "resource": "{ANPOS_PUBLIC_BASE_URL}/mcp",
     "issued_scopes": [
       "anpos:profile",
-      "anpos:repo:read"
+      "anpos:repo:read",
+      "anpos:repo:write"
     ],
-    "write_scope_available": false,
+    "write_scope_available": true,
     "pkce": "S256",
     "access_token": "opaque_short_lived_hashed_ledger",
     "github_provider_token": "encrypted_server_side_only",
     "profile_tool": "repository_profile",
-    "profile_meta": "openai/profile=true"
+    "profile_meta": "openai/profile=true",
+    "github_app_role": "dedicated_repository_supervisor_app"
   }
 }
