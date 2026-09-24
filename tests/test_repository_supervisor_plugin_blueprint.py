@@ -37,7 +37,7 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertIn("plan_hash", plan["required_outputs"])
         self.assertIn("action_preview", plan["required_outputs"])
         self.assertIn("requirements_83_96", plan["required_outputs"])
-        self.assertEqual(plan["full_mode_apply_status"], "sandbox_full_plan_v1_for_non_empty_conflict_free_plans")
+        self.assertEqual(plan["full_mode_apply_status"], "sandbox_full_plan_v1_plus_guarded_empty_repository_v1")
         self.assertNotIn(
             "full_anpos_bootstrap_adoption_upgrade_plan_generator",
             contract["implementation"]["not_yet_implemented"],
