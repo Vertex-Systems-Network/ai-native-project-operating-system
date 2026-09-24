@@ -18,6 +18,7 @@ const README_SHA = "c".repeat(40);
 const CREATED_TREE = "d".repeat(40);
 const FEATURE_HEAD = "e".repeat(40);
 const MERGE_HEAD = "f".repeat(40);
+const BILLING_ACCOUNT_ID = 42;
 
 class MemoryStore implements RepositoryWritePlanStore {
   plans = new Map<string, RepositoryWritePlan>();
@@ -39,6 +40,14 @@ class MemoryStore implements RepositoryWritePlanStore {
     plan.status = "applied";
     plan.branch_name = branchName;
     plan.resulting_head_sha = resultingHeadSha;
+  }
+
+  async markChangeRequest(planId: string, changeRequestId: number) {
+    const plan = this.plans.get(planId);
+    if (!plan || plan.status !== "applied" || plan.change_request_id != null) {
+      throw new Error("REPOSITORY_WRITE_PLAN_CHANGE_REQUEST_STATE_CHANGED");
+    }
+    plan.change_request_id = changeRequestId;
   }
 
   async beginOperation(input: {
@@ -237,6 +246,43 @@ function githubHarness(options: { active?: boolean } = {}) {
   };
 }
 
+async function preparePlanAndPullRequest(store: MemoryStore, harness: ReturnType<typeof githubHarness>) {
+  const plan = await createRepositoryWritePlan({
+    repository: "example/project",
+    expectedTargetHeadSha: HEAD,
+    changes: [{ path: "README.md", action: "upsert", content: "updated\n" }],
+    commitMessage: "Update README",
+    githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
+    token: "token",
+  }, store, harness.fetchImpl);
+
+  await applyRepositoryWritePlan({
+    planId: plan.plan_id,
+    branchName: "anpos/milestone",
+    idempotencyKey: `apply:prepare:${plan.plan_id.slice(0, 8)}`,
+    confirmDeletions: false,
+    githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
+    token: "token",
+  }, store, harness.fetchImpl);
+
+  await openRepositoryChangeRequest({
+    repository: "example/project",
+    planId: plan.plan_id,
+    headBranch: "anpos/milestone",
+    expectedHeadSha: FEATURE_HEAD,
+    title: "Update README",
+    body: "Bound change",
+    idempotencyKey: `pr:prepare:${plan.plan_id.slice(0, 8)}`,
+    githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
+    token: "token",
+  }, store, harness.fetchImpl);
+
+  return plan;
+}
+
 test("guarded write plan binds active project head, blob SHA and executable mode", async () => {
   const store = new MemoryStore();
   const harness = githubHarness();
@@ -249,6 +295,7 @@ test("guarded write plan binds active project head, blob SHA and executable mode
     ],
     commitMessage: "Update project docs",
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
 
@@ -271,6 +318,7 @@ test("feature-branch apply preserves mode and replays successful idempotency key
     changes: [{ path: "README.md", action: "upsert", content: "updated\n" }],
     commitMessage: "Update README",
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
 
@@ -280,6 +328,7 @@ test("feature-branch apply preserves mode and replays successful idempotency key
     idempotencyKey: "apply:milestone:001",
     confirmDeletions: false,
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   };
   const applied = await applyRepositoryWritePlan(input, store, harness.fetchImpl);
@@ -300,6 +349,7 @@ test("applied plan is bound to exact feature branch and head before PR creation"
     changes: [{ path: "README.md", action: "upsert", content: "updated\n" }],
     commitMessage: "Update README",
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
   await applyRepositoryWritePlan({
@@ -308,6 +358,7 @@ test("applied plan is bound to exact feature branch and head before PR creation"
     idempotencyKey: "apply:milestone:002",
     confirmDeletions: false,
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
 
@@ -335,6 +386,7 @@ test("applied plan is bound to exact feature branch and head before PR creation"
     body: "Bound change",
     idempotencyKey: "pr:milestone:001",
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
   assert.equal(opened.change_request_id, 7);
@@ -345,6 +397,7 @@ test("applied plan is bound to exact feature branch and head before PR creation"
 test("guarded merge requires clean exact-head PR and green checks then rereads main", async () => {
   const store = new MemoryStore();
   const harness = githubHarness();
+  const plan = await preparePlanAndPullRequest(store, harness);
 
   const current = await getRepositoryChangeRequest({
     repository: "example/project",
@@ -364,12 +417,15 @@ test("guarded merge requires clean exact-head PR and green checks then rereads m
 
   const merged = await mergeRepositoryChangeRequest({
     repository: "example/project",
+    planId: plan.plan_id,
+    billingAccountId: BILLING_ACCOUNT_ID,
     changeRequestId: 7,
     expectedHeadSha: FEATURE_HEAD,
     mergeMethod: "merge",
     confirmMerge: true,
     idempotencyKey: "merge:milestone:001",
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
   assert.equal(merged.merged, true);
@@ -381,6 +437,7 @@ test("guarded merge requires clean exact-head PR and green checks then rereads m
 test("guarded merge fails closed when no CI check runs are configured", async () => {
   const store = new MemoryStore();
   const harness = githubHarness();
+  const plan = await preparePlanAndPullRequest(store, harness);
   const noChecks = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(typeof input === "string" || input instanceof URL ? input.toString() : input.url);
     if (decodeURIComponent(url.pathname) === `/repos/example/project/commits/${FEATURE_HEAD}/check-runs`) {
@@ -400,6 +457,8 @@ test("guarded merge fails closed when no CI check runs are configured", async ()
   await assert.rejects(
     () => mergeRepositoryChangeRequest({
       repository: "example/project",
+      planId: plan.plan_id,
+      billingAccountId: BILLING_ACCOUNT_ID,
       changeRequestId: 7,
       expectedHeadSha: FEATURE_HEAD,
       mergeMethod: "merge",
@@ -409,6 +468,71 @@ test("guarded merge fails closed when no CI check runs are configured", async ()
       token: "token",
     }, store, noChecks),
     /CHANGE_REQUEST_CHECKS_NOT_GREEN/,
+  );
+});
+
+test("guarded write plan cannot switch billing account or merge an unrelated pull request", async () => {
+  const store = new MemoryStore();
+  const harness = githubHarness();
+  const plan = await createRepositoryWritePlan({
+    repository: "example/project",
+    expectedTargetHeadSha: HEAD,
+    changes: [{ path: "README.md", action: "upsert", content: "updated\n" }],
+    commitMessage: "Update README",
+    githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
+    token: "token",
+  }, store, harness.fetchImpl);
+
+  await assert.rejects(
+    () => applyRepositoryWritePlan({
+      planId: plan.plan_id,
+      branchName: "anpos/milestone",
+      idempotencyKey: "apply:wrong-billing:001",
+      confirmDeletions: false,
+      githubUserId: 42,
+      billingAccountId: 99,
+      token: "token",
+    }, store, harness.fetchImpl),
+    /WRITE_PLAN_BILLING_ACCOUNT_MISMATCH/,
+  );
+
+  await applyRepositoryWritePlan({
+    planId: plan.plan_id,
+    branchName: "anpos/milestone",
+    idempotencyKey: "apply:chain:001",
+    confirmDeletions: false,
+    githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
+    token: "token",
+  }, store, harness.fetchImpl);
+  await openRepositoryChangeRequest({
+    repository: "example/project",
+    planId: plan.plan_id,
+    headBranch: "anpos/milestone",
+    expectedHeadSha: FEATURE_HEAD,
+    title: "Update README",
+    body: "",
+    idempotencyKey: "pr:chain:001",
+    githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
+    token: "token",
+  }, store, harness.fetchImpl);
+
+  await assert.rejects(
+    () => mergeRepositoryChangeRequest({
+      repository: "example/project",
+      planId: plan.plan_id,
+      billingAccountId: BILLING_ACCOUNT_ID,
+      changeRequestId: 8,
+      expectedHeadSha: FEATURE_HEAD,
+      mergeMethod: "merge",
+      confirmMerge: true,
+      idempotencyKey: "merge:wrong-pr:001",
+      githubUserId: 42,
+      token: "token",
+    }, store, harness.fetchImpl),
+    /WRITE_PLAN_CHANGE_REQUEST_MISMATCH/,
   );
 });
 
@@ -460,6 +584,7 @@ test("generic write path rejects stale expected main head and direct/default bra
     changes: [{ path: "README.md", action: "upsert", content: "x" }],
     commitMessage: "Valid",
     githubUserId: 42,
+    billingAccountId: BILLING_ACCOUNT_ID,
     token: "token",
   }, store, harness.fetchImpl);
 
