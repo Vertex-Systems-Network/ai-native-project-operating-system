@@ -384,6 +384,7 @@ def validate_template_boundary() -> None:
     allowed_source_workflows = {
         "source-continuous-certification.yml",
         "immutable-vendor-handoff.yml",
+        "commercial-production-deploy.yml",
     }
     if not set(active_workflows).issubset(allowed_source_workflows):
         fail("template source: active source workflows must remain in the guarded source-only allowlist")

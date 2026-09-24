@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_PATH = ".github/workflows/source-continuous-certification.yml"
 HANDOFF_WORKFLOW_PATH = ".github/workflows/immutable-vendor-handoff.yml"
+DEPLOY_WORKFLOW_PATH = ".github/workflows/commercial-production-deploy.yml"
 
 
 class SourceContinuousCertificationTests(unittest.TestCase):
@@ -94,11 +95,34 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertNotIn('service_receipt["source_tree"]', source)
 
+    def test_guarded_commercial_production_deploy_controller(self):
+        source = subprocess.run(
+            ["git", "show", f"HEAD:{DEPLOY_WORKFLOW_PATH}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        for marker in (
+            "ops/deploy-commercial-*",
+            "ref: main",
+            "persist-credentials: false",
+            "contents: read",
+            "scripts/export_vendor_repositories.py",
+            "scripts/verify_vendor_handoff.py",
+            'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}',
+            "vercel@59.11.7 deploy --prod --yes --force",
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn("contents: write", source)
+        self.assertNotIn("pull_request_target:", source)
+
     def test_source_only_ci_assets_are_stripped_from_customer_template_boundary(self):
         boundary = json.loads((ROOT / "config" / "licensing" / "vendor-source-boundary.json").read_text())
         vendor_only = set(boundary["vendor_only_paths"])
         for path in (
             WORKFLOW_PATH,
+            DEPLOY_WORKFLOW_PATH,
             "scripts/validate_source_continuous_certification.py",
             "tests/test_source_continuous_certification.py",
         ):
