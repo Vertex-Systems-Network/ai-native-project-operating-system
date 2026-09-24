@@ -3,7 +3,7 @@
   "status": "pending_verified_customer_release_artifact",
   "scope": "customer_visible_release_notes_and_version_provenance",
   "expected_identity": {
-    "service_version": "0.4.1",
+    "service_version": "0.4.2",
     "protocol_version": "1.4.0",
     "runtime_contract": "split-github-app-v1"
   },
@@ -17,7 +17,7 @@
     "verified": false
   },
   "customer_notes": {
-    "draft_path": "docs/releases/ANPOS-1.4.0-commercial-0.4.1.md",
+    "draft_path": "docs/releases/ANPOS-1.4.0-commercial-0.4.2.md",
     "customer_visible_release_notes_verified": false
   },
   "release_gate": {

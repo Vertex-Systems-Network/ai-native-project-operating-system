@@ -259,11 +259,15 @@
     "Adoption and upgrade flows preserve verified child evidence and must not reset project-specific assurance state blindly.",
     "Material AI configuration drift must invalidate stale AI assurance when the child policy requires reevaluation.",
     "Plugin capability authorization is server-side commercial-service state; repository files cannot grant paid access.",
-    "An unimplemented plugin capability remains denied even when billing entitlements would otherwise qualify."
+    "An unimplemented plugin capability remains denied even when billing entitlements would otherwise qualify.",
+    "MCP authorization codes are one-time, short-lived and bound to exact client, redirect, resource and PKCE verifier.",
+    "MCP access tokens are opaque, short-lived and store GitHub provider credentials only as encrypted server-side state.",
+    "A billing_account_id tool input is only a selector; server-side GitHub principal access, entitlement and organization-seat checks remain authoritative.",
+    "MCP write scope is not issued until the guarded write runtime exists."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_read_only_runtime_plus_subscription_entitlement_bridge",
+    "phase": "github_read_only_runtime_plus_entitlement_bridge_plus_mcp_oauth_transport",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -281,10 +285,15 @@
       "server_side_subscription_entitlement_bridge",
       "authenticated_github_principal_account_binding",
       "paid_repository_supervisor_read_capability_gate",
-      "unimplemented_write_capability_fail_closed"
+      "unimplemented_write_capability_fail_closed",
+      "github_backed_mcp_oauth_2_1_authorization_code_pkce",
+      "protected_resource_and_authorization_server_metadata",
+      "replay_safe_opaque_mcp_access_tokens",
+      "stateless_streamable_http_post_mcp_transport",
+      "openai_compatible_authenticated_profile_tool",
+      "explicit_billing_account_binding_with_server_side_reauthorization"
     ],
     "not_yet_implemented": [
-      "supervisor_specific_oauth_and_mcp_transport",
       "repository_plan_anpos_change",
       "repository_apply_anpos_change",
       "repository_open_change_request",
@@ -294,12 +303,12 @@
       "production_sandbox_driver",
       "gitlab_adapter"
     ],
-    "claim_boundary": "Source implementation and unit certification do not claim a deployed MCP endpoint, write-capable repository runtime, or production isolation driver."
+    "claim_boundary": "Source implementation and unit certification do not claim a publicly deployed/registered plugin connection, production MCP E2E, write-capable repository runtime, or production isolation driver."
   },
   "commercial_authorization": {
     "authority": "commercial_service_server_side_entitlement_ledger",
     "billing_provider": "github_marketplace_for_initial_launch",
-    "account_binding": "authenticated_github_principal_plus_explicit_github_account_id",
+    "account_binding": "authenticated_mcp_github_principal_plus_explicit_billing_account_id_reauthorized_server_side",
     "repository_local_entitlement_authority": false,
     "capabilities": {
       "community_repository_readiness_audit": {
@@ -326,5 +335,27 @@
         "implementation_status": "defined_fail_closed_until_write_runtime_implemented"
       }
     }
+  },
+  "mcp_transport": {
+    "source_route": "commercial-service/app/mcp/route.ts",
+    "oauth_source": "commercial-service/lib/mcp-auth.ts",
+    "runtime_source": "commercial-service/lib/mcp-runtime.ts",
+    "protected_resource_metadata": "/.well-known/oauth-protected-resource",
+    "authorization_server_metadata": "/.well-known/oauth-authorization-server",
+    "authorization_endpoint": "/oauth/authorize",
+    "token_endpoint": "/oauth/token",
+    "provider_callback": "/api/auth/mcp/github/callback",
+    "readiness_endpoint": "/api/ready/mcp",
+    "resource": "{ANPOS_PUBLIC_BASE_URL}/mcp",
+    "issued_scopes": [
+      "anpos:profile",
+      "anpos:repo:read"
+    ],
+    "write_scope_available": false,
+    "pkce": "S256",
+    "access_token": "opaque_short_lived_hashed_ledger",
+    "github_provider_token": "encrypted_server_side_only",
+    "profile_tool": "repository_profile",
+    "profile_meta": "openai/profile=true"
   }
 }

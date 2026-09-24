@@ -28,6 +28,14 @@ export type PremiumDistributionConfig = {
   premiumContentSetSha256: string;
 };
 
+export type McpOAuthConfig = {
+  publicBaseUrl: string;
+  resourceUrl: string;
+  allowedClientIds: string[];
+  allowedRedirectUris: string[];
+  accessTokenTtlSeconds: number;
+};
+
 const ENV_ALIASES: Record<string, readonly string[]> = {
   GITHUB_WEBHOOK_SECRET: ["ANPOS_GITHUB_WEBHOOK_SECRET", "ANPOS_WEBHOOK_SECRET"],
   GITHUB_MARKETPLACE_APP_ID: ["ANPOS_MARKETPLACE_APP_ID"],
@@ -310,6 +318,57 @@ export function serviceConfig(): ServiceConfig {
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
     operatorToken: value("ANPOS_OPERATOR_TOKEN")!,
     commercialReleaseRef: value("ANPOS_COMMERCIAL_RELEASE_REF")!,
+  };
+}
+
+function httpsAllowlist(name: string): string[] {
+  const raw = rawValue(name);
+  if (!raw) return [];
+  return raw.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+export function mcpOAuthConfigurationProblems(): string[] {
+  const problems: string[] = [];
+  const base = rawValue("ANPOS_PUBLIC_BASE_URL");
+  if (!base) problems.push("missing:ANPOS_PUBLIC_BASE_URL");
+  else if (!validHttpsBaseUrl(base)) problems.push("invalid:ANPOS_PUBLIC_BASE_URL");
+
+  for (const name of ["ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS"] as const) {
+    const values = httpsAllowlist(name);
+    if (!values.length) {
+      problems.push(`missing:${name}`);
+      continue;
+    }
+    for (const item of values) {
+      try {
+        const url = new URL(item);
+        if (url.protocol !== "https:" || url.username || url.password || url.hash) problems.push(`invalid:${name}`);
+      } catch {
+        problems.push(`invalid:${name}`);
+      }
+    }
+  }
+
+  const ttl = rawValue("ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS");
+  if (ttl) {
+    const parsed = Number(ttl);
+    if (!Number.isSafeInteger(parsed) || parsed < 900 || parsed > 28_800) {
+      problems.push("invalid:ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS");
+    }
+  }
+  return [...new Set(problems)];
+}
+
+export function mcpOAuthConfig(): McpOAuthConfig {
+  const problems = mcpOAuthConfigurationProblems();
+  if (problems.length) throw new Error(`MCP OAuth is not configured: ${problems.join(", ")}`);
+  const publicBaseUrl = rawValue("ANPOS_PUBLIC_BASE_URL")!.replace(/\/$/, "");
+  return {
+    publicBaseUrl,
+    resourceUrl: `${publicBaseUrl}/mcp`,
+    allowedClientIds: httpsAllowlist("ANPOS_MCP_ALLOWED_CLIENT_IDS"),
+    allowedRedirectUris: httpsAllowlist("ANPOS_MCP_ALLOWED_REDIRECT_URIS"),
+    accessTokenTtlSeconds: Number(rawValue("ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS") ?? "3600"),
   };
 }
 

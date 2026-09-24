@@ -1,7 +1,7 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "status": "inactive_blueprint",
-  "purpose": "Language-agnostic API boundary for a separately deployed ANPOS commercial entitlement/distribution service plus the source-implemented, externally unlaunched Community repository-readiness product surface and conditional higher-tier premium-pack distribution.",
+  "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor MCP OAuth/transport runtime.",
   "endpoints": [
     {
       "method": "GET",
@@ -201,6 +201,102 @@
       "authentication": "operator_or_trusted_runtime_only",
       "purpose": "Retry revocation of vendor-template collaborator access after entitlement/seat revocation while preserving access backed by other active grants",
       "customer_callable": false
+    },
+    {
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource",
+      "authentication": "public_metadata",
+      "purpose": "Publish the MCP resource URL, authorization-server issuer and currently issuable OAuth scopes.",
+      "resource": "{ANPOS_PUBLIC_BASE_URL}/mcp",
+      "scopes_supported": [
+        "anpos:profile",
+        "anpos:repo:read"
+      ],
+      "write_scope_available": false,
+      "cache_control": "public, max-age=300"
+    },
+    {
+      "method": "GET",
+      "path": "/.well-known/oauth-authorization-server",
+      "authentication": "public_metadata",
+      "purpose": "Publish OAuth authorization-code metadata for the Repository Supervisor MCP resource.",
+      "grant_types_supported": [
+        "authorization_code"
+      ],
+      "pkce_required": "S256",
+      "token_endpoint_auth_methods_supported": [
+        "none"
+      ],
+      "client_id_metadata_document_supported": true,
+      "authorization_response_iss_parameter_supported": true,
+      "scopes_supported": [
+        "anpos:profile",
+        "anpos:repo:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/oauth/authorize",
+      "authentication": "exact_allowlisted_mcp_client_plus_resource_binding_then_github_app_oauth",
+      "purpose": "Validate MCP client/redirect/resource/scope/PKCE inputs, seal short-lived authorization state, and redirect to GitHub App OAuth.",
+      "exact_client_allowlist_required": true,
+      "exact_redirect_allowlist_required": true,
+      "resource_parameter_must_equal_mcp_resource": true,
+      "pkce_required": "S256",
+      "state_cookie": "HttpOnly Secure SameSite=Lax encrypted max_10_minutes"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/mcp/github/callback",
+      "authentication": "github_app_oauth_code_plus_provider_pkce_plus_encrypted_mcp_state",
+      "purpose": "Bind the validated MCP authorization request to the authenticated GitHub principal, issue a replay-safe one-time authorization code, and return issuer-bound success/error response to the validated client redirect.",
+      "github_refresh_token_persisted": false,
+      "provider_access_token_exposed_to_client": false,
+      "authorization_code_ttl_seconds": 300
+    },
+    {
+      "method": "POST",
+      "path": "/oauth/token",
+      "authentication": "public_oauth_client_with_exact_client_redirect_resource_and_pkce_code_verifier_binding",
+      "purpose": "Atomically redeem one one-time authorization code for one short-lived opaque MCP bearer token.",
+      "access_token_format": "opaque_random_bearer",
+      "access_token_ttl_seconds": "operator_configurable_900_to_28800_default_3600",
+      "refresh_token_issued": false,
+      "github_provider_token_storage": "encrypted_server_side_only",
+      "replay_protection": "authorization_code_consumed_at plus token_hash ledger"
+    },
+    {
+      "method": "POST",
+      "path": "/mcp",
+      "authentication": "opaque_mcp_bearer_token_for_exact_resource",
+      "purpose": "Serve the stateless Repository Supervisor MCP tool surface over Streamable HTTP-compatible request/response POSTs.",
+      "modern_protocol": "2026-07-28 server/discover",
+      "legacy_protocols": [
+        "2025-11-25",
+        "2025-06-18",
+        "2025-03-26"
+      ],
+      "implemented_tools": [
+        "repository_profile",
+        "repository_resolve",
+        "repository_audit",
+        "repository_get_assurance"
+      ],
+      "profile_tool_meta": "openai/profile=true",
+      "paid_tools_require_explicit_billing_account_id": true,
+      "billing_account_id_is_not_authorization": true,
+      "server_rechecks_github_account_access_and_entitlement": true,
+      "write_tools_exposed": false,
+      "max_request_body_bytes": 65536,
+      "cache_control": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ready/mcp",
+      "authentication": "public_readiness_no_secrets",
+      "purpose": "Fail closed unless MCP OAuth allowlists, database migration and service connectivity are ready.",
+      "write_scope_available": false,
+      "cache_control": "no-store"
     }
   ],
   "cross_cutting_rules": {
@@ -239,6 +335,17 @@
     "plugin_capability_authorization_is_server_side": true,
     "plugin_account_binding_requires_authenticated_github_access": true,
     "unimplemented_plugin_capabilities_fail_closed": true,
-    "plugin_response_exposes_no_payment_card_or_signing_secret_material": true
+    "plugin_response_exposes_no_payment_card_or_signing_secret_material": true,
+    "mcp_oauth_pkce_s256_required": true,
+    "mcp_resource_parameter_binding_required": true,
+    "mcp_client_and_redirect_exact_allowlists_required": true,
+    "mcp_authorization_codes_single_use_and_short_lived": true,
+    "mcp_access_tokens_opaque_short_lived_and_server_side_hashed": true,
+    "mcp_github_provider_token_encrypted_server_side_only": true,
+    "mcp_profile_identity_must_be_stable_opaque_and_credential_scoped": true,
+    "mcp_paid_tool_billing_account_id_is_not_authorization": true,
+    "mcp_server_must_reauthorize_github_principal_and_entitlement": true,
+    "mcp_write_scope_forbidden_until_guarded_write_runtime_exists": true,
+    "mcp_transport_source_implementation_is_not_public_deployment_evidence": true
   }
 }

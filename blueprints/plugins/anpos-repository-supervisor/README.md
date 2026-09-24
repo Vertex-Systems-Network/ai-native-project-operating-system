@@ -1,6 +1,6 @@
 # ANPOS Repository Supervisor Plugin Blueprint
 
-Status: **inert source-side blueprint aligned to ANPOS 1.4.0 / Requirements 83–96**. This directory defines the product/runtime contract for a ChatGPT/Codex plugin that accepts a user-supplied GitHub or GitLab repository URL and supervises ANPOS-based project initialization, adoption, audit, and development. It is not a deployed MCP server and contains no live credentials.
+Status: **source blueprint plus GitHub read-only runtime/OAuth-MCP implementation aligned to ANPOS 1.4.0 / Requirements 83–96**. This directory defines the product/runtime contract for a ChatGPT/Codex plugin that accepts a user-supplied GitHub or GitLab repository URL and supervises ANPOS-based project initialization, adoption, audit, and development. The GitHub read-only runtime, entitlement bridge, OAuth 2.1/PKCE broker and stateless `/mcp` source are implemented in the vendor-only commercial service, but no public plugin connection or production MCP deployment is claimed and no live credentials belong in this repository.
 
 ## Product goal
 
@@ -53,6 +53,8 @@ anpos-repository-supervisor/
 ```
 
 The MCP server owns authentication, authorization, provider API access, concurrency checks, mutation safety, audit logging, and ANPOS release retrieval. The skill owns the deterministic workflow and tells the model how to use those tools.
+
+The committed `mcp.json` intentionally keeps `https://replace-me.invalid/mcp` because this repository is inert source. A deployed plugin package must replace that placeholder with the exact `ANPOS_PUBLIC_BASE_URL + /mcp` endpoint only after `/api/ready/mcp` and production OAuth/MCP E2E pass.
 
 ## Provider architecture
 
@@ -189,7 +191,7 @@ Private repository reads and all writes require authenticated user context. Use 
 Repository authorization and commercial authorization are separate checks.
 
 - The user must first be an authenticated GitHub/GitLab principal with provider permission for the target repository.
-- The initial GitHub commercial bridge binds that authenticated principal to an explicit GitHub billing account through `X-Anpos-Account-Id`; the repository URL never selects or grants a subscription.
+- The REST commercial bridge uses `X-Anpos-Account-Id`; the MCP tool surface uses an explicit non-secret `billing_account_id` selector. Neither value grants access by itself: the server re-verifies the authenticated GitHub principal, billing account entitlement and organization seat when applicable.
 - Commercial Service remains the server-side entitlement authority and reconciles Marketplace state before returning plugin capability decisions.
 - Community remains limited to the existing bounded readiness audit and does not gain the broader Repository Supervisor read surface.
 - `repository_supervisor_read` is a paid capability derived from the existing `protocol_update_channel` entitlement and requires an active organization seat when the billing account is an organization.
@@ -261,7 +263,7 @@ Current source implementation status:
 - ✅ repository classification including empty/not-ANPOS/uninitialized/active/partial/canonical;
 - ✅ Requirements 83–96 assurance/governance summaries and evidence-bound assurance reads;
 - ✅ isolated sandbox driver contract with network denied and no local-process fallback;
-- ⏳ supervisor-specific OAuth/MCP transport;
+- ✅ GitHub-backed OAuth 2.1 authorization-code flow with PKCE S256, protected-resource/authorization-server metadata, one-time replay-safe authorization codes, opaque short-lived MCP access tokens, stateless POST `/mcp`, authenticated profile metadata and MCP readiness gate;
 - ⏳ deterministic adoption/upgrade planning and branch apply;
 - ⏳ PR/check/guarded-merge write flow;
 - ⏳ production container/microVM/remote sandbox driver;
@@ -270,6 +272,18 @@ Current source implementation status:
 Implementation references:
 
 - `commercial-service/lib/repository-supervisor-runtime.ts`
+- `commercial-service/lib/mcp-auth.ts`
+- `commercial-service/lib/mcp-runtime.ts`
+- `commercial-service/app/mcp/route.ts`
+- `commercial-service/app/.well-known/oauth-protected-resource/route.ts`
+- `commercial-service/app/.well-known/oauth-authorization-server/route.ts`
+- `commercial-service/app/oauth/authorize/route.ts`
+- `commercial-service/app/oauth/token/route.ts`
+- `commercial-service/app/api/auth/mcp/github/callback/route.ts`
+- `commercial-service/app/api/ready/mcp/route.ts`
+- `commercial-service/migrations/002_mcp_oauth.sql`
+- `commercial-service/tests/mcp-auth.test.ts`
+- `commercial-service/tests/mcp-runtime.test.ts`
 - `commercial-service/lib/execution-sandbox.ts`
 - `config/runtime/execution-sandbox.json`
 - `commercial-service/tests/repository-supervisor-runtime.test.ts`

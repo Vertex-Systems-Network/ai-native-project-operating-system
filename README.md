@@ -559,8 +559,9 @@ Implemented and source-certified:
 - ANPOS repository classification;
 - Requirements 83–96 assurance/governance summary and exact-ref assurance reads;
 - execution-sandbox request/driver contract with network denied by default, bounded time/output, environment names only, and no direct local-process fallback;
-- commercial service 0.4.1 server-side Plugin Subscription Entitlement Bridge with authenticated GitHub principal/account binding, Marketplace reconciliation, organization-seat-aware paid read gating, and fail-closed write capability.
+- commercial service 0.4.2 server-side Plugin Subscription Entitlement Bridge with authenticated GitHub principal/account binding, Marketplace reconciliation, organization-seat-aware paid read gating, and fail-closed write capability;
+- GitHub-backed OAuth 2.1 authorization-code + PKCE S256 source flow with protected-resource/authorization-server metadata, exact client/redirect/resource binding, one-time authorization-code replay protection, opaque short-lived MCP access tokens, encrypted server-side GitHub provider credentials, stateless POST `/mcp`, OpenAI-compatible authenticated profile metadata, and `/api/ready/mcp`.
 
-Community remains restricted to the separate bounded readiness audit. The commercial bridge does not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint.
+Community remains restricted to the separate bounded readiness audit. The commercial bridge and MCP transport do not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint. MCP write scope/tools remain unavailable until the guarded write runtime exists.
 
-This is the **read-only runtime foundation plus entitlement gate**, not a deployed MCP server. Write planning/apply, pull-request/CI/merge tools, a production isolation driver, GitLab parity and production MCP/OAuth transport remain subsequent milestones.
+This is the **read-only Repository Supervisor runtime + entitlement gate + OAuth/MCP source transport**, not evidence of a publicly registered/deployed plugin. Write planning/apply, pull-request/CI/merge tools, a production isolation driver, production MCP E2E and GitLab parity remain subsequent milestones.

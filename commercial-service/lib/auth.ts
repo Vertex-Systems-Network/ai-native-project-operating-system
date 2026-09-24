@@ -65,11 +65,10 @@ async function selfOrganizationMembership(token: string, organizationLogin: stri
   return membership.json() as Promise<GitHubOrganizationMembership>;
 }
 
-export async function requireGithubAccountAccess(
-  request: Request,
+export async function requireGithubAccountAccessForContext(
+  context: GitHubAuthContext,
   target: { github_account_id: number; github_login: string; github_account_type: string },
 ): Promise<GitHubUser> {
-  const context = await authenticatedGithubContext(request);
   if (target.github_account_type === "User" && context.user.id === Number(target.github_account_id)) return context.user;
 
   if (target.github_account_type === "Organization") {
@@ -77,6 +76,13 @@ export async function requireGithubAccountAccess(
     if (membership.state === "active") return context.user;
   }
   throw new Error("FORBIDDEN_GITHUB_ACCOUNT");
+}
+
+export async function requireGithubAccountAccess(
+  request: Request,
+  target: { github_account_id: number; github_login: string; github_account_type: string },
+): Promise<GitHubUser> {
+  return requireGithubAccountAccessForContext(await authenticatedGithubContext(request), target);
 }
 
 export async function requireGithubOrganizationAdmin(

@@ -274,9 +274,15 @@
         "commercial-service/lib/repository-supervisor-runtime.ts",
         "commercial-service/lib/plugin-entitlements.ts",
         "commercial-service/app/api/v1/plugin/entitlements/current/route.ts",
-        "commercial-service/tests/plugin-entitlements.test.ts"
+        "commercial-service/tests/plugin-entitlements.test.ts",
+        "commercial-service/lib/mcp-auth.ts",
+        "commercial-service/lib/mcp-runtime.ts",
+        "commercial-service/app/mcp/route.ts",
+        "commercial-service/migrations/002_mcp_oauth.sql",
+        "commercial-service/tests/mcp-auth.test.ts",
+        "commercial-service/tests/mcp-runtime.test.ts"
       ],
-      "notes": "GitHub read-only Repository Supervisor runtime foundation and server-side subscription entitlement bridge are implemented in source. Community remains limited to its bounded readiness audit. Paid Repository Supervisor read access is derived from the existing protocol_update_channel entitlement; write capability is defined but fail-closed until the guarded write runtime exists. This does not make core ANPOS child development billing-dependent and is not production plugin deployment evidence."
+      "notes": "GitHub read-only Repository Supervisor runtime, server-side subscription entitlement bridge, GitHub-backed OAuth 2.1/PKCE source flow, replay-safe opaque MCP access-token ledger, stateless POST /mcp transport, OpenAI-compatible profile metadata, and explicit billing-account reauthorization are implemented in source. Community remains limited to its bounded readiness audit. Write OAuth scope/tools remain fail-closed until the guarded write runtime exists. Public plugin registration, production MCP deployment/E2E and write runtime are not yet evidenced."
     }
   ]
 }
