@@ -106,14 +106,13 @@ function writeActions(payload: FullPlannerPayload): PlannerAction[] {
 }
 
 function materializationRequests(payload: FullPlannerPayload): TemplateReleaseMaterializationRequest[] {
-  const needed = new Map<string, PlannerAction>();
-  for (const action of writeActions(payload)) needed.set(action.path, action);
-  if (BOOTSTRAP_MODES.has(payload.mode)) {
-    const bootstrap = payload.actions.find((action) => action.path === "scripts/bootstrap_instance.py");
-    if (!bootstrap) throw new RepositorySupervisorError(409, "bootstrap_runner_missing_from_release_plan");
-    needed.set(bootstrap.path, bootstrap);
+  const selected = BOOTSTRAP_MODES.has(payload.mode)
+    ? payload.actions
+    : writeActions(payload);
+  if (BOOTSTRAP_MODES.has(payload.mode) && !payload.actions.some((action) => action.path === "scripts/bootstrap_instance.py")) {
+    throw new RepositorySupervisorError(409, "bootstrap_runner_missing_from_release_plan");
   }
-  return [...needed.values()].map((action) => ({
+  return selected.map((action) => ({
     path: action.path,
     git_object: String(action.release_git_object),
     sha256: action.release_sha256,
@@ -142,11 +141,7 @@ export function buildFullApplySandboxRequest(input: {
   const planJson = JSON.stringify(input.payload);
   return {
     workspace_id: `anpos-${input.plan_id}`,
-    source: input.payload.target.expected_head_sha ? {
-      provider: "github",
-      repository_full_name: input.payload.target.repository_full_name,
-      commit_sha: input.payload.target.expected_head_sha,
-    } : undefined,
+    source: undefined,
     command: ["python3", ".anpos-input/apply.py"],
     working_directory: "workspace",
     timeout_seconds: 900,
