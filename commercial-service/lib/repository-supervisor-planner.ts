@@ -484,6 +484,8 @@ export async function createGithubFullAnposPlan(input: {
     payload,
   }, principal, billingAccountId);
 
+  const actionable = payload.actions.filter((row) => row.action !== "unchanged");
+  const preview = actionable.slice(0, 200);
   return {
     ...stored,
     release: payload.release,
@@ -495,6 +497,12 @@ export async function createGithubFullAnposPlan(input: {
     planning_complete: payload.planning_complete,
     safe_to_apply: payload.safe_to_apply,
     apply_implementation: payload.apply_implementation,
-    actions: payload.actions,
+    action_preview: preview,
+    action_preview_truncated: actionable.length > preview.length,
+    full_action_count: payload.actions.length,
+    confirmation_paths: payload.actions
+      .filter((row) => row.confirmation_required)
+      .slice(0, 200)
+      .map((row) => row.path),
   };
 }
