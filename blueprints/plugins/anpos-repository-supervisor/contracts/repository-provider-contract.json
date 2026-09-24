@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -91,6 +91,36 @@
       ]
     },
     {
+      "name": "repository_plan_change",
+      "intent": "Create a short-lived deterministic no-repository-write plan for a bounded development change on an already-active ANPOS project, bound to exact default-branch head plus observed blob SHA and Git mode.",
+      "read_only": false,
+      "destructive": false,
+      "open_world": false,
+      "active_project_only": true,
+      "required_inputs": [
+        "canonical_repository_id",
+        "expected_target_head_sha",
+        "changes",
+        "commit_message"
+      ],
+      "required_outputs": [
+        "plan_id",
+        "target_head_sha",
+        "plan_digest_sha256",
+        "changes",
+        "safe_to_apply",
+        "expires_at"
+      ],
+      "server_requirements": [
+        "reject_non_active_project",
+        "require_authenticated_write_permission",
+        "reject_secret_bearing_paths_and_obvious_secret_material",
+        "bind_existing_paths_to_blob_sha_and_git_mode",
+        "encrypt_change_payload_at_rest",
+        "expire_plan_after_short_ttl"
+      ]
+    },
+    {
       "name": "repository_plan_anpos_change",
       "intent": "Create a deterministic no-write ANPOS bootstrap, adoption, repair, or upgrade plan bound to an observed repository head and immutable ANPOS release.",
       "read_only": true,
@@ -149,6 +179,37 @@
         "reject_default_branch_direct_write_by_default",
         "reject_force_push",
         "reverify_authenticated_permission"
+      ]
+    },
+    {
+      "name": "repository_apply_change",
+      "intent": "Apply one previously generated generic active-project plan to a new anpos/* feature branch using optimistic concurrency and idempotency.",
+      "read_only": false,
+      "destructive": false,
+      "open_world": false,
+      "active_project_only": true,
+      "required_inputs": [
+        "plan_id",
+        "branch_name",
+        "idempotency_key",
+        "confirm_deletions"
+      ],
+      "required_outputs": [
+        "branch_name",
+        "base_head_sha",
+        "resulting_head_sha",
+        "applied_paths",
+        "verification"
+      ],
+      "server_requirements": [
+        "reject_if_plan_expired_or_already_applied_except_same_idempotent_replay",
+        "reject_if_target_head_changed",
+        "reverify_blob_sha_and_git_mode_preconditions",
+        "reject_default_branch_direct_write",
+        "require_anpos_feature_branch_prefix",
+        "preserve_existing_executable_mode",
+        "reject_force_push",
+        "verify_created_branch_head"
       ]
     },
     {
@@ -263,11 +324,16 @@
     "MCP authorization codes are one-time, short-lived and bound to exact client, redirect, resource and PKCE verifier.",
     "MCP access tokens are opaque, short-lived and store GitHub provider credentials only as encrypted server-side state.",
     "A billing_account_id tool input is only a selector; server-side GitHub principal access, entitlement and organization-seat checks remain authoritative.",
-    "MCP write scope is not issued until the guarded write runtime exists."
+    "MCP write scope is not issued until the guarded write runtime exists.",
+    "Generic guarded writes are permitted only for repositories classified active_project; canonical, empty, uninitialized, not-ANPOS and malformed repositories remain blocked.",
+    "Write plans are short-lived, encrypted at rest, bound to exact repository identity/default head/path blob SHA/Git mode and cannot authorize direct default-branch writes.",
+    "Applied plans are durably bound to the exact created anpos/* branch and resulting commit before a pull request can be opened.",
+    "Merge requires explicit confirmation, exact PR head, default-branch base, provider mergeability clean, green observed checks and a provider-enforced merge call followed by default-branch reread.",
+    "Secret-bearing paths and obvious committed credential markers are rejected by the generic write planner."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_read_only_runtime_plus_entitlement_bridge_plus_mcp_oauth_transport",
+    "phase": "github_active_project_guarded_write_runtime",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -275,7 +341,13 @@
       "repository_resolve",
       "repository_profile",
       "repository_audit",
-      "repository_get_assurance"
+      "repository_get_assurance",
+      "repository_plan_change",
+      "repository_apply_change",
+      "repository_open_change_request",
+      "repository_get_change_request",
+      "repository_get_ci",
+      "repository_merge_change_request"
     ],
     "implemented_support": [
       "bounded_immutable_ref_file_reads",
@@ -291,19 +363,25 @@
       "replay_safe_opaque_mcp_access_tokens",
       "stateless_streamable_http_post_mcp_transport",
       "openai_compatible_authenticated_profile_tool",
-      "explicit_billing_account_binding_with_server_side_reauthorization"
+      "explicit_billing_account_binding_with_server_side_reauthorization",
+      "active_project_only_generic_write_plans",
+      "encrypted_short_lived_write_plan_ledger",
+      "exact_head_blob_and_git_mode_preconditions",
+      "anpos_feature_branch_only_apply",
+      "idempotent_remote_write_operations",
+      "pull_request_creation_and_reread",
+      "commit_check_run_inspection",
+      "expected_head_clean_policy_guarded_merge",
+      "resulting_default_branch_reread",
+      "secret_bearing_path_and_obvious_secret_material_rejection"
     ],
     "not_yet_implemented": [
       "repository_plan_anpos_change",
       "repository_apply_anpos_change",
-      "repository_open_change_request",
-      "repository_get_change_request",
-      "repository_get_ci",
-      "repository_merge_change_request",
       "production_sandbox_driver",
       "gitlab_adapter"
     ],
-    "claim_boundary": "Source implementation and unit certification do not claim a publicly deployed/registered plugin connection, production MCP E2E, write-capable repository runtime, or production isolation driver."
+    "claim_boundary": "Source implementation and unit certification now include guarded generic writes for already-active GitHub ANPOS projects only. They do not claim specialized bootstrap/adoption/repair/upgrade planning, public production MCP E2E, a production isolation driver, or GitLab write parity."
   },
   "commercial_authorization": {
     "authority": "commercial_service_server_side_entitlement_ledger",
@@ -332,7 +410,7 @@
           "protocol_update_channel"
         ],
         "organization_seat_required": true,
-        "implementation_status": "defined_fail_closed_until_write_runtime_implemented"
+        "implementation_status": "implemented_guarded_active_project_only"
       }
     }
   },
@@ -349,13 +427,30 @@
     "resource": "{ANPOS_PUBLIC_BASE_URL}/mcp",
     "issued_scopes": [
       "anpos:profile",
-      "anpos:repo:read"
+      "anpos:repo:read",
+      "anpos:repo:write"
     ],
-    "write_scope_available": false,
+    "write_scope_available": true,
     "pkce": "S256",
     "access_token": "opaque_short_lived_hashed_ledger",
     "github_provider_token": "encrypted_server_side_only",
     "profile_tool": "repository_profile",
-    "profile_meta": "openai/profile=true"
+    "profile_meta": "openai/profile=true",
+    "guarded_write_runtime": {
+      "source": "commercial-service/lib/repository-write-runtime.ts",
+      "migration": "commercial-service/migrations/003_repository_guarded_write.sql",
+      "active_project_only": true,
+      "plan_ttl_minutes": 30,
+      "feature_branch_prefix": "anpos/",
+      "default_branch_direct_write": false,
+      "expected_head_required": true,
+      "per_path_blob_and_mode_binding": true,
+      "idempotency_ledger": true,
+      "explicit_delete_confirmation": true,
+      "explicit_merge_confirmation": true,
+      "provider_mergeability_clean_required": true,
+      "observed_checks_must_be_green": true,
+      "provider_branch_policy_final_authority": true
+    }
   }
 }
