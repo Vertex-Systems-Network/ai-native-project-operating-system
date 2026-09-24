@@ -310,7 +310,7 @@ def main() -> int:
         (
             "exact client, redirect, resource and PKCE S256",
             "write scope is available only through the dedicated Supervisor App flow", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
-            "MCP_OAUTH_RESOURCE_MISMATCH", "MCP_OAUTH_SCOPE_INVALID",
+            "MCP_OAUTH_RESOURCE_MISMATCH", "Iv1.supervisor-client-123456",
         ),
         "MCP OAuth unit tests",
     )
