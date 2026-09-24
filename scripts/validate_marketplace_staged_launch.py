@@ -13,6 +13,7 @@ LISTING = ROOT / "blueprints/commercial/marketplace-listing-draft.md"
 CATALOG = ROOT / "config/licensing/product-catalog.json"
 BOUNDARY = ROOT / "config/licensing/vendor-source-boundary.json"
 MARKETPLACE_APP = ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json"
+SUPERVISOR_APP = ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json"
 VENDOR_APP = ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json"
 VENDOR_QUALITY = ROOT / "blueprints/commercial/vendor-launch-quality.yml"
 CHILD_QUALITY = ROOT / "blueprints/github/workflows/repository-quality.yml"
@@ -36,13 +37,13 @@ def load_json(path: Path) -> dict:
 
 
 def main() -> int:
-    for path in (STRATEGY, CHECKLIST, LISTING, CATALOG, BOUNDARY, MARKETPLACE_APP, VENDOR_APP, VENDOR_QUALITY):
+    for path in (STRATEGY, CHECKLIST, LISTING, CATALOG, BOUNDARY, MARKETPLACE_APP, SUPERVISOR_APP, VENDOR_APP, VENDOR_QUALITY):
         if not path.is_file():
             fail(f"missing {path.relative_to(ROOT)}")
 
     strategy = load_json(STRATEGY) if STRATEGY.is_file() else {}
-    if strategy.get("schema_version") != 1:
-        fail("staged launch strategy must be schema_version 1")
+    if strategy.get("schema_version") != 2:
+        fail("staged launch strategy must be schema_version 2")
     if strategy.get("status") != "inactive_blueprint":
         fail("staged launch strategy must remain inactive_blueprint")
     if strategy.get("activation_scope") != "vendor_marketplace_launch_only":
@@ -58,11 +59,15 @@ def main() -> int:
     app_architecture = strategy.get("github_app_architecture") or {}
     if app_architecture.get("marketplace_app_reference") != "blueprints/commercial/github-marketplace-app-manifest.example.json":
         fail("staged launch must reference the public Marketplace App blueprint")
+    if app_architecture.get("supervisor_app_reference") != "blueprints/commercial/github-supervisor-app-manifest.example.json":
+        fail("staged launch must reference the Repository Supervisor App blueprint")
     if app_architecture.get("vendor_app_reference") != "blueprints/commercial/github-vendor-app-manifest.example.json":
         fail("staged launch must reference the private Vendor App blueprint")
     for key in (
         "marketplace_app_must_be_public",
         "apps_must_remain_distinct",
+        "all_three_apps_must_remain_distinct",
+        "marketplace_app_permissions_must_not_be_widened_for_supervisor_writes",
         "vendor_administration_must_not_be_requested_from_customer_installations",
     ):
         if app_architecture.get(key) is not True:
@@ -71,6 +76,18 @@ def main() -> int:
     marketplace_app = load_json(MARKETPLACE_APP) if MARKETPLACE_APP.is_file() else {}
     if (marketplace_app.get("required_defaults") or {}).get("public") is not True:
         fail("free-first Marketplace App must be public/installable")
+    supervisor_app = load_json(SUPERVISOR_APP) if SUPERVISOR_APP.is_file() else {}
+    if supervisor_app.get("role") != "repository_supervisor_app":
+        fail("staged launch Supervisor App blueprint role is invalid")
+    if (supervisor_app.get("required_defaults") or {}).get("public") is not True:
+        fail("Repository Supervisor App must be public/installable")
+    if (supervisor_app.get("repository_permissions") or {}) != {
+        "metadata": "read",
+        "contents": "write",
+        "pull_requests": "write",
+        "checks": "read",
+    }:
+        fail("Repository Supervisor App permissions must remain bounded")
     vendor_app = load_json(VENDOR_APP) if VENDOR_APP.is_file() else {}
     if (vendor_app.get("required_defaults") or {}).get("public") is not False:
         fail("vendor distribution App must remain private during staged launch")
@@ -141,7 +158,7 @@ def main() -> int:
     if publication.get("operator_override_allowed") is not True:
         fail("staged path must remain a recommendation rather than a forced commercial decision")
     gate_ids = {item.get("id") for item in checklist.get("required_gates", []) if isinstance(item, dict)}
-    for required in ("github_marketplace_app", "github_vendor_app", "github_app_role_separation", "vendor_app_installation"):
+    for required in ("github_marketplace_app", "github_supervisor_app", "github_vendor_app", "github_app_role_separation", "supervisor_app_installation_e2e", "vendor_app_installation"):
         if required not in gate_ids:
             fail(f"staged launch checklist missing split GitHub App gate: {required}")
     if "github_app" in gate_ids or "app_installation" in gate_ids:
@@ -152,8 +169,9 @@ def main() -> int:
         "Recommended staged publication path",
         "free-first then paid",
         "real free offering",
-        "two distinct GitHub Apps",
+        "three distinct GitHub Apps",
         "Marketplace App — public/customer-facing",
+        "Repository Supervisor App — public/customer-facing repository access",
         "never manufacture or buy installations",
         "does **not** alter the draft Developer, Pro, Team, or Enterprise product catalog",
     ):
@@ -165,6 +183,7 @@ def main() -> int:
     for path in (
         "blueprints/commercial/marketplace-staged-launch.json",
         "blueprints/commercial/github-marketplace-app-manifest.example.json",
+        "blueprints/commercial/github-supervisor-app-manifest.example.json",
         "blueprints/commercial/github-vendor-app-manifest.example.json",
         "scripts/validate_marketplace_staged_launch.py",
     ):
