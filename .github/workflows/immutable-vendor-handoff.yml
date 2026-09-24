@@ -1,0 +1,147 @@
+name: ANPOS Immutable Vendor Handoff
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: immutable-vendor-handoff-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vendor-handoff:
+    if: github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify checked out source identity
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Export and verify deterministic vendor repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/vendor-handoff"
+          mkdir -p "$out"
+
+          python scripts/export_vendor_repositories.py --output "$out"
+
+          revision="$(git rev-parse HEAD)"
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          service_version="$(python -c "import json; print(json.load(open('commercial-service/package.json'))['version'])")"
+          protocol_version="$(python -c "import json; print(json.load(open('config/protocol/version.json'))['version'])")"
+          runtime_contract="$(python -c "import json; print(json.load(open('commercial-service/package.json'))['anpos']['runtime_contract'])")"
+
+          python scripts/verify_vendor_handoff.py             --repository "$out/anpos-commercial-service"             --expected-mode service             --expected-source-revision "$revision"             --expected-source-tree "$tree"             --expected-service-version "$service_version"             --expected-protocol-version "$protocol_version"             --expected-runtime-contract "$runtime_contract"             > "$out/service-receipt.json"
+
+          python scripts/verify_vendor_handoff.py             --repository "$out/anpos-commercial-template"             --expected-mode template             --expected-source-revision "$revision"             --expected-source-tree "$tree"             > "$out/template-receipt.json"
+
+          python - <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import zipfile
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "vendor-handoff"
+          source_sha = os.environ["GITHUB_SHA"]
+
+          def deterministic_zip(source: Path, destination: Path) -> str:
+              with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                  for path in sorted(source.rglob("*")):
+                      if not path.is_file():
+                          continue
+                      relative = path.relative_to(source).as_posix()
+                      info = zipfile.ZipInfo(relative)
+                      info.date_time = (1980, 1, 1, 0, 0, 0)
+                      info.compress_type = zipfile.ZIP_DEFLATED
+                      info.create_system = 3
+                      info.external_attr = 0o100644 << 16
+                      archive.writestr(info, path.read_bytes())
+              return hashlib.sha256(destination.read_bytes()).hexdigest()
+
+          service_zip = root / f"anpos-commercial-service-{source_sha}.zip"
+          template_zip = root / f"anpos-commercial-template-{source_sha}.zip"
+          service_sha256 = deterministic_zip(root / "anpos-commercial-service", service_zip)
+          template_sha256 = deterministic_zip(root / "anpos-commercial-template", template_zip)
+
+          service_receipt = json.loads((root / "service-receipt.json").read_text(encoding="utf-8"))
+          template_receipt = json.loads((root / "template-receipt.json").read_text(encoding="utf-8"))
+          assert service_receipt["ok"] is True
+          assert template_receipt["ok"] is True
+
+          manifest = {
+              "schema_version": 1,
+              "source_revision": source_sha,
+              "source_tree": service_receipt["source_tree"],
+              "protocol_version": service_receipt.get("protocol_version"),
+              "service_version": service_receipt.get("service_version"),
+              "runtime_contract": service_receipt.get("runtime_contract"),
+              "artifacts": {
+                  "service": {
+                      "file": service_zip.name,
+                      "sha256": service_sha256,
+                      "receipt": "service-receipt.json",
+                  },
+                  "template": {
+                      "file": template_zip.name,
+                      "sha256": template_sha256,
+                      "receipt": "template-receipt.json",
+                  },
+              },
+          }
+          (root / "handoff-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          mkdir -p handoff-artifact
+          cp "$out"/*.zip handoff-artifact/
+          cp "$out"/service-receipt.json handoff-artifact/
+          cp "$out"/template-receipt.json handoff-artifact/
+          cp "$out"/handoff-manifest.json handoff-artifact/
+
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path("handoff-artifact")
+          rows = []
+          for path in sorted(root.iterdir()):
+              if path.is_file():
+                  rows.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}")
+          (root / "SHA256SUMS").write_text("\n".join(rows) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload exact immutable handoff artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: anpos-vendor-handoff-${{ github.sha }}
+          path: handoff-artifact/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+          include-hidden-files: false
