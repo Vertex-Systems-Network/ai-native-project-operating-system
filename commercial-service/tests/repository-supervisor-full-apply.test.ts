@@ -9,7 +9,7 @@ import type { MaterializedTemplateReleaseFile } from "../lib/github";
 import type { SandboxExecutionResult } from "../lib/execution-sandbox";
 
 const content = Buffer.from('{"enabled":true}\n', "utf8");
-const digest = "52b22687c87cc8d3a4879360dbbf04abc370510296d3167e11c4f04b61f45e43";
+const digest = "a050ef06ea542b8fd8781f1e945f9adcd03c7ae5190719e66ba826e2059fce12";
 
 const payload: FullPlannerPayload = {
   v: 1,
