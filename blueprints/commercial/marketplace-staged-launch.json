@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "inactive_blueprint",
   "activation_scope": "vendor_marketplace_launch_only",
   "source_checked_at": "2026-09-04",
@@ -17,7 +17,10 @@
     "vendor_app_reference": "blueprints/commercial/github-vendor-app-manifest.example.json",
     "marketplace_app_must_be_public": true,
     "apps_must_remain_distinct": true,
-    "vendor_administration_must_not_be_requested_from_customer_installations": true
+    "vendor_administration_must_not_be_requested_from_customer_installations": true,
+    "supervisor_app_reference": "blueprints/commercial/github-supervisor-app-manifest.example.json",
+    "all_three_apps_must_remain_distinct": true,
+    "marketplace_app_permissions_must_not_be_widened_for_supervisor_writes": true
   },
   "phase_1_free_listing": {
     "supported_by_source_checked_docs": true,
@@ -78,7 +81,7 @@
   "safety": [
     "Never create artificial, purchased, duplicate, deceptive, or otherwise non-genuine installations to satisfy an eligibility threshold.",
     "Do not publish a free app whose only purpose is authentication or installation counting; it must provide real GitHub-integrated user value.",
-    "Do not collapse the public Marketplace App and private Vendor Distribution App trust roles or reuse their private keys.",
+    "Do not collapse Marketplace, Repository Supervisor, and Vendor Distribution App trust roles; do not reuse Marketplace OAuth credentials for Supervisor MCP or widen Community permissions for writes.",
     "Do not grant private_template_access or other paid/premium entitlements to a free Marketplace plan unless the operator deliberately approves that product decision and runtime tests enforce it.",
     "Do not represent a free Marketplace listing as evidence that paid Marketplace requirements have been met.",
     "Re-check official GitHub documentation immediately before free listing submission and again before paid conversion."
