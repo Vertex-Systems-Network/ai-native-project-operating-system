@@ -162,6 +162,25 @@ test("repository_audit classifies active ANPOS child and summarizes Requirements
   assert.equal(SUPERVISOR_AUDIT_PATHS.length, 11);
 });
 
+test("repository_audit treats canonical source identity as canonical even when control state is malformed", async () => {
+  const canonical = "Vertex-Systems-Network/ai-native-project-operating-system";
+  const fetchImpl = mockFetch((url) => {
+    if (url.pathname === `/repos/${canonical}`) {
+      return response({
+        ...repositoryMetadata(),
+        full_name: canonical,
+      });
+    }
+    if (url.pathname === `/repos/${canonical}/branches/main`) return response({ commit: { sha: HEAD } });
+    if (url.pathname.startsWith(`/repos/${canonical}/contents/`)) return response({ message: "Not Found" }, 404);
+    return response({ message: "unexpected" }, 500);
+  });
+
+  const result = await auditGithubRepository(canonical, "token", fetchImpl);
+  assert.equal(result.classification, "canonical_source");
+  assert.equal(result.classification_evidence.protocol_detected, false);
+});
+
 test("repository_audit classifies an empty repository without pretending ANPOS state exists", async () => {
   let controlReads = 0;
   const fetchImpl = mockFetch((url) => {
