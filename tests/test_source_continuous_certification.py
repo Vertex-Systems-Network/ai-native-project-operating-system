@@ -132,12 +132,11 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             "persist-credentials: false",
             "contents: read",
             'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}',
-            "vercel@59.11.7",
-            ".vercel/project.json",
-            "VERCEL_PROJECT_ID",
-            "env run -e production",
-            "npm --prefix commercial-service run migrate",
-            "Re-run migrator to prove idempotent complete state",
+            "scripts/export_vendor_repositories.py",
+            "scripts/verify_vendor_handoff.py",
+            "vercel@59.11.7 deploy",
+            "--build-env",
+            "ANPOS_PRODUCTION_MIGRATE_ON_BUILD=$CANONICAL_SOURCE_SHA",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("contents: write", source)
