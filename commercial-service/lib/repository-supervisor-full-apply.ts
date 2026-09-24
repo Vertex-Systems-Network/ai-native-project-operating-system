@@ -158,7 +158,7 @@ export function buildFullApplySandboxRequest(input: {
   };
 }
 
-function verifySandboxOutputs(
+export function verifyFullApplySandboxOutputs(
   payload: FullPlannerPayload,
   result: SandboxExecutionResult,
 ): SandboxFileArtifact[] {
@@ -521,7 +521,7 @@ export async function applyGithubSupervisorPlan(
       materialized_release_files: materialized,
     });
     const sandboxResult = await executeWithSandboxDriver(sandboxRequest, productionSandboxDriver(fetchImpl));
-    const outputs = verifySandboxOutputs(payload, sandboxResult);
+    const outputs = verifyFullApplySandboxOutputs(payload, sandboxResult);
     const receipt = sandboxReceiptDigest(sandboxResult, outputs);
 
     const beforeCommit = await resolveGithubRepository(record.repository_full_name, token, fetchImpl);
