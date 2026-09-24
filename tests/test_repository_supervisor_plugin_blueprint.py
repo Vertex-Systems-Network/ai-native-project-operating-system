@@ -15,13 +15,13 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.6.0")
+        self.assertEqual(plugin["version"], "0.7.0")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 6)
+        self.assertEqual(contract["schema_version"], 7)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
@@ -50,10 +50,17 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
             "full_plan_conflict_resolution_runtime",
             contract["implementation"]["not_yet_implemented"],
         )
-        self.assertIn(
+        self.assertNotIn(
             "empty_repository_guarded_initialization_flow",
             contract["implementation"]["not_yet_implemented"],
         )
+        self.assertEqual(
+            contract["full_planner"]["empty_repository_apply"],
+            "guarded_root_seed_then_feature_branch_pr_v1",
+        )
+        self.assertTrue(contract["full_planner"]["empty_repository_seed_zero_parent_required"])
+        self.assertTrue(contract["full_planner"]["empty_repository_seed_removed_on_feature_branch"])
+        self.assertTrue(contract["full_planner"]["empty_repository_explicit_confirmation_required"])
 
     def test_skill_preserves_assurance_evidence_on_upgrade(self) -> None:
         skill = (ROOT / "blueprints/plugins/anpos-repository-supervisor/skills/anpos-repository-supervisor/SKILL.md").read_text(encoding="utf-8")
@@ -88,7 +95,7 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertNotIn("full_anpos_bootstrap_adoption_upgrade_plan_generator", implementation["not_yet_implemented"])
         self.assertNotIn("sandbox_backed_full_plan_apply_runtime", implementation["not_yet_implemented"])
         self.assertIn("full_plan_conflict_resolution_runtime", implementation["not_yet_implemented"])
-        self.assertIn("empty_repository_guarded_initialization_flow", implementation["not_yet_implemented"])
+        self.assertNotIn("empty_repository_guarded_initialization_flow", implementation["not_yet_implemented"])
         self.assertNotIn("production_sandbox_driver", implementation["not_yet_implemented"])
         self.assertIn("live_production_sandbox_gateway_evidence", implementation["not_yet_implemented"])
         self.assertIn("live_github_repository_supervisor_read_e2e_receipt", implementation["not_yet_implemented"])
