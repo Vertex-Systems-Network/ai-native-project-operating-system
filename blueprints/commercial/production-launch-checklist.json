@@ -179,6 +179,6 @@
       "rule": "Deploy production from vendor-private source or a verified immutable artifact; do not rely on public canonical source access."
     }
   ],
-  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion. Marketplace/Vendor GitHub App role separation and exact deployed artifact identity are mandatory for this reference architecture.",
+  "promotion_rule": "Production sales are authorized only when every required paid-production gate has status=verified and evidence is recorded. Repository edits alone cannot set launch_authorized=true. Re-check blueprints/commercial/github-marketplace-compliance.json and the staged-launch strategy against official GitHub documentation immediately before Marketplace submission or paid conversion. Marketplace/Repository Supervisor/Vendor GitHub App role separation, signed sandbox evidence, and exact deployed artifact identity are mandatory for this reference architecture.",
   "non_destructive_expiry": true
 }
