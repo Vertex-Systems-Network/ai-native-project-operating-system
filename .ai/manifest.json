@@ -24,7 +24,8 @@
     "config/security/trust-policy.json",
     "config/runtime/budgets.json",
     "config/protocol/blueprint-completion.json",
-    "config/protocol/extension-contract.json"
+    "config/protocol/extension-contract.json",
+    "config/runtime/execution-sandbox.json"
   ],
   "roles": {
     "bootstrap": [
@@ -83,7 +84,8 @@
       "config/ai/agent-catalog.json",
       "config/coordination/agent-work-queue.json",
       "config/coordination/agent-alerts.json",
-      "config/security/control-plane-policy.json"
+      "config/security/control-plane-policy.json",
+      "config/runtime/execution-sandbox.json"
     ],
     "supervisor": [
       "SUPERVISOR.md",
@@ -112,7 +114,8 @@
       "config/operations/runbooks-and-drills.json",
       "config/audit/audit-journal.json",
       "config/risk/risk-register.json",
-      "config/testing/reference-e2e-matrix.json"
+      "config/testing/reference-e2e-matrix.json",
+      "config/runtime/execution-sandbox.json"
     ],
     "qa": [
       "CODE-QUALITY.md",
@@ -132,7 +135,8 @@
       "config/ai/asset-registry.json",
       "config/operations/runbooks-and-drills.json",
       "config/risk/risk-register.json",
-      "config/testing/reference-e2e-matrix.json"
+      "config/testing/reference-e2e-matrix.json",
+      "config/runtime/execution-sandbox.json"
     ],
     "security": [
       "SECURITY.md",
@@ -201,7 +205,8 @@
       "config/operations/runbooks-and-drills.json",
       "config/audit/audit-journal.json",
       "config/risk/risk-register.json",
-      "config/testing/reference-e2e-matrix.json"
+      "config/testing/reference-e2e-matrix.json",
+      "config/runtime/execution-sandbox.json"
     ],
     "commercial_distribution": [
       "COMMERCIAL-LICENSING.md",
