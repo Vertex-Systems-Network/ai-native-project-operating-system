@@ -270,7 +270,8 @@
       "commercial-service/app/api/ready/sandbox/route.ts",
       "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
       "commercial-service/tests/remote-sandbox-driver.test.ts",
-      "config/runtime/repository-supervisor-e2e.json"
+      "config/runtime/repository-supervisor-e2e.json",
+      "schemas/repository-supervisor-e2e.schema.json"
     ]
   },
   "bootstrap_entrypoint": "scripts/bootstrap_child.py",
