@@ -517,12 +517,10 @@ export async function createRepositoryWritePlan(input: {
   };
 }
 
-async function loadUsablePlan(planId: string, githubUserId: number, store: RepositoryWritePlanStore): Promise<RepositoryWritePlan> {
+async function loadPlan(planId: string, githubUserId: number, store: RepositoryWritePlanStore): Promise<RepositoryWritePlan> {
   if (!/^[0-9a-f-]{36}$/i.test(planId)) throw new Error("VALID_WRITE_PLAN_ID_REQUIRED");
   const plan = await store.get(planId, githubUserId);
   if (!plan) throw new Error("REPOSITORY_WRITE_PLAN_NOT_FOUND");
-  if (plan.status !== "planned") throw new Error("REPOSITORY_WRITE_PLAN_ALREADY_APPLIED");
-  if (new Date(plan.expires_at).getTime() <= Date.now()) throw new Error("REPOSITORY_WRITE_PLAN_EXPIRED");
   return plan;
 }
 
@@ -600,7 +598,7 @@ export async function applyRepositoryWritePlan(input: {
   token: string;
 }, store: RepositoryWritePlanStore = databaseWritePlanStore, fetchImpl: FetchLike = fetch) {
   assertUserId(input.githubUserId);
-  const plan = await loadUsablePlan(input.planId, input.githubUserId, store);
+  const plan = await loadPlan(input.planId, input.githubUserId, store);
   assertFeatureBranch(input.branchName, plan.default_branch);
   if (plan.changes.some((change) => change.action === "delete") && input.confirmDeletions !== true) {
     throw new Error("DELETE_CONFIRMATION_REQUIRED");
@@ -617,6 +615,8 @@ export async function applyRepositoryWritePlan(input: {
       confirm_deletions: input.confirmDeletions,
     },
   }, async () => {
+    if (plan.status !== "planned") throw new Error("REPOSITORY_WRITE_PLAN_ALREADY_APPLIED");
+    if (new Date(plan.expires_at).getTime() <= Date.now()) throw new Error("REPOSITORY_WRITE_PLAN_EXPIRED");
     await assertPlanStillMatches(plan, input.token, fetchImpl);
     const path = repoPath(plan.repository_full_name);
 
@@ -681,7 +681,6 @@ export async function applyRepositoryWritePlan(input: {
     };
   });
 }
-
 async function resolveForWrite(repository: string, token: string, fetchImpl: FetchLike) {
   const audit = await auditGithubRepository(repository, token, fetchImpl);
   if (audit.classification !== "active_project") throw new Error("ACTIVE_ANPOS_PROJECT_REQUIRED");
