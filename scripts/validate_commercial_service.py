@@ -674,9 +674,10 @@ def main() -> int:
         fail("Repository Supervisor adoption collisions must remain manual-merge")
     if planner_policy.get("requirements_83_96_rule") != "preserve_verified_evidence_never_reset_on_adoption_or_upgrade":
         fail("Repository Supervisor planner must preserve Requirements 83-96 evidence")
-    if "config/runtime/repository-supervisor-planner.json" not in vendor_boundary.get("vendor_only_paths", []):
+    planner_vendor_boundary = json.loads((ROOT / "config/licensing/vendor-source-boundary.json").read_text(encoding="utf-8"))
+    if "config/runtime/repository-supervisor-planner.json" not in planner_vendor_boundary.get("vendor_only_paths", []):
         fail("Repository Supervisor planner policy must remain vendor-only")
-    if "schemas/repository-supervisor-planner.schema.json" not in vendor_boundary.get("vendor_only_paths", []):
+    if "schemas/repository-supervisor-planner.schema.json" not in planner_vendor_boundary.get("vendor_only_paths", []):
         fail("Repository Supervisor planner schema must remain vendor-only")
 
     e2e_contract = json.loads((ROOT / "config/runtime/repository-supervisor-e2e.json").read_text(encoding="utf-8"))
