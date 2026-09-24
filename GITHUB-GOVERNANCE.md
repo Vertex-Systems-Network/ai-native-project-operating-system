@@ -12,7 +12,7 @@ For `Vertex-Systems-Network/ai-native-project-operating-system`:
 - missing child rules on the canonical source are not child-project governance drift;
 - do not silently apply child merge/ruleset settings to the source;
 - `blueprints/github/workflows/governance-audit.yml` stays inactive on the source;
-- the canonical source may retain only the explicit guarded vendor/source workflow allowlist: continuous certification, immutable vendor handoff, guarded commercial production deploy, and guarded commercial database migration; these workflows are repository-guarded, source/vendor-only, least-privilege, and stripped from customer/vendor-template outputs;
+- the canonical source may retain only the explicit guarded vendor/source workflow allowlist: continuous certification, immutable vendor handoff, guarded commercial production deploy, guarded commercial database migration, and guarded production readiness audit; these workflows are repository-guarded, source/vendor-only, least-privilege, and stripped from customer/vendor-template outputs;
 - source branch protection/rulesets, review requirements, bypass actors and required-check enforcement are repository settings maintained and verified separately from child-project policy and from CI workflow presence.
 
 ## Child setup and consent
