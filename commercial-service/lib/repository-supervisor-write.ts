@@ -69,6 +69,21 @@ export type PersistedSupervisorPlanSummary = {
   expires_at: string;
 };
 
+export type SupervisorPlanApplyRecord = {
+  plan_id: string;
+  plan_hash: string;
+  mode: SupervisorPlanMode;
+  canonical_repository_id: string;
+  repository_full_name: string;
+  default_branch: string;
+  expected_target_head_sha: string | null;
+  status: string;
+  applied_branch: string | null;
+  applied_head_sha: string | null;
+  expires_at: string;
+  payload: StoredSupervisorPlanEnvelope;
+};
+
 export type WritePlanSummary = {
   plan_id: string;
   plan_hash: string;
@@ -271,6 +286,10 @@ function idempotencyKey(value: unknown): string {
   return value;
 }
 
+export function validateSupervisorIdempotencyKey(value: unknown): string {
+  return idempotencyKey(value);
+}
+
 function assertWriteTarget(resolution: RepositoryResolution): void {
   if (resolution.full_name.toLowerCase() === CANONICAL_REPOSITORY.toLowerCase()) {
     throw new RepositorySupervisorError(403, "canonical_source_write_forbidden");
@@ -400,6 +419,46 @@ export async function persistGithubSupervisorPlan(input: {
     default_branch: input.default_branch,
     expected_target_head_sha: input.expected_target_head_sha?.toLowerCase() ?? null,
     expires_at: expiresAt.toISOString(),
+  };
+}
+
+export async function loadGithubSupervisorPlanForApply(
+  input: { plan_id: string; plan_hash: string },
+  principal: { id: number; login: string },
+  billingAccountId: number,
+): Promise<SupervisorPlanApplyRecord> {
+  const row = await loadPlan(input.plan_id, principal.id, billingAccountId);
+  if (row.plan_hash !== input.plan_hash) throw new RepositorySupervisorError(409, "write_plan_hash_mismatch");
+  const allowedModes: SupervisorPlanMode[] = [
+    "bounded_change",
+    "bootstrap_empty",
+    "bootstrap_child",
+    "adopt_existing",
+    "repair_partial",
+    "upgrade_active",
+  ];
+  if (!allowedModes.includes(row.mode as SupervisorPlanMode)) {
+    throw new RepositorySupervisorError(500, "write_plan_mode_invalid");
+  }
+  let payload: StoredSupervisorPlanEnvelope;
+  try { payload = JSON.parse(unseal(row.payload_ciphertext)) as StoredSupervisorPlanEnvelope; }
+  catch { throw new RepositorySupervisorError(500, "write_plan_payload_invalid"); }
+  if (payload.v !== 1 || payload.mode !== row.mode) {
+    throw new RepositorySupervisorError(500, "write_plan_payload_invalid");
+  }
+  return {
+    plan_id: row.plan_id,
+    plan_hash: row.plan_hash,
+    mode: row.mode as SupervisorPlanMode,
+    canonical_repository_id: row.canonical_repository_id,
+    repository_full_name: row.repository_full_name,
+    default_branch: row.default_branch,
+    expected_target_head_sha: row.expected_target_head_sha,
+    status: row.status,
+    applied_branch: row.applied_branch,
+    applied_head_sha: row.applied_head_sha,
+    expires_at: new Date(row.expires_at).toISOString(),
+    payload,
   };
 }
 
