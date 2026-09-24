@@ -299,7 +299,7 @@ export type MaterializedTemplateReleaseFile = TemplateReleaseMaterializationRequ
 };
 
 const MAX_TEMPLATE_MATERIALIZATION_FILES = 5_000;
-const MAX_TEMPLATE_MATERIALIZATION_BYTES = 32 * 1024 * 1024;
+const MAX_TEMPLATE_MATERIALIZATION_BYTES = 24 * 1024 * 1024;
 const TEMPLATE_BLOB_CONCURRENCY = 8;
 
 function safeTemplateMaterializationPath(value: string): boolean {
