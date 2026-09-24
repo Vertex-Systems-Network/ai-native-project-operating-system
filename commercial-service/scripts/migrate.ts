@@ -3,10 +3,13 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Pool } from "pg";
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const databaseUrl = process.env.DATABASE_URL_UNPOOLED?.trim() || process.env.DATABASE_URL?.trim();
 if (!databaseUrl || !/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
-  throw new Error("DATABASE_URL is required for migrations");
+  throw new Error("DATABASE_URL_UNPOOLED or DATABASE_URL is required for migrations");
 }
+console.log(
+  `migration connection source=${process.env.DATABASE_URL_UNPOOLED?.trim() ? "DATABASE_URL_UNPOOLED" : "DATABASE_URL"}`,
+);
 
 const pool = new Pool({
   connectionString: databaseUrl,
