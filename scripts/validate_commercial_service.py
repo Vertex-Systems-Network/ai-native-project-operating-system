@@ -13,8 +13,8 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
@@ -64,6 +64,7 @@ def main() -> int:
         "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
         "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
         "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+        "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
         "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
         "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
@@ -96,6 +97,10 @@ def main() -> int:
             "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
             "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
             "mcpOAuthConfigurationProblems", "mcpOAuthConfig", "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS",
+            "supervisorAppConfigurationProblems", "supervisorAppConfig",
+            "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
+            "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION", "unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION",
+            "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION", "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE",
             "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
             "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
             "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
@@ -203,7 +208,7 @@ def main() -> int:
         (
             "PLUGIN_CAPABILITIES", "community_repository_readiness_audit", "repository_supervisor_read",
             "repository_supervisor_write", "protocol_update_channel", "private_template_access",
-            "organization_seat_required", "capability_not_implemented", "requirePluginCapability",
+            "organization_seat_required", "repository_supervisor_write", "implemented: true", "requirePluginCapability",
         ),
         "Plugin subscription entitlement capability bridge",
     )
@@ -211,7 +216,7 @@ def main() -> int:
         "tests/plugin-entitlements.test.ts",
         (
             "Community stays limited to bounded readiness capability",
-            "Developer entitlement authorizes read-only Repository Supervisor capability",
+            "Developer entitlement authorizes Repository Supervisor read and guarded write capabilities",
             "principal mismatch and inactive billing",
             "Organization paid capability requires an active assigned seat",
         ),
@@ -233,7 +238,8 @@ def main() -> int:
             "MCP_OAUTH_STATE_COOKIE_NAME", "MCP_SCOPES", "createMcpAuthorizationStart",
             "consumeMcpAuthorizationState", "issueMcpAuthorizationCode", "redeemMcpAuthorizationCode",
             "authenticateMcpRequest", "mcpBearerChallenge", "code_challenge_method", "S256",
-            "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "anpos:profile", "anpos:repo:read",
+            "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "supervisorAppConfig",
+            "anpos:profile", "anpos:repo:read", "anpos:repo:write",
         ),
         "Repository Supervisor MCP OAuth broker",
     )
@@ -242,7 +248,9 @@ def main() -> int:
         (
             "MCP_TOOL_DEFINITIONS", "server/discover", "2026-07-28", "repository_profile",
             '"openai/profile": true', "repository_resolve", "repository_audit", "repository_get_assurance",
-            "billing_account_id", "authorizeRepositorySupervisorRead", "requireMcpScope",
+            "billing_account_id", "authorizeRepositorySupervisorCapability", "requireMcpScope",
+            "repository_plan_anpos_change", "repository_apply_anpos_change", "repository_open_change_request",
+            "repository_get_change_request", "repository_get_ci", "repository_merge_change_request",
         ),
         "Repository Supervisor MCP runtime",
     )
@@ -256,7 +264,7 @@ def main() -> int:
     )
     require_markers(
         "app/.well-known/oauth-protected-resource/route.ts",
-        ("authorization_servers", "bearer_methods_supported", "anpos:profile", "anpos:repo:read"),
+        ("authorization_servers", "bearer_methods_supported", "anpos:profile", "anpos:repo:read", "anpos:repo:write"),
         "MCP protected resource metadata",
     )
     require_markers(
@@ -293,7 +301,7 @@ def main() -> int:
         "app/api/ready/mcp/route.ts",
         (
             "mcpOAuthConfigurationProblems", "ensureSchema", "repository_supervisor_mcp",
-            "protected_resource_metadata", "authorization_server_metadata", "write_scope_available: false",
+            "protected_resource_metadata", "authorization_server_metadata", "supervisorAppConfigurationProblems", "write_scope_available: true",
         ),
         "MCP readiness gate",
     )
@@ -301,7 +309,7 @@ def main() -> int:
         "tests/mcp-auth.test.ts",
         (
             "exact client, redirect, resource and PKCE S256",
-            "read-only until guarded write runtime exists", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
+            "write scope is available only through the dedicated Supervisor App flow", "MCP_OAUTH_CLIENT_NOT_ALLOWED",
             "MCP_OAUTH_RESOURCE_MISMATCH", "MCP_OAUTH_SCOPE_INVALID",
         ),
         "MCP OAuth unit tests",
@@ -310,7 +318,7 @@ def main() -> int:
         "tests/mcp-runtime.test.ts",
         (
             "MCP discovery advertises modern stateless tool capability",
-            "authenticated OpenAI profile metadata and no write tool",
+            "authenticated profile plus guarded write tool metadata",
             "stable opaque profile", "OAuth challenge metadata on insufficient scope",
         ),
         "MCP runtime unit tests",
@@ -371,7 +379,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "002_mcp_oauth.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "003_repository_supervisor_write.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -389,6 +397,36 @@ def main() -> int:
             "mcp_oauth_access_tokens", "token_hash", "github_access_token_ciphertext", "revoked_at",
         ),
         "MCP OAuth migration",
+    )
+    require_markers(
+        "migrations/003_repository_supervisor_write.sql",
+        (
+            "repository_supervisor_write_plans", "plan_hash", "payload_ciphertext", "expected_target_head_sha",
+            "applied_branch", "applied_head_sha", "pull_request_number", "merge_commit_sha",
+            "repository_supervisor_write_idempotency", "idempotency_key",
+        ),
+        "Repository Supervisor write migration",
+    )
+    require_markers(
+        "lib/repository-supervisor-write.ts",
+        (
+            "createGithubWritePlan", "applyGithubWritePlan", "openGithubWritePlanPullRequest",
+            "getGithubWritePlanPullRequest", "getGithubWritePlanCi", "mergeGithubWritePlanPullRequest",
+            "validatePlannedChanges", "validateFeatureBranchName", "target_head_changed_replan_required",
+            "canonical_source_write_forbidden", "planned_change_contains_secret_material",
+            "refs/heads/", "git/blobs", "git/trees", "git/commits", "check-runs",
+            "repository_policy_rejected_merge", "resulting_default_branch_verification_failed",
+        ),
+        "Repository Supervisor guarded write runtime",
+    )
+    require_markers(
+        "tests/repository-supervisor-write.test.ts",
+        (
+            "bounded sorted change sets and hashes content",
+            "rejects vendor/control escape paths and committed secret material",
+            "accepts only anpos feature branches and rejects default branch",
+        ),
+        "Repository Supervisor guarded write unit tests",
     )
     require_markers(
         "scripts/migrate.ts",
@@ -453,6 +491,7 @@ def main() -> int:
         (
             "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
             "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
+            "Supervisor App role cannot collapse into Marketplace or Vendor roles",
             "legacy single-app credentials do not satisfy split configuration", "Community OAuth state uses PKCE",
             "Community browser session is encrypted", "ANPOS_COMMERCIAL_RELEASE_REF", "mutable production controls",
         ),
@@ -494,8 +533,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 7:
-        fail("commercial service API contract must be schema_version 7")
+    if api_contract.get("schema_version") != 8:
+        fail("commercial service API contract must be schema_version 8")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -505,10 +544,27 @@ def main() -> int:
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
         "mcp_oauth_pkce_s256_required", "mcp_resource_parameter_binding_required",
         "mcp_access_tokens_opaque_short_lived_and_server_side_hashed",
-        "mcp_write_scope_forbidden_until_guarded_write_runtime_exists",
+        "repository_supervisor_uses_dedicated_github_app_role",
+        "marketplace_app_must_not_be_widened_for_supervisor_writes",
+        "supervisor_write_plan_must_be_server_issued_and_expected_head_bound",
+        "supervisor_write_forbids_direct_default_branch_and_force_push",
+        "supervisor_merge_must_verify_resulting_default_branch_head",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
+
+    supervisor_manifest = json.loads((ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json").read_text(encoding="utf-8"))
+    if supervisor_manifest.get("role") != "repository_supervisor_app":
+        fail("Supervisor GitHub App manifest must declare repository_supervisor_app role")
+    supervisor_permissions = supervisor_manifest.get("repository_permissions", {})
+    for permission, level in (("metadata", "read"), ("contents", "write"), ("pull_requests", "write"), ("checks", "read"), ("statuses", "read")):
+        if supervisor_permissions.get(permission) != level:
+            fail(f"Supervisor GitHub App manifest missing least-privilege permission: {permission}:{level}")
+    if "administration" in supervisor_permissions:
+        fail("Supervisor GitHub App must not request Administration permission by default")
+    vendor_boundary = json.loads((ROOT / "config/licensing/vendor-source-boundary.json").read_text(encoding="utf-8"))
+    if "blueprints/commercial/github-supervisor-app-manifest.example.json" not in vendor_boundary.get("vendor_only_paths", []):
+        fail("Supervisor GitHub App blueprint must remain vendor-only")
 
     catalog = json.loads((ROOT / "config/licensing/product-catalog.json").read_text(encoding="utf-8"))
     plans_source = text("lib/plans.ts")
