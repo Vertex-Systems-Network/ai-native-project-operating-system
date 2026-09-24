@@ -1,6 +1,6 @@
 # ANPOS Repository Supervisor Plugin Blueprint
 
-Status: **source blueprint plus GitHub read-only runtime/OAuth-MCP implementation aligned to ANPOS 1.4.0 / Requirements 83–96**. This directory defines the product/runtime contract for a ChatGPT/Codex plugin that accepts a user-supplied GitHub or GitLab repository URL and supervises ANPOS-based project initialization, adoption, audit, and development. The GitHub read-only runtime, entitlement bridge, OAuth 2.1/PKCE broker and stateless `/mcp` source are implemented in the vendor-only commercial service, but no public plugin connection or production MCP deployment is claimed and no live credentials belong in this repository.
+Status: **source blueprint plus GitHub read/write Repository Supervisor runtime aligned to ANPOS 1.4.0 / Requirements 83–96**. This directory defines the product/runtime contract for a ChatGPT/Codex plugin that accepts a user-supplied GitHub or GitLab repository URL and supervises ANPOS-based project initialization, adoption, audit, and development. The GitHub read-only runtime, entitlement bridge, OAuth 2.1/PKCE broker and stateless `/mcp` source are implemented in the vendor-only commercial service, but no public plugin connection or production MCP deployment is claimed and no live credentials belong in this repository.
 
 ## Product goal
 
@@ -192,14 +192,23 @@ Repository authorization and commercial authorization are separate checks.
 
 - The user must first be an authenticated GitHub/GitLab principal with provider permission for the target repository.
 - The REST commercial bridge uses `X-Anpos-Account-Id`; the MCP tool surface uses an explicit non-secret `billing_account_id` selector. Neither value grants access by itself: the server re-verifies the authenticated GitHub principal, billing account entitlement and organization seat when applicable.
+- Paid Repository Supervisor OAuth uses a **dedicated Supervisor GitHub App**. Do not widen the Community/Marketplace App permissions for writes and do not reuse the private Vendor Distribution App.
 - Commercial Service remains the server-side entitlement authority and reconciles Marketplace state before returning plugin capability decisions.
 - Community remains limited to the existing bounded readiness audit and does not gain the broader Repository Supervisor read surface.
 - `repository_supervisor_read` is a paid capability derived from the existing `protocol_update_channel` entitlement and requires an active organization seat when the billing account is an organization.
-- `repository_supervisor_write` is already defined against `private_template_access + protocol_update_channel`, but is deliberately denied until the guarded write runtime exists.
+- `repository_supervisor_write` requires `private_template_access + protocol_update_channel` and an active organization seat when applicable. The guarded write runtime is source-implemented but production write E2E remains pending.
 - Repository-local entitlement references, README text, Issues, PR comments, or model instructions cannot grant paid capability.
 - The plugin entitlement response exposes plan/capability state only; it does not return card/payment data, webhook secrets, signing private keys, or provider credentials.
 
 This bridge does not make ANPOS core child development, Requirements 1–96, child bootstrap, or the normal AI-development lifecycle subscription-dependent.
+
+### Guarded write foundation
+
+The currently implemented write planner mode is `bounded_change`. It accepts an explicit bounded file upsert/delete set, validates path/size/secret boundaries, sorts and hashes the plan deterministically, encrypts the full plan payload at rest, binds it to the authenticated principal/billing account/canonical repository/default branch/exact observed head SHA, and expires the plan after a short window.
+
+Apply creates one Git Data tree/commit and then one new `anpos/*` branch ref. It never patches the default branch directly and never force-pushes. The PR and CI tools operate only on the server-recorded applied head. Guarded merge is destructive/confirmation-worthy and rechecks entitlement, GitHub permission, exact PR head/base, checks/statuses, unchanged default-branch head, GitHub policy response, and the resulting default-branch head.
+
+This foundation does **not** yet generate complete bootstrap/adoption/repair/upgrade plans from sanitized ANPOS releases. Those planner modes remain pending and must preserve child application code and verified Requirements 83–96 evidence.
 
 ## Repository URL safety
 
@@ -264,14 +273,17 @@ Current source implementation status:
 - ✅ Requirements 83–96 assurance/governance summaries and evidence-bound assurance reads;
 - ✅ isolated sandbox driver contract with network denied and no local-process fallback;
 - ✅ GitHub-backed OAuth 2.1 authorization-code flow with PKCE S256, protected-resource/authorization-server metadata, one-time replay-safe authorization codes, opaque short-lived MCP access tokens, stateless POST `/mcp`, authenticated profile metadata and MCP readiness gate;
-- ⏳ deterministic adoption/upgrade planning and branch apply;
-- ⏳ PR/check/guarded-merge write flow;
+- ✅ dedicated Supervisor GitHub App trust boundary with write scope separated from Marketplace billing/Community and Vendor Distribution roles;
+- ✅ server-issued encrypted `bounded_change` plans bound to canonical repository identity, exact default-branch head SHA and deterministic plan hash;
+- ✅ atomic Git Data commit apply to a new `anpos/*` feature branch, PR creation/re-read, exact commit CI inspection, and guarded merge with resulting-main verification;
+- ⏳ full bootstrap/adoption/repair/upgrade plan generation from sanitized ANPOS release contracts;
 - ⏳ production container/microVM/remote sandbox driver;
 - ⏳ GitHub runtime E2E certification.
 
 Implementation references:
 
 - `commercial-service/lib/repository-supervisor-runtime.ts`
+- `commercial-service/lib/repository-supervisor-write.ts`
 - `commercial-service/lib/mcp-auth.ts`
 - `commercial-service/lib/mcp-runtime.ts`
 - `commercial-service/app/mcp/route.ts`
@@ -282,7 +294,9 @@ Implementation references:
 - `commercial-service/app/api/auth/mcp/github/callback/route.ts`
 - `commercial-service/app/api/ready/mcp/route.ts`
 - `commercial-service/migrations/002_mcp_oauth.sql`
+- `commercial-service/migrations/003_repository_supervisor_write.sql`
 - `commercial-service/tests/mcp-auth.test.ts`
+- `commercial-service/tests/repository-supervisor-write.test.ts`
 - `commercial-service/tests/mcp-runtime.test.ts`
 - `commercial-service/lib/execution-sandbox.ts`
 - `config/runtime/execution-sandbox.json`
