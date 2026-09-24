@@ -40,7 +40,9 @@
     "tests/test_repository_supervisor_plugin_blueprint.py",
     "config/runtime/repository-supervisor-e2e.json",
     "schemas/repository-supervisor-e2e.schema.json",
-    "tests/test_repository_supervisor_production_runtime.py"
+    "tests/test_repository_supervisor_production_runtime.py",
+    "config/runtime/repository-supervisor-planner.json",
+    "schemas/repository-supervisor-planner.schema.json"
   ],
   "rules": [
     "Canonical source may retain these paths as inert vendor/operator assets.",
@@ -55,6 +57,7 @@
     "Removing vendor-only paths must not remove core ANPOS child development, security, quality, PM, AI selection, or non-secret entitlement-reference functionality.",
     "Repository supervisor plugin blueprints and their source-only regression tests are vendor/operator assets, must track the active ANPOS protocol baseline, and must not leak into initialized child repositories or customer-facing template exports.",
     "Repository Supervisor GitHub App assets are vendor/operator launch architecture and must remain distinct from Marketplace billing/Community and Vendor Distribution App roles.",
-    "Repository Supervisor live E2E evidence contracts are vendor/operator launch assets and must not be copied into customer child repositories."
+    "Repository Supervisor live E2E evidence contracts are vendor/operator launch assets and must not be copied into customer child repositories.",
+    "Repository Supervisor full-mode planner policy/schema are vendor runtime assets and must not leak into customer child repositories."
   ]
 }
