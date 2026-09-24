@@ -134,7 +134,7 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}',
             "vercel@59.11.7",
             "env run -e production",
-            "npm run migrate",
+            "npm --prefix commercial-service run migrate",
             "Re-run migrator to prove idempotent complete state",
         ):
             self.assertIn(marker, source)

@@ -59,7 +59,6 @@ jobs:
           npm ci
 
       - name: Verify production database environment is injectable
-        working-directory: commercial-service
         shell: bash
         run: |
           set -euo pipefail
@@ -71,15 +70,13 @@ jobs:
           '
 
       - name: Apply checksum-locked commercial migrations
-        working-directory: commercial-service
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- npm run migrate
+          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- npm --prefix commercial-service run migrate
 
       - name: Re-run migrator to prove idempotent complete state
-        working-directory: commercial-service
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- npm run migrate
+          npx --yes vercel@59.11.7 --token "$VERCEL_TOKEN" env run -e production -- npm --prefix commercial-service run migrate
