@@ -28,7 +28,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 3
+      "const": 4
     },
     "status": {
       "const": "source_planner_policy"
@@ -166,7 +166,11 @@
         "empty_repository_seed_path",
         "empty_repository_seed_removed_on_feature_branch",
         "empty_repository_explicit_confirmation_required",
-        "empty_repository_recovery_after_seed_failure"
+        "empty_repository_recovery_after_seed_failure",
+        "conflict_resolution_requires_exact_source_plan_hash",
+        "conflict_resolution_requires_exact_target_git_object",
+        "migration_review_use_release_requires_acknowledgement",
+        "resolved_plan_is_new_immutable_plan"
       ],
       "properties": {
         "source": {
@@ -200,7 +204,7 @@
           "const": "guarded_root_seed_then_feature_branch_pr_v1"
         },
         "conflict_resolution": {
-          "const": "pending_user_resolved_plan"
+          "const": "explicit_resolved_plan_v1"
         },
         "customer_provider_token_forwarded_to_sandbox": {
           "const": false
@@ -231,6 +235,18 @@
         },
         "empty_repository_recovery_after_seed_failure": {
           "const": "apply_recovery_required"
+        },
+        "conflict_resolution_requires_exact_source_plan_hash": {
+          "const": true
+        },
+        "conflict_resolution_requires_exact_target_git_object": {
+          "const": true
+        },
+        "migration_review_use_release_requires_acknowledgement": {
+          "const": true
+        },
+        "resolved_plan_is_new_immutable_plan": {
+          "const": true
         }
       }
     }

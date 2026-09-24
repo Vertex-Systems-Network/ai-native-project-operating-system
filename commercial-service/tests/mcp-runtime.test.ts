@@ -58,6 +58,7 @@ test("tool list exposes authenticated profile plus guarded write tool metadata",
   const merge = tools.find((tool: any) => tool.name === "repository_merge_change_request");
   const apply = tools.find((tool: any) => tool.name === "repository_apply_anpos_change");
   const plan = tools.find((tool: any) => tool.name === "repository_plan_anpos_change");
+  const resolveConflicts = tools.find((tool: any) => tool.name === "repository_resolve_plan_conflicts");
   assert.equal(apply.annotations.destructiveHint, true);
   assert.equal(apply.inputSchema.properties.confirm_empty_repository_initialization.type, "boolean");
   assert.equal(plan.annotations.readOnlyHint, true);
@@ -65,13 +66,16 @@ test("tool list exposes authenticated profile plus guarded write tool metadata",
     "bounded_change", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active",
   ]);
   assert.deepEqual(plan.inputSchema.required, ["mode", "repository_url", "billing_account_id"]);
+  assert.equal(resolveConflicts.annotations.readOnlyHint, true);
+  assert.deepEqual(resolveConflicts.inputSchema.required, ["billing_account_id", "source_plan_id", "source_plan_hash", "resolutions"]);
+  assert.deepEqual(resolveConflicts.inputSchema.properties.resolutions.items.properties.resolution.enum, ["keep_target", "use_release"]);
   assert.equal(merge.annotations.readOnlyHint, false);
   assert.equal(merge.annotations.destructiveHint, true);
   assert.deepEqual(merge.securitySchemes, [{
     type: "oauth2",
     scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
   }]);
-  assert.equal(MCP_TOOL_DEFINITIONS.length, 10);
+  assert.equal(MCP_TOOL_DEFINITIONS.length, 11);
 });
 
 test("repository_profile returns one stable opaque profile from validated credentials", async () => {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildFullPlannerPayload,
+  buildResolvedFullPlannerPayload,
   type FullPlannerMode,
 } from "../lib/repository-supervisor-planner";
 import type { RepositorySupervisorAudit, RepositoryTreeEntry } from "../lib/repository-supervisor-runtime";
@@ -175,4 +176,98 @@ test("planner mode must match the audited repository classification", () => {
     }),
     /planner_mode_classification_mismatch:active_project/,
   );
+});
+
+
+test("resolved plan converts every manual merge into explicit immutable decisions", () => {
+  const source = buildFullPlannerPayload({
+    mode: "adopt_existing",
+    audit: audit("adopt_existing"),
+    release: RELEASE,
+    target_tree: [
+      tree("README.md", "f".repeat(40)),
+      tree("src/index.ts", "9".repeat(40)),
+    ],
+    principal_login: "octo",
+    generated_instance_id: "11111111-1111-4111-8111-111111111111",
+    generated_at: "2026-09-24T00:00:00.000Z",
+  });
+  const blocker = source.actions.find((row) => row.path === "README.md");
+  assert.equal(blocker?.action, "manual_merge");
+
+  const resolved = buildResolvedFullPlannerPayload({
+    source_payload: source,
+    source_plan_id: "22222222-2222-4222-8222-222222222222",
+    source_plan_hash: "a".repeat(64),
+    resolved_by_github_login: "octo",
+    resolutions: [{
+      path: "README.md",
+      resolution: "use_release",
+      expected_target_git_object: "f".repeat(40),
+    }],
+  });
+  assert.equal(resolved.conflict_free, true);
+  assert.equal(resolved.safe_to_apply, true);
+  assert.equal(resolved.apply_implementation, "sandbox_full_plan_v1");
+  assert.equal(resolved.actions.find((row) => row.path === "README.md")?.action, "replace_from_release");
+  assert.equal(resolved.resolution?.source_plan_hash, "a".repeat(64));
+});
+
+test("resolved plan requires explicit acknowledgement before replacing migration-reviewed project state", () => {
+  const source = buildFullPlannerPayload({
+    mode: "upgrade_active",
+    audit: audit("upgrade_active"),
+    release: RELEASE,
+    target_tree: [
+      tree(".ai/manifest.json", "a".repeat(40)),
+      tree("README.md", "b".repeat(40)),
+      tree("config/assurance/assurance-state.json", "7".repeat(40)),
+      tree("config/protocol/instance.json", "6".repeat(40)),
+    ],
+    principal_login: "octo",
+  });
+  const blockers = source.actions.filter((row) => row.action === "migration_review");
+  assert.equal(blockers.length, 2);
+
+  assert.throws(() => buildResolvedFullPlannerPayload({
+    source_payload: source,
+    source_plan_id: "33333333-3333-4333-8333-333333333333",
+    source_plan_hash: "b".repeat(64),
+    resolved_by_github_login: "octo",
+    resolutions: [
+      {
+        path: "config/assurance/assurance-state.json",
+        resolution: "use_release",
+        expected_target_git_object: "7".repeat(40),
+      },
+      {
+        path: "config/protocol/instance.json",
+        resolution: "keep_target",
+        expected_target_git_object: "6".repeat(40),
+      },
+    ],
+  }), /project_state_replacement_acknowledgement_required/);
+
+  const resolved = buildResolvedFullPlannerPayload({
+    source_payload: source,
+    source_plan_id: "33333333-3333-4333-8333-333333333333",
+    source_plan_hash: "b".repeat(64),
+    resolved_by_github_login: "octo",
+    resolutions: [
+      {
+        path: "config/assurance/assurance-state.json",
+        resolution: "use_release",
+        expected_target_git_object: "7".repeat(40),
+        acknowledge_project_state_replacement: true,
+      },
+      {
+        path: "config/protocol/instance.json",
+        resolution: "keep_target",
+        expected_target_git_object: "6".repeat(40),
+      },
+    ],
+  });
+  assert.equal(resolved.summary.migration_review, 0);
+  assert.equal(resolved.conflict_free, true);
+  assert.equal(resolved.actions.find((row) => row.path === "config/protocol/instance.json")?.action, "preserve_project_state");
 });

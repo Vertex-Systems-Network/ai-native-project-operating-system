@@ -1,5 +1,5 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -170,6 +170,47 @@
         ]
       },
       "full_mode_apply_status": "sandbox_full_plan_v1_plus_guarded_empty_repository_v1"
+    },
+    {
+      "name": "repository_resolve_plan_conflicts",
+      "intent": "Derive a new immutable conflict-free full ANPOS plan from one exact conflict-blocked source plan. Every manual_merge or migration_review path must receive an explicit keep_target or use_release decision bound to the exact observed target Git object; migration-reviewed project-state replacement additionally requires explicit acknowledgement.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [
+        "billing_account_id",
+        "source_plan_id",
+        "source_plan_hash",
+        "resolutions"
+      ],
+      "required_outputs": [
+        "plan_id",
+        "plan_hash",
+        "supersedes",
+        "release",
+        "target",
+        "summary",
+        "requirements_83_96",
+        "resolution",
+        "conflict_free",
+        "planning_complete",
+        "safe_to_apply",
+        "apply_implementation",
+        "action_preview",
+        "action_preview_truncated",
+        "full_action_count"
+      ],
+      "server_requirements": [
+        "source_plan_must_be_planned_and_conflict_blocked",
+        "source_plan_hash_must_match_exact_server_ledger_plan",
+        "canonical_repository_identity_and_default_branch_must_match_source_plan",
+        "target_default_branch_head_must_remain_exactly_unchanged",
+        "verified_private_release_identity_must_remain_exactly_unchanged",
+        "every_blocking_path_requires_exactly_one_resolution",
+        "resolution_must_bind_expected_target_git_object",
+        "keep_target_requires_existing_target_object",
+        "migration_review_use_release_requires_explicit_project_state_replacement_acknowledgement",
+        "resolved_plan_is_new_encrypted_immutable_plan_and_does_not_mutate_source_plan"
+      ]
     },
     {
       "name": "repository_apply_anpos_change",
@@ -369,7 +410,7 @@
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_full_planner_plus_sandbox_full_apply_plus_guarded_empty_bootstrap_source",
+    "phase": "github_full_planner_plus_resolved_plan_plus_sandbox_apply_plus_guarded_empty_bootstrap_source",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -379,6 +420,7 @@
       "repository_audit",
       "repository_get_assurance",
       "repository_plan_anpos_change",
+      "repository_resolve_plan_conflicts",
       "repository_apply_anpos_change",
       "repository_open_change_request",
       "repository_get_change_request",
@@ -433,16 +475,20 @@
       "zero_parent_seed_commit_verification",
       "empty_bootstrap_explicit_confirmation",
       "seed_removed_on_feature_branch_commit",
-      "empty_bootstrap_post_seed_recovery_state"
+      "empty_bootstrap_post_seed_recovery_state",
+      "explicit_full_plan_conflict_resolution",
+      "resolved_plan_source_hash_binding",
+      "resolved_plan_target_git_object_binding",
+      "migration_review_replacement_acknowledgement",
+      "immutable_resolved_plan_derivation"
     ],
     "not_yet_implemented": [
-      "full_plan_conflict_resolution_runtime",
       "gitlab_adapter",
       "live_production_sandbox_gateway_evidence",
       "live_github_repository_supervisor_read_e2e_receipt",
       "live_github_repository_supervisor_write_e2e_receipt"
     ],
-    "claim_boundary": "Source implements GitHub read/audit, deterministic full planning, sandbox-backed full apply, and guarded bootstrap_empty initialization through one explicitly confirmed zero-parent seed commit followed by an anpos/* feature branch and PR. Manual/migration conflict resolution, live sandbox/plugin/GitHub E2E evidence, and GitLab parity remain pending.",
+    "claim_boundary": "Source implements GitHub read/audit, deterministic full planning, exact source-bound conflict resolution into a new immutable plan, sandbox-backed full apply, and guarded bootstrap_empty initialization. Custom merged-content synthesis, live sandbox/plugin/GitHub E2E evidence, and GitLab parity remain outside this source claim.",
     "sandbox_driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
     "sandbox_readiness_endpoint": "/api/ready/sandbox",
     "e2e_verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
@@ -554,11 +600,19 @@
     "requirements_83_96": "preserve_verified_evidence_and_reverify_material_ai_drift",
     "mcp_output": "bounded_action_preview_full_plan_encrypted_server_side",
     "full_mode_apply": "sandbox_full_plan_v1_plus_guarded_empty_repository_v1",
-    "conflict_resolution_apply": "pending",
+    "conflict_resolution_apply": "explicit_resolved_plan_v1",
     "empty_repository_apply": "guarded_root_seed_then_feature_branch_pr_v1",
     "empty_repository_seed_path": ".anpos-bootstrap-seed",
     "empty_repository_seed_zero_parent_required": true,
     "empty_repository_seed_removed_on_feature_branch": true,
-    "empty_repository_explicit_confirmation_required": true
+    "empty_repository_explicit_confirmation_required": true,
+    "conflict_resolution_choices": [
+      "keep_target",
+      "use_release"
+    ],
+    "conflict_resolution_source_plan_hash_required": true,
+    "conflict_resolution_target_git_object_required": true,
+    "migration_review_use_release_requires_acknowledgement": true,
+    "resolved_plan_mutates_source_plan": false
   }
 }

@@ -15,13 +15,13 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.7.0")
+        self.assertEqual(plugin["version"], "0.8.0")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 7)
+        self.assertEqual(contract["schema_version"], 8)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
@@ -46,10 +46,17 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
             "sandbox_backed_full_plan_apply_runtime",
             contract["implementation"]["not_yet_implemented"],
         )
-        self.assertIn(
+        self.assertNotIn(
             "full_plan_conflict_resolution_runtime",
             contract["implementation"]["not_yet_implemented"],
         )
+        self.assertIn("repository_resolve_plan_conflicts", names)
+        resolved = next(tool for tool in contract["tools"] if tool["name"] == "repository_resolve_plan_conflicts")
+        self.assertIn("source_plan_hash", resolved["required_inputs"])
+        self.assertIn("resolutions", resolved["required_inputs"])
+        self.assertEqual(contract["full_planner"]["conflict_resolution_apply"], "explicit_resolved_plan_v1")
+        self.assertEqual(contract["full_planner"]["conflict_resolution_choices"], ["keep_target", "use_release"])
+        self.assertTrue(contract["full_planner"]["migration_review_use_release_requires_acknowledgement"])
         self.assertNotIn(
             "empty_repository_guarded_initialization_flow",
             contract["implementation"]["not_yet_implemented"],
@@ -87,14 +94,15 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertTrue(transport["write_scope_available"])
         self.assertEqual(transport["github_app_role"], "dedicated_repository_supervisor_app")
         for tool in [
-            "repository_plan_anpos_change", "repository_apply_anpos_change",
+            "repository_plan_anpos_change", "repository_resolve_plan_conflicts", "repository_apply_anpos_change",
             "repository_open_change_request", "repository_get_change_request",
             "repository_get_ci", "repository_merge_change_request",
         ]:
             self.assertIn(tool, implementation["implemented_tools"])
         self.assertNotIn("full_anpos_bootstrap_adoption_upgrade_plan_generator", implementation["not_yet_implemented"])
         self.assertNotIn("sandbox_backed_full_plan_apply_runtime", implementation["not_yet_implemented"])
-        self.assertIn("full_plan_conflict_resolution_runtime", implementation["not_yet_implemented"])
+        self.assertNotIn("full_plan_conflict_resolution_runtime", implementation["not_yet_implemented"])
+        self.assertIn("explicit_full_plan_conflict_resolution", implementation["implemented_support"])
         self.assertNotIn("empty_repository_guarded_initialization_flow", implementation["not_yet_implemented"])
         self.assertNotIn("production_sandbox_driver", implementation["not_yet_implemented"])
         self.assertIn("live_production_sandbox_gateway_evidence", implementation["not_yet_implemented"])

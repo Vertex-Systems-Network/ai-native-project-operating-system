@@ -4,12 +4,14 @@ import { templateReleasePlanSnapshot, type CommercialReleasePlanSnapshot } from 
 import {
   auditGithubRepository,
   listGithubRepositoryTree,
+  resolveGithubRepository,
   RepositorySupervisorError,
   type RepositorySupervisorAudit,
   type RepositorySupervisorClassification,
   type RepositoryTreeEntry,
 } from "./repository-supervisor-runtime";
 import {
+  loadGithubSupervisorPlanForApply,
   persistGithubSupervisorPlan,
   type StoredSupervisorPlanEnvelope,
   type SupervisorPlanMode,
@@ -17,6 +19,21 @@ import {
 
 export type FullPlannerMode = Exclude<SupervisorPlanMode, "bounded_change">;
 export type GithubSecurityCapability = "enabled" | "unavailable" | "unknown";
+export type ConflictResolutionChoice = "keep_target" | "use_release";
+
+export type ConflictResolutionInput = {
+  path: unknown;
+  resolution: unknown;
+  expected_target_git_object?: unknown;
+  acknowledge_project_state_replacement?: unknown;
+};
+
+export type ConflictResolutionDecision = {
+  path: string;
+  resolution: ConflictResolutionChoice;
+  expected_target_git_object: string | null;
+  acknowledge_project_state_replacement: boolean;
+};
 
 export type PlannerActionKind =
   | "unchanged"
@@ -84,6 +101,12 @@ export type FullPlannerPayload = StoredSupervisorPlanEnvelope & {
     assurance_summary: RepositorySupervisorAudit["assurance_state_summary"];
     ai_assurance_reverification_required: boolean;
   };
+  resolution?: {
+    source_plan_id: string;
+    source_plan_hash: string;
+    resolved_by_github_login: string;
+    decisions: ConflictResolutionDecision[];
+  } | null;
   conflict_free: boolean;
   planning_complete: true;
   safe_to_apply: boolean;
@@ -460,6 +483,228 @@ export function buildFullPlannerPayload(input: {
   };
 }
 
+
+function normalizedResolutionTarget(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(normalized)) {
+    throw new RepositorySupervisorError(400, "conflict_resolution_expected_target_invalid");
+  }
+  return normalized;
+}
+
+function summarizeResolvedActions(actions: PlannerAction[]) {
+  const counts: Record<PlannerActionKind, number> = {
+    unchanged: 0,
+    add_from_release: 0,
+    replace_from_release: 0,
+    bootstrap_transform: 0,
+    manual_merge: 0,
+    preserve_project_state: 0,
+    migration_review: 0,
+  };
+  for (const action of actions) counts[action.action] += 1;
+  return counts;
+}
+
+export function buildResolvedFullPlannerPayload(input: {
+  source_payload: FullPlannerPayload;
+  source_plan_id: string;
+  source_plan_hash: string;
+  resolutions: ConflictResolutionInput[];
+  resolved_by_github_login: string;
+}): FullPlannerPayload {
+  const source = validateStoredFullPlannerPayload(input.source_payload);
+  if (
+    source.apply_implementation !== "conflict_resolution_required"
+    || source.conflict_free
+    || source.safe_to_apply
+  ) throw new RepositorySupervisorError(409, "source_plan_does_not_require_conflict_resolution");
+  if (!/^[0-9a-f-]{36}$/.test(input.source_plan_id)) {
+    throw new RepositorySupervisorError(400, "source_plan_id_invalid");
+  }
+  if (!/^[0-9a-f]{64}$/.test(input.source_plan_hash)) {
+    throw new RepositorySupervisorError(400, "source_plan_hash_invalid");
+  }
+  const resolver = ownerHandle(input.resolved_by_github_login);
+  const blockers = source.actions.filter((action) => action.action === "manual_merge" || action.action === "migration_review");
+  if (!blockers.length) throw new RepositorySupervisorError(409, "source_plan_has_no_resolvable_conflicts");
+  if (!Array.isArray(input.resolutions) || input.resolutions.length !== blockers.length) {
+    throw new RepositorySupervisorError(400, "all_plan_conflicts_require_exact_resolution");
+  }
+
+  const blockerByPath = new Map(blockers.map((action) => [action.path, action]));
+  const normalized = new Map<string, ConflictResolutionDecision>();
+  for (const raw of input.resolutions) {
+    const path = typeof raw?.path === "string" ? raw.path.trim() : "";
+    if (!path || path.length > 512 || normalized.has(path)) {
+      throw new RepositorySupervisorError(400, "conflict_resolution_path_invalid_or_duplicate");
+    }
+    const blocker = blockerByPath.get(path);
+    if (!blocker) throw new RepositorySupervisorError(400, "conflict_resolution_path_not_blocking");
+    const resolution = raw.resolution;
+    if (resolution !== "keep_target" && resolution !== "use_release") {
+      throw new RepositorySupervisorError(400, "conflict_resolution_choice_invalid");
+    }
+    const expectedTarget = normalizedResolutionTarget(raw.expected_target_git_object);
+    const actualTarget = blocker.target_git_object?.toLowerCase() ?? null;
+    if (expectedTarget !== actualTarget) {
+      throw new RepositorySupervisorError(409, "conflict_resolution_target_object_changed");
+    }
+    const acknowledge = raw.acknowledge_project_state_replacement === true;
+    if (resolution === "keep_target" && !actualTarget) {
+      throw new RepositorySupervisorError(409, "conflict_resolution_keep_target_missing_target");
+    }
+    if (resolution === "use_release" && blocker.action === "migration_review" && !acknowledge) {
+      throw new RepositorySupervisorError(409, "project_state_replacement_acknowledgement_required");
+    }
+    normalized.set(path, {
+      path,
+      resolution,
+      expected_target_git_object: expectedTarget,
+      acknowledge_project_state_replacement: acknowledge,
+    });
+  }
+
+  const actions = source.actions.map((action): PlannerAction => {
+    if (action.action !== "manual_merge" && action.action !== "migration_review") return { ...action };
+    const decision = normalized.get(action.path);
+    if (!decision) throw new RepositorySupervisorError(400, "all_plan_conflicts_require_exact_resolution");
+    if (decision.resolution === "keep_target") {
+      return {
+        ...action,
+        action: "preserve_project_state",
+        reason: "explicit_conflict_resolution_keep_target",
+        confirmation_required: false,
+      };
+    }
+    const useBootstrapTransform = ["bootstrap_child", "adopt_existing"].includes(source.mode) && isBootstrapTransform(action.path);
+    return {
+      ...action,
+      action: useBootstrapTransform
+        ? "bootstrap_transform"
+        : action.target_git_object
+          ? "replace_from_release"
+          : "add_from_release",
+      reason: action.action === "migration_review"
+        ? "explicit_conflict_resolution_use_release_with_project_state_acknowledgement"
+        : "explicit_conflict_resolution_use_release",
+      confirmation_required: false,
+    };
+  });
+
+  const counts = summarizeResolvedActions(actions);
+  if (counts.manual_merge !== 0 || counts.migration_review !== 0) {
+    throw new RepositorySupervisorError(500, "resolved_plan_still_contains_conflicts");
+  }
+  const writeCount = counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform;
+  return {
+    ...source,
+    actions,
+    summary: {
+      ...source.summary,
+      unchanged: counts.unchanged,
+      add_from_release: counts.add_from_release,
+      replace_from_release: counts.replace_from_release,
+      bootstrap_transform: counts.bootstrap_transform,
+      manual_merge: 0,
+      preserve_project_state: counts.preserve_project_state,
+      migration_review: 0,
+    },
+    resolution: {
+      source_plan_id: input.source_plan_id,
+      source_plan_hash: input.source_plan_hash,
+      resolved_by_github_login: resolver,
+      decisions: blockers.map((blocker) => normalized.get(blocker.path)!),
+    },
+    conflict_free: true,
+    safe_to_apply: writeCount > 0,
+    apply_implementation: writeCount > 0 ? "sandbox_full_plan_v1" : "no_changes",
+  };
+}
+
+function releaseStillMatches(
+  payload: FullPlannerPayload,
+  release: CommercialReleasePlanSnapshot,
+): boolean {
+  return (
+    payload.release.repository === release.repository
+    && payload.release.release_ref === release.release_ref
+    && payload.release.source_revision === release.source_revision
+    && payload.release.source_tree === release.source_tree
+    && payload.release.file_count === release.file_count
+    && payload.release.total_bytes === release.total_bytes
+  );
+}
+
+export async function resolveGithubFullAnposPlan(input: {
+  source_plan_id: unknown;
+  source_plan_hash: unknown;
+  resolutions: ConflictResolutionInput[];
+}, principal: { id: number; login: string }, billingAccountId: number, token: string, fetchImpl: typeof fetch = fetch) {
+  const sourcePlanId = typeof input.source_plan_id === "string" ? input.source_plan_id.trim() : "";
+  const sourcePlanHash = typeof input.source_plan_hash === "string" ? input.source_plan_hash.trim().toLowerCase() : "";
+  const record = await loadGithubSupervisorPlanForApply(
+    { plan_id: sourcePlanId, plan_hash: sourcePlanHash },
+    principal,
+    billingAccountId,
+  );
+  if (record.mode === "bounded_change") {
+    throw new RepositorySupervisorError(409, "bounded_change_conflict_resolution_not_supported");
+  }
+  if (record.status !== "planned") {
+    throw new RepositorySupervisorError(409, "source_plan_not_resolvable");
+  }
+  const source = validateStoredFullPlannerPayload(record.payload);
+  const current = await resolveGithubRepository(record.repository_full_name, token, fetchImpl);
+  if (
+    current.canonical_repository_id !== record.canonical_repository_id
+    || current.default_branch !== record.default_branch
+    || current.head_sha?.toLowerCase() !== record.expected_target_head_sha?.toLowerCase()
+  ) throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
+  if (!current.write_capability) throw new RepositorySupervisorError(403, "repository_write_permission_required");
+
+  const release = await templateReleasePlanSnapshot();
+  if (!releaseStillMatches(source, release)) {
+    throw new RepositorySupervisorError(409, "verified_release_changed_replan_required");
+  }
+
+  const payload = buildResolvedFullPlannerPayload({
+    source_payload: source,
+    source_plan_id: sourcePlanId,
+    source_plan_hash: sourcePlanHash,
+    resolutions: input.resolutions,
+    resolved_by_github_login: principal.login,
+  });
+  const stored = await persistGithubSupervisorPlan({
+    mode: source.mode,
+    canonical_repository_id: record.canonical_repository_id,
+    repository_full_name: record.repository_full_name,
+    default_branch: record.default_branch,
+    expected_target_head_sha: record.expected_target_head_sha,
+    payload,
+  }, principal, billingAccountId);
+
+  const actionable = payload.actions.filter((row) => row.action !== "unchanged");
+  const preview = actionable.slice(0, 200);
+  return {
+    ...stored,
+    supersedes: { plan_id: sourcePlanId, plan_hash: sourcePlanHash },
+    release: payload.release,
+    target: payload.target,
+    summary: payload.summary,
+    requirements_83_96: payload.requirements_83_96,
+    resolution: payload.resolution,
+    conflict_free: payload.conflict_free,
+    planning_complete: payload.planning_complete,
+    safe_to_apply: payload.safe_to_apply,
+    apply_implementation: payload.apply_implementation,
+    action_preview: preview,
+    action_preview_truncated: actionable.length > preview.length,
+    full_action_count: payload.actions.length,
+  };
+}
+
 export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnvelope): FullPlannerPayload {
   const modes: FullPlannerMode[] = [
     "bootstrap_empty",
@@ -492,6 +737,35 @@ export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnve
       "no_changes",
     ].includes(payload.apply_implementation)
   ) throw new RepositorySupervisorError(500, "full_plan_payload_invalid");
+
+  if (payload.resolution != null) {
+    if (
+      !payload.resolution
+      || !/^[0-9a-f-]{36}$/.test(payload.resolution.source_plan_id)
+      || !/^[0-9a-f]{64}$/.test(payload.resolution.source_plan_hash)
+      || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(payload.resolution.resolved_by_github_login)
+      || !Array.isArray(payload.resolution.decisions)
+      || payload.resolution.decisions.length < 1
+      || payload.resolution.decisions.length > MAX_ACTIONS
+    ) throw new RepositorySupervisorError(500, "resolved_plan_lineage_invalid");
+    const resolutionPaths = new Set<string>();
+    for (const decision of payload.resolution.decisions) {
+      if (
+        !decision
+        || typeof decision.path !== "string"
+        || !decision.path
+        || decision.path.length > 512
+        || resolutionPaths.has(decision.path)
+        || !["keep_target", "use_release"].includes(decision.resolution)
+        || (
+          decision.expected_target_git_object !== null
+          && !/^[0-9a-f]{40}$/i.test(decision.expected_target_git_object)
+        )
+        || typeof decision.acknowledge_project_state_replacement !== "boolean"
+      ) throw new RepositorySupervisorError(500, "resolved_plan_lineage_invalid");
+      resolutionPaths.add(decision.path);
+    }
+  }
 
   const seen = new Set<string>();
   const allowedActions: PlannerActionKind[] = [
