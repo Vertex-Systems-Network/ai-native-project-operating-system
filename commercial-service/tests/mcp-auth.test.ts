@@ -15,6 +15,9 @@ function configure() {
     "-----BEGIN RSA PRIVATE KEY-----\nplaceholder\n-----END RSA PRIVATE KEY-----";
   process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.GITHUB_SUPERVISOR_APP_ID = "234567";
+  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-234567";
+  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = "u".repeat(48);
   process.env.ANPOS_MCP_ALLOWED_CLIENT_IDS = "https://chatgpt.com/oauth/client.json";
   process.env.ANPOS_MCP_ALLOWED_REDIRECT_URIS = "https://chatgpt.com/connector_platform_oauth_redirect";
   process.env.ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS = "3600";
@@ -37,7 +40,7 @@ test("MCP OAuth start enforces exact client, redirect, resource and PKCE S256", 
   const github = new URL(start.githubAuthorizeUrl);
   assert.equal(github.origin, "https://github.com");
   assert.equal(github.pathname, "/login/oauth/authorize");
-  assert.equal(github.searchParams.get("client_id"), "Iv1.community-client-123456");
+  assert.equal(github.searchParams.get("client_id"), "Iv1.supervisor-client-234567");
   assert.equal(github.searchParams.get("redirect_uri"), "https://license.example.test/api/auth/mcp/github/callback");
   assert.equal(github.searchParams.get("code_challenge_method"), "S256");
   assert.ok(github.searchParams.get("state"));
