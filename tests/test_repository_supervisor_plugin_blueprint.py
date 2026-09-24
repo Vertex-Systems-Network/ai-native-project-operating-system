@@ -15,13 +15,13 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.3.0")
+        self.assertEqual(plugin["version"], "0.4.0")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 2)
+        self.assertEqual(contract["schema_version"], 3)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
@@ -29,9 +29,14 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertIn("anpos_protocol_version", audit["required_outputs"])
         self.assertIn("assurance_state_summary", audit["required_outputs"])
         plan = next(tool for tool in contract["tools"] if tool["name"] == "repository_plan_anpos_change")
-        self.assertIn("requirements_83_96_applicability", plan["required_outputs"])
-        self.assertIn("evidence_preservation_plan", plan["required_outputs"])
-        self.assertIn("upgrade_active", plan["modes"])
+        self.assertEqual(plan["source_implemented_modes"], ["bounded_change"])
+        self.assertIn("plan_hash", plan["required_outputs"])
+        self.assertIn("changes", plan["required_outputs"])
+        self.assertIn("upgrade_active", plan["planned_modes"])
+        self.assertIn(
+            "full_anpos_bootstrap_adoption_upgrade_plan_generator",
+            contract["implementation"]["not_yet_implemented"],
+        )
 
     def test_skill_preserves_assurance_evidence_on_upgrade(self) -> None:
         skill = (ROOT / "blueprints/plugins/anpos-repository-supervisor/skills/anpos-repository-supervisor/SKILL.md").read_text(encoding="utf-8")
@@ -54,8 +59,16 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         ]:
             self.assertIn(marker, implementation["implemented_support"])
         transport = contract["mcp_transport"]
-        self.assertEqual(transport["issued_scopes"], ["anpos:profile", "anpos:repo:read"])
-        self.assertFalse(transport["write_scope_available"])
+        self.assertEqual(transport["issued_scopes"], ["anpos:profile", "anpos:repo:read", "anpos:repo:write"])
+        self.assertTrue(transport["write_scope_available"])
+        self.assertEqual(transport["github_app_role"], "dedicated_repository_supervisor_app")
+        for tool in [
+            "repository_plan_anpos_change", "repository_apply_anpos_change",
+            "repository_open_change_request", "repository_get_change_request",
+            "repository_get_ci", "repository_merge_change_request",
+        ]:
+            self.assertIn(tool, implementation["implemented_tools"])
+        self.assertIn("full_anpos_bootstrap_adoption_upgrade_plan_generator", implementation["not_yet_implemented"])
 
     def test_plugin_assets_are_vendor_only(self) -> None:
         boundary = load("config/licensing/vendor-source-boundary.json")

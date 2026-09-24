@@ -36,6 +36,14 @@ export type McpOAuthConfig = {
   accessTokenTtlSeconds: number;
 };
 
+export type SupervisorAppConfig = {
+  githubSupervisorAppId: string;
+  githubSupervisorClientId: string;
+  githubSupervisorClientSecret: string;
+  publicBaseUrl: string;
+  sessionSecret: string;
+};
+
 const ENV_ALIASES: Record<string, readonly string[]> = {
   GITHUB_WEBHOOK_SECRET: ["ANPOS_GITHUB_WEBHOOK_SECRET", "ANPOS_WEBHOOK_SECRET"],
   GITHUB_MARKETPLACE_APP_ID: ["ANPOS_MARKETPLACE_APP_ID"],
@@ -283,6 +291,43 @@ export function webhookConfig(): { githubWebhookSecret: string } {
   const problems = commonProblems(["GITHUB_WEBHOOK_SECRET"], false);
   if (problems.length) throw new Error(`Marketplace webhook is not configured: ${problems.join(", ")}`);
   return { githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")! };
+}
+
+export function supervisorAppConfigurationProblems(): string[] {
+  const problems = commonProblems(["ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET"], false);
+  const appId = value("GITHUB_SUPERVISOR_APP_ID");
+  const clientId = value("GITHUB_SUPERVISOR_CLIENT_ID");
+  const clientSecret = value("GITHUB_SUPERVISOR_CLIENT_SECRET");
+  if (!appId) problems.push("missing:GITHUB_SUPERVISOR_APP_ID");
+  else if (!/^\d+$/.test(appId)) problems.push("invalid:GITHUB_SUPERVISOR_APP_ID");
+  if (!clientId) problems.push("missing:GITHUB_SUPERVISOR_CLIENT_ID");
+  else if (!/^[A-Za-z0-9._-]{10,100}$/.test(clientId)) problems.push("invalid:GITHUB_SUPERVISOR_CLIENT_ID");
+  if (!clientSecret) problems.push("missing:GITHUB_SUPERVISOR_CLIENT_SECRET");
+  else if (clientSecret.length < 32) problems.push("weak:GITHUB_SUPERVISOR_CLIENT_SECRET");
+
+  const marketplaceAppId = value("GITHUB_MARKETPLACE_APP_ID");
+  const vendorAppId = value("GITHUB_VENDOR_APP_ID");
+  if (appId && marketplaceAppId && appId === marketplaceAppId) problems.push("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION");
+  if (appId && vendorAppId && appId === vendorAppId) problems.push("unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION");
+  const marketplaceClientId = value("GITHUB_MARKETPLACE_CLIENT_ID");
+  if (clientId && marketplaceClientId && clientId === marketplaceClientId) problems.push("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION");
+  const marketplaceClientSecret = value("GITHUB_MARKETPLACE_CLIENT_SECRET");
+  if (clientSecret && marketplaceClientSecret && clientSecret === marketplaceClientSecret) {
+    problems.push("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE");
+  }
+  return [...new Set(problems)];
+}
+
+export function supervisorAppConfig(): SupervisorAppConfig {
+  const problems = supervisorAppConfigurationProblems();
+  if (problems.length) throw new Error(`Supervisor App is not configured: ${problems.join(", ")}`);
+  return {
+    githubSupervisorAppId: value("GITHUB_SUPERVISOR_APP_ID")!,
+    githubSupervisorClientId: value("GITHUB_SUPERVISOR_CLIENT_ID")!,
+    githubSupervisorClientSecret: value("GITHUB_SUPERVISOR_CLIENT_SECRET")!,
+    publicBaseUrl: value("ANPOS_PUBLIC_BASE_URL")!.replace(/\/$/, ""),
+    sessionSecret: value("ANPOS_SESSION_SECRET")!,
+  };
 }
 
 export function marketplaceAppConfig(): MarketplaceAppConfig {

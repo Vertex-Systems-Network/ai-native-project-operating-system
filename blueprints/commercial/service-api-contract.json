@@ -1,7 +1,7 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "status": "inactive_blueprint",
-  "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor MCP OAuth/transport runtime.",
+  "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
     {
       "method": "GET",
@@ -210,9 +210,10 @@
       "resource": "{ANPOS_PUBLIC_BASE_URL}/mcp",
       "scopes_supported": [
         "anpos:profile",
-        "anpos:repo:read"
+        "anpos:repo:read",
+        "anpos:repo:write"
       ],
-      "write_scope_available": false,
+      "write_scope_available": true,
       "cache_control": "public, max-age=300"
     },
     {
@@ -231,7 +232,8 @@
       "authorization_response_iss_parameter_supported": true,
       "scopes_supported": [
         "anpos:profile",
-        "anpos:repo:read"
+        "anpos:repo:read",
+        "anpos:repo:write"
       ]
     },
     {
@@ -280,22 +282,35 @@
         "repository_profile",
         "repository_resolve",
         "repository_audit",
-        "repository_get_assurance"
+        "repository_get_assurance",
+        "repository_plan_anpos_change",
+        "repository_apply_anpos_change",
+        "repository_open_change_request",
+        "repository_get_change_request",
+        "repository_get_ci",
+        "repository_merge_change_request"
       ],
       "profile_tool_meta": "openai/profile=true",
       "paid_tools_require_explicit_billing_account_id": true,
       "billing_account_id_is_not_authorization": true,
       "server_rechecks_github_account_access_and_entitlement": true,
-      "write_tools_exposed": false,
+      "write_tools_exposed": true,
       "max_request_body_bytes": 65536,
-      "cache_control": "no-store"
+      "cache_control": "no-store",
+      "write_tool_policy": {
+        "plan": "server-issued encrypted plan bound to canonical repository identity, exact expected default-branch head SHA and deterministic plan hash",
+        "apply": "atomic Git Data commit to a new anpos/* feature branch only; no direct default-branch write and no force push",
+        "pull_request": "exact applied branch head only",
+        "ci": "fresh GitHub check-runs plus legacy statuses for exact planned commit",
+        "merge": "destructive host-confirmed tool; fresh entitlement/permission, PR head/base, CI, unchanged default-branch head, repository-policy response and resulting-main verification"
+      }
     },
     {
       "method": "GET",
       "path": "/api/ready/mcp",
       "authentication": "public_readiness_no_secrets",
       "purpose": "Fail closed unless MCP OAuth allowlists, database migration and service connectivity are ready.",
-      "write_scope_available": false,
+      "write_scope_available": true,
       "cache_control": "no-store"
     }
   ],
@@ -345,7 +360,16 @@
     "mcp_profile_identity_must_be_stable_opaque_and_credential_scoped": true,
     "mcp_paid_tool_billing_account_id_is_not_authorization": true,
     "mcp_server_must_reauthorize_github_principal_and_entitlement": true,
-    "mcp_write_scope_forbidden_until_guarded_write_runtime_exists": true,
-    "mcp_transport_source_implementation_is_not_public_deployment_evidence": true
+    "mcp_transport_source_implementation_is_not_public_deployment_evidence": true,
+    "repository_supervisor_uses_dedicated_github_app_role": true,
+    "marketplace_app_must_not_be_widened_for_supervisor_writes": true,
+    "supervisor_app_must_be_distinct_from_marketplace_and_vendor_apps": true,
+    "supervisor_write_plan_must_be_server_issued_and_expected_head_bound": true,
+    "supervisor_write_plan_payload_must_be_encrypted_at_rest": true,
+    "supervisor_write_forbids_direct_default_branch_and_force_push": true,
+    "supervisor_apply_must_use_atomic_git_data_commit": true,
+    "supervisor_merge_requires_fresh_ci_and_expected_head_reverification": true,
+    "supervisor_merge_must_verify_resulting_default_branch_head": true,
+    "supervisor_write_source_implementation_is_not_production_write_e2e": true
   }
 }

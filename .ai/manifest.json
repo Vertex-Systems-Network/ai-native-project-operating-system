@@ -258,7 +258,14 @@
       "config/data/data-governance.json",
       "commercial-service/app/api/version/route.ts",
       "scripts/verify_commercial_production.py",
-      "scripts/validate_deployment_identity.py"
+      "scripts/validate_deployment_identity.py",
+      "blueprints/commercial/github-supervisor-app-manifest.example.json",
+      "commercial-service/lib/mcp-auth.ts",
+      "commercial-service/lib/mcp-runtime.ts",
+      "commercial-service/lib/repository-supervisor-write.ts",
+      "commercial-service/migrations/003_repository_supervisor_write.sql",
+      "commercial-service/app/mcp/route.ts",
+      "commercial-service/app/api/ready/mcp/route.ts"
     ]
   },
   "bootstrap_entrypoint": "scripts/bootstrap_child.py",

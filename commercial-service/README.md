@@ -52,9 +52,9 @@ Community is deliberately outside the paid `ANPOS_MARKETPLACE_PLAN_MAP`. After t
 
 The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `paid=false`. The same Marketplace plan ID cannot also appear in `ANPOS_MARKETPLACE_PLAN_MAP`, and `community` is not accepted as a paid-map target. Do not invent a placeholder production plan ID merely to make readiness pass.
 
-## Two-App trust architecture
+## Three-App trust architecture
 
-Production uses two distinct GitHub App registrations and the full commercial service fails closed if their App IDs or private keys are reused.
+Production uses three distinct GitHub App roles: Marketplace billing/Community, Repository Supervisor, and Vendor Distribution. The Supervisor App must not reuse Marketplace or Vendor identity/credentials; Marketplace and Vendor key separation remains independently enforced.
 
 ### Marketplace App — public/customer-facing
 
@@ -88,6 +88,30 @@ Community runtime credentials/configuration:
 - `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`
 
 These values are sufficient for the Community configuration boundary; they intentionally do not include Vendor App credentials, entitlement-signing keys, paid plan mapping, organization-seat policy, or a private-template repository.
+
+### Repository Supervisor App — public/installable paid runtime
+
+The Repository Supervisor App is a separate customer-installable GitHub App used by the authenticated MCP runtime. It must never reuse the Marketplace App or Vendor Distribution App identity.
+
+Runtime configuration:
+
+- `GITHUB_SUPERVISOR_APP_ID`
+- `GITHUB_SUPERVISOR_CLIENT_ID`
+- `GITHUB_SUPERVISOR_CLIENT_SECRET`
+
+Minimum repository permissions for the guarded GitHub write runtime:
+
+- Metadata: read
+- Contents: write
+- Pull requests: write
+- Checks: read
+- Commit statuses: read
+
+Do not grant Administration by default. Branch protection/rulesets remain authoritative. OAuth uses PKCE S256 through the MCP broker and issues `anpos:profile`, `anpos:repo:read`, and `anpos:repo:write` only after the Supervisor App flow. The server then separately rechecks the paid entitlement and organization seat for each write-capable tool.
+
+Guarded writes use a short-lived encrypted server-side plan bound to canonical repository identity, authenticated principal/billing account, exact default-branch head SHA, and deterministic plan hash. Apply creates a new `anpos/*` feature branch from an atomic Git Data commit. The service never direct-writes the default branch or force-pushes through the normal workflow. Merge re-reads PR state, exact planned head CI, current default-branch head and resulting default-branch head.
+
+The current source implements `bounded_change` planning only. Complete bootstrap/adoption/repair/upgrade plan generation remains pending.
 
 ### Vendor Distribution App — private/vendor-only
 
@@ -212,7 +236,8 @@ The migrator takes a PostgreSQL advisory lock, applies ordered migrations transa
 - `GET /api/health` — process liveness; does not imply artifact identity or readiness.
 - `GET /api/version` — public, secret-free service/protocol/runtime-contract identity for deployment attestation.
 - `GET /api/ready/community` — Community-only configuration/database readiness; deliberately independent of paid/vendor secrets.
-- `GET /api/ready` — full commercial configuration, split GitHub App key types/role separation, paid plan/seat/release policy, migration/schema, and database readiness.
+- `GET /api/ready` — full commercial configuration, Marketplace/Vendor role separation, paid plan/seat/release policy, migration/schema, and database readiness.
+- `GET /api/ready/mcp` — Repository Supervisor OAuth/MCP configuration, dedicated Supervisor App separation, migration/schema and database readiness.
 - `POST /api/webhooks/github/marketplace` — GitHub Marketplace webhook receiver.
 - `GET /setup/github` — Marketplace Setup entrypoint; starts PKCE GitHub App OAuth from an untrusted setup installation ID.
 - `GET /api/auth/github/callback` — OAuth callback; verifies user + installation and creates encrypted short-lived browser session.
@@ -227,6 +252,9 @@ The migrator takes a PostgreSQL advisory lock, applies ordered migrations transa
 - `DELETE /api/v1/seats` — organization-admin seat revocation by assigned GitHub user ID.
 - `POST /api/v1/reconcile` — operator-only billing reconciliation with `ANPOS_OPERATOR_TOKEN`.
 - `POST /api/v1/access/reconcile` — operator-only retry of pending collaborator access revocations.
+- `POST /mcp` — authenticated Repository Supervisor MCP transport.
+- `GET /.well-known/oauth-protected-resource` and `GET /.well-known/oauth-authorization-server` — MCP OAuth metadata.
+- `GET /oauth/authorize`, `POST /oauth/token`, and `GET /api/auth/mcp/github/callback` — Supervisor App OAuth 2.1/PKCE broker.
 - `POST /api/v1/provision` — optional authenticated/idempotent collaborator provisioning; disabled by default.
 
 ## Organization seats

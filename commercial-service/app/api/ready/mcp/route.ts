@@ -1,10 +1,10 @@
 import { db, ensureSchema } from "@/lib/db";
-import { mcpOAuthConfig, mcpOAuthConfigurationProblems } from "@/lib/env";
+import { mcpOAuthConfig, mcpOAuthConfigurationProblems, supervisorAppConfigurationProblems } from "@/lib/env";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const problems = mcpOAuthConfigurationProblems();
+  const problems = [...mcpOAuthConfigurationProblems(), ...supervisorAppConfigurationProblems()];
   if (problems.length) {
     return Response.json({ ok: false, mode: "repository_supervisor_mcp", problems }, {
       status: 503,
@@ -25,9 +25,9 @@ export async function GET() {
         authorization_endpoint: `${cfg.publicBaseUrl}/oauth/authorize`,
         token_endpoint: `${cfg.publicBaseUrl}/oauth/token`,
         pkce: "S256",
-        scopes: ["anpos:profile", "anpos:repo:read"],
+        scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
       },
-      write_scope_available: false,
+      write_scope_available: true,
     }, {
       status: 200,
       headers: { "Cache-Control": "no-store" },

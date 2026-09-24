@@ -559,9 +559,11 @@ Implemented and source-certified:
 - ANPOS repository classification;
 - Requirements 83–96 assurance/governance summary and exact-ref assurance reads;
 - execution-sandbox request/driver contract with network denied by default, bounded time/output, environment names only, and no direct local-process fallback;
-- commercial service 0.4.2 server-side Plugin Subscription Entitlement Bridge with authenticated GitHub principal/account binding, Marketplace reconciliation, organization-seat-aware paid read gating, and fail-closed write capability;
-- GitHub-backed OAuth 2.1 authorization-code + PKCE S256 source flow with protected-resource/authorization-server metadata, exact client/redirect/resource binding, one-time authorization-code replay protection, opaque short-lived MCP access tokens, encrypted server-side GitHub provider credentials, stateless POST `/mcp`, OpenAI-compatible authenticated profile metadata, and `/api/ready/mcp`.
+- commercial service 0.4.3 server-side Plugin Subscription Entitlement Bridge with authenticated GitHub principal/account binding, Marketplace reconciliation, organization-seat-aware paid read/write gating, and non-destructive cancellation boundaries;
+- GitHub-backed OAuth 2.1 authorization-code + PKCE S256 source flow with protected-resource/authorization-server metadata, exact client/redirect/resource binding, one-time authorization-code replay protection, opaque short-lived MCP access tokens, encrypted server-side GitHub provider credentials, stateless POST `/mcp`, OpenAI-compatible authenticated profile metadata, and `/api/ready/mcp`;
+- dedicated Repository Supervisor GitHub App role, separate from the read-only Marketplace billing/Community App and private Vendor Distribution App;
+- guarded write foundation: encrypted server-issued expected-head-bound `bounded_change` plans, atomic Git Data feature-branch commits, PR creation/re-read, exact commit CI inspection, destructive host-confirmed guarded merge, and resulting-main verification.
 
-Community remains restricted to the separate bounded readiness audit. The commercial bridge and MCP transport do not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint. MCP write scope/tools remain unavailable until the guarded write runtime exists.
+Community remains restricted to the separate bounded readiness audit. The commercial bridge, MCP transport and guarded write runtime do not alter or make subscription-dependent the ANPOS 1.4.0 Requirements 1–96 child development blueprint.
 
-This is the **read-only Repository Supervisor runtime + entitlement gate + OAuth/MCP source transport**, not evidence of a publicly registered/deployed plugin. Write planning/apply, pull-request/CI/merge tools, a production isolation driver, production MCP E2E and GitLab parity remain subsequent milestones.
+This is the **Repository Supervisor read + bounded guarded-write source runtime**, not evidence of a publicly registered/deployed plugin or production write E2E. Full bootstrap/adoption/repair/upgrade plan generation, a production isolation driver, production MCP E2E and GitLab parity remain subsequent milestones.
