@@ -94,7 +94,7 @@ test("remote sandbox driver sends names-only environment and validates signed de
           path: "dist/result.txt",
           mode: "100644",
           content_base64: Buffer.from("done").toString("base64"),
-          sha256: "a4c3ed04a95a3da14a8c0eb6b5b7294924d8b40f1f802f0294ce3f5e9a6f1f68",
+          sha256: "a4c3ed04a95a3da14a9d235c83d868bed7c0f45cf7f3faa751ee8f50598d2211",
           bytes: 4,
         }],
       });
