@@ -12,6 +12,7 @@ ERRORS: list[str] = []
 
 LEGACY_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-app-manifest.example.json"
 MARKETPLACE_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json"
+SUPERVISOR_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json"
 VENDOR_APP_BLUEPRINT = ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json"
 COMPLIANCE = ROOT / "blueprints/commercial/github-marketplace-compliance.json"
 CHECKLIST = ROOT / "blueprints/commercial/production-launch-checklist.json"
@@ -55,6 +56,7 @@ def main() -> int:
     for path in (
         LEGACY_APP_BLUEPRINT,
         MARKETPLACE_APP_BLUEPRINT,
+        SUPERVISOR_APP_BLUEPRINT,
         VENDOR_APP_BLUEPRINT,
         COMPLIANCE,
         CHECKLIST,
@@ -74,10 +76,11 @@ def main() -> int:
     replacements = set(legacy.get("replacements") or [])
     expected_replacements = {
         "blueprints/commercial/github-marketplace-app-manifest.example.json",
+        "blueprints/commercial/github-supervisor-app-manifest.example.json",
         "blueprints/commercial/github-vendor-app-manifest.example.json",
     }
     if expected_replacements - replacements:
-        fail("legacy single-App blueprint must point to both split App replacements")
+        fail("legacy single-App blueprint must point to all three trust-role replacements")
 
     marketplace_app = load_json(MARKETPLACE_APP_BLUEPRINT) if MARKETPLACE_APP_BLUEPRINT.is_file() else {}
     if marketplace_app.get("status") != "operator_configuration_required":
@@ -103,6 +106,27 @@ def main() -> int:
     marketplace_text = json.dumps(marketplace_app, sort_keys=True)
     if "administration:write_for_private_template_distribution" not in marketplace_text:
         fail("Marketplace App blueprint must explicitly forbid vendor Administration scope")
+
+    supervisor_app = load_json(SUPERVISOR_APP_BLUEPRINT) if SUPERVISOR_APP_BLUEPRINT.is_file() else {}
+    if supervisor_app.get("status") != "operator_configuration_required":
+        fail("Repository Supervisor App blueprint must remain operator_configuration_required")
+    if supervisor_app.get("role") != "repository_supervisor_app":
+        fail("Repository Supervisor App blueprint role is invalid")
+    if (supervisor_app.get("required_defaults") or {}).get("public") is not True:
+        fail("Repository Supervisor App must be public/installable")
+    if (supervisor_app.get("repository_permissions") or {}) != {
+        "metadata": "read",
+        "contents": "write",
+        "pull_requests": "write",
+        "checks": "read",
+    }:
+        fail("Repository Supervisor App permission set must remain bounded")
+    if "administration" in (supervisor_app.get("repository_permissions") or {}):
+        fail("Repository Supervisor App must not request Administration permission")
+    supervisor_text = json.dumps(supervisor_app, sort_keys=True)
+    for marker in ("distinct from both", "MCP OAuth", "active_project", "anpos/*"):
+        if marker not in supervisor_text:
+            fail(f"Repository Supervisor App blueprint missing security marker: {marker}")
 
     vendor_app = load_json(VENDOR_APP_BLUEPRINT) if VENDOR_APP_BLUEPRINT.is_file() else {}
     if vendor_app.get("status") != "operator_configuration_required":
@@ -217,8 +241,8 @@ def main() -> int:
         fail("Marketplace trial/privacy requirements must be re-verified before publication")
 
     checklist = load_json(CHECKLIST) if CHECKLIST.is_file() else {}
-    if checklist.get("schema_version") != 2:
-        fail("production launch checklist must be schema_version 2")
+    if checklist.get("schema_version") != 3:
+        fail("production launch checklist must be schema_version 3")
     if checklist.get("status") != "inactive_blueprint":
         fail("production launch checklist must remain an inactive blueprint")
     if checklist.get("launch_authorized") is not False:
@@ -231,8 +255,10 @@ def main() -> int:
         "vendor_service_repo",
         "vendor_template_repo",
         "github_marketplace_app",
+        "github_supervisor_app",
         "github_vendor_app",
         "github_app_role_separation",
+        "supervisor_app_installation_e2e",
         "vendor_app_installation",
         "marketplace_publisher",
         "marketplace_installation_threshold",
@@ -271,8 +297,9 @@ def main() -> int:
         LISTING,
         (
             "Draft only",
-            "two distinct GitHub Apps",
+            "three distinct GitHub Apps",
             "Marketplace App — public/customer-facing",
+            "Repository Supervisor App — public/customer-facing repository access",
             "Vendor Distribution App — private/vendor-only",
             "minimum of **100 GitHub App installations**",
             "monthly and annual price in USD",
@@ -371,6 +398,7 @@ def main() -> int:
         "commercial-service",
         "blueprints/commercial/github-app-manifest.example.json",
         "blueprints/commercial/github-marketplace-app-manifest.example.json",
+        "blueprints/commercial/github-supervisor-app-manifest.example.json",
         "blueprints/commercial/github-vendor-app-manifest.example.json",
         "blueprints/commercial/github-marketplace-compliance.json",
         "blueprints/commercial/legal-pack.template.md",
