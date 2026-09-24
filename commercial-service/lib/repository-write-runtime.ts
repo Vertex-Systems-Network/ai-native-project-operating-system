@@ -42,6 +42,7 @@ export type RepositoryWritePlan = {
   default_branch: string;
   expected_target_head_sha: string;
   created_by_github_user_id: number;
+  billing_account_id: number;
   plan_digest_sha256: string;
   changes: RepositoryWriteChange[];
   commit_message: string;
@@ -49,6 +50,7 @@ export type RepositoryWritePlan = {
   expires_at: string;
   branch_name?: string;
   resulting_head_sha?: string;
+  change_request_id?: number;
 };
 
 export type WriteOperationResult = Record<string, unknown>;
@@ -57,6 +59,7 @@ export interface RepositoryWritePlanStore {
   create(plan: RepositoryWritePlan): Promise<void>;
   get(planId: string, githubUserId: number): Promise<RepositoryWritePlan | null>;
   markApplied(planId: string, branchName: string, resultingHeadSha: string): Promise<void>;
+  markChangeRequest(planId: string, changeRequestId: number): Promise<void>;
   beginOperation(input: {
     idempotencyKey: string;
     operation: string;
@@ -116,6 +119,7 @@ function rowPlan(row: Record<string, unknown>): RepositoryWritePlan {
     default_branch: String(row.default_branch),
     expected_target_head_sha: String(row.expected_target_head_sha),
     created_by_github_user_id: Number(row.created_by_github_user_id),
+    billing_account_id: Number(row.billing_account_id),
     plan_digest_sha256: String(row.plan_digest_sha256),
     changes,
     commit_message: String(row.commit_message),
@@ -123,6 +127,7 @@ function rowPlan(row: Record<string, unknown>): RepositoryWritePlan {
     expires_at: new Date(String(row.expires_at)).toISOString(),
     branch_name: row.branch_name ? String(row.branch_name) : undefined,
     resulting_head_sha: row.resulting_head_sha ? String(row.resulting_head_sha) : undefined,
+    change_request_id: row.opened_change_request_id == null ? undefined : Number(row.opened_change_request_id),
   };
 }
 
@@ -131,9 +136,9 @@ export const databaseWritePlanStore: RepositoryWritePlanStore = {
     await db().query(
       `INSERT INTO repository_write_plans(
         plan_id,github_repository_id,repository_full_name,default_branch,expected_target_head_sha,
-        created_by_github_user_id,plan_digest_sha256,changes_ciphertext,change_count,total_bytes,
+        created_by_github_user_id,billing_account_id,plan_digest_sha256,changes_ciphertext,change_count,total_bytes,
         commit_message,status,expires_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'planned',$12)`,
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'planned',$13)`,
       [
         plan.plan_id,
         plan.github_repository_id,
@@ -141,6 +146,7 @@ export const databaseWritePlanStore: RepositoryWritePlanStore = {
         plan.default_branch,
         plan.expected_target_head_sha,
         plan.created_by_github_user_id,
+        plan.billing_account_id,
         plan.plan_digest_sha256,
         sealPlan(plan.changes),
         plan.changes.length,
@@ -167,6 +173,15 @@ export const databaseWritePlanStore: RepositoryWritePlanStore = {
       [planId, branchName, resultingHeadSha],
     );
     if (!result.rowCount) throw new Error("REPOSITORY_WRITE_PLAN_STATE_CHANGED");
+  },
+  async markChangeRequest(planId, changeRequestId) {
+    const result = await db().query(
+      `UPDATE repository_write_plans
+          SET opened_change_request_id=$2
+        WHERE plan_id=$1 AND status='applied' AND opened_change_request_id IS NULL`,
+      [planId, changeRequestId],
+    );
+    if (!result.rowCount) throw new Error("REPOSITORY_WRITE_PLAN_CHANGE_REQUEST_STATE_CHANGED");
   },
   async beginOperation(input) {
     return transaction(async (client) => {
@@ -445,9 +460,11 @@ export async function createRepositoryWritePlan(input: {
   changes: unknown;
   commitMessage: unknown;
   githubUserId: number;
+  billingAccountId: number;
   token: string;
 }, store: RepositoryWritePlanStore = databaseWritePlanStore, fetchImpl: FetchLike = fetch) {
   assertUserId(input.githubUserId);
+  assertUserId(input.billingAccountId);
   assertSha(input.expectedTargetHeadSha);
   const changes = normalizeChanges(input.changes);
   const commitMessage = normalizeCommitMessage(input.commitMessage);
@@ -481,6 +498,7 @@ export async function createRepositoryWritePlan(input: {
     default_branch: audit.default_branch,
     expected_target_head_sha: input.expectedTargetHeadSha.toLowerCase(),
     created_by_github_user_id: input.githubUserId,
+    billing_account_id: input.billingAccountId,
     changes: bound,
     commit_message: commitMessage,
   };
@@ -491,6 +509,7 @@ export async function createRepositoryWritePlan(input: {
     default_branch: audit.default_branch,
     expected_target_head_sha: input.expectedTargetHeadSha.toLowerCase(),
     created_by_github_user_id: input.githubUserId,
+    billing_account_id: input.billingAccountId,
     plan_digest_sha256: sha256(canonicalJson(digestPayload)),
     changes: bound,
     commit_message: commitMessage,
@@ -504,6 +523,7 @@ export async function createRepositoryWritePlan(input: {
     default_branch: plan.default_branch,
     expected_target_head_sha: plan.expected_target_head_sha,
     plan_digest_sha256: plan.plan_digest_sha256,
+    billing_account_id: plan.billing_account_id,
     changes: plan.changes.map((change) => ({
       path: change.path,
       action: change.action,
@@ -595,10 +615,13 @@ export async function applyRepositoryWritePlan(input: {
   idempotencyKey: string;
   confirmDeletions: boolean;
   githubUserId: number;
+  billingAccountId: number;
   token: string;
 }, store: RepositoryWritePlanStore = databaseWritePlanStore, fetchImpl: FetchLike = fetch) {
   assertUserId(input.githubUserId);
+  assertUserId(input.billingAccountId);
   const plan = await loadPlan(input.planId, input.githubUserId, store);
+  if (plan.billing_account_id !== input.billingAccountId) throw new Error("WRITE_PLAN_BILLING_ACCOUNT_MISMATCH");
   assertFeatureBranch(input.branchName, plan.default_branch);
   if (plan.changes.some((change) => change.action === "delete") && input.confirmDeletions !== true) {
     throw new Error("DELETE_CONFIRMATION_REQUIRED");
@@ -611,6 +634,7 @@ export async function applyRepositoryWritePlan(input: {
     githubUserId: input.githubUserId,
     digestPayload: {
       plan_id: plan.plan_id,
+      billing_account_id: input.billingAccountId,
       branch_name: input.branchName,
       confirm_deletions: input.confirmDeletions,
     },
@@ -697,13 +721,24 @@ export async function openRepositoryChangeRequest(input: {
   body: string;
   idempotencyKey: string;
   githubUserId: number;
+  billingAccountId: number;
   token: string;
 }, store: RepositoryWritePlanStore = databaseWritePlanStore, fetchImpl: FetchLike = fetch) {
   assertUserId(input.githubUserId);
+  assertUserId(input.billingAccountId);
   assertSha(input.expectedHeadSha);
   const plan = await store.get(input.planId, input.githubUserId);
   if (!plan || plan.status !== "applied") throw new Error("APPLIED_WRITE_PLAN_REQUIRED");
+  if (plan.billing_account_id !== input.billingAccountId) throw new Error("WRITE_PLAN_BILLING_ACCOUNT_MISMATCH");
+  if (plan.change_request_id != null) throw new Error("WRITE_PLAN_CHANGE_REQUEST_ALREADY_OPENED");
   if (plan.branch_name !== input.headBranch || plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
+    throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
+  }
+  const plan = await loadPlan(input.planId, input.githubUserId, store);
+  if (plan.status !== "applied") throw new Error("APPLIED_WRITE_PLAN_REQUIRED");
+  if (plan.billing_account_id !== input.billingAccountId) throw new Error("WRITE_PLAN_BILLING_ACCOUNT_MISMATCH");
+  if (plan.change_request_id !== input.changeRequestId) throw new Error("WRITE_PLAN_CHANGE_REQUEST_MISMATCH");
+  if (plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
     throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
   }
   const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
@@ -721,6 +756,7 @@ export async function openRepositoryChangeRequest(input: {
     githubUserId: input.githubUserId,
     digestPayload: {
       plan_id: plan.plan_id,
+      billing_account_id: input.billingAccountId,
       head_branch: input.headBranch,
       expected_head_sha: input.expectedHeadSha.toLowerCase(),
       title,
@@ -758,6 +794,7 @@ export async function openRepositoryChangeRequest(input: {
     if (!Number.isSafeInteger(created.number) || !created.html_url || created.head?.sha !== input.expectedHeadSha) {
       throw new Error("CHANGE_REQUEST_RESPONSE_INVALID");
     }
+    await store.markChangeRequest(plan.plan_id, Number(created.number));
     return {
       change_request_id: Number(created.number),
       url: created.html_url,
@@ -831,6 +868,8 @@ export async function getRepositoryCi(input: {
 
 export async function mergeRepositoryChangeRequest(input: {
   repository: string;
+  planId: string;
+  billingAccountId: number;
   changeRequestId: number;
   expectedHeadSha: string;
   mergeMethod: "merge" | "squash" | "rebase";
@@ -840,6 +879,7 @@ export async function mergeRepositoryChangeRequest(input: {
   token: string;
 }, store: RepositoryWritePlanStore = databaseWritePlanStore, fetchImpl: FetchLike = fetch) {
   assertUserId(input.githubUserId);
+  assertUserId(input.billingAccountId);
   assertSha(input.expectedHeadSha);
   if (!Number.isSafeInteger(input.changeRequestId) || input.changeRequestId <= 0) throw new Error("VALID_CHANGE_REQUEST_ID_REQUIRED");
   if (!["merge", "squash", "rebase"].includes(input.mergeMethod)) throw new Error("INVALID_MERGE_METHOD");
@@ -850,11 +890,13 @@ export async function mergeRepositoryChangeRequest(input: {
   return withIdempotency(store, {
     idempotencyKey: input.idempotencyKey,
     operation: "merge_change_request",
-    planId: null,
+    planId: plan.plan_id,
     githubRepositoryId,
     githubUserId: input.githubUserId,
     digestPayload: {
       repository_id: githubRepositoryId,
+      plan_id: plan.plan_id,
+      billing_account_id: input.billingAccountId,
       change_request_id: input.changeRequestId,
       expected_head_sha: input.expectedHeadSha.toLowerCase(),
       merge_method: input.mergeMethod,
@@ -868,6 +910,7 @@ export async function mergeRepositoryChangeRequest(input: {
     }, fetchImpl);
     if (current.state !== "open" || current.draft) throw new Error("CHANGE_REQUEST_NOT_MERGE_READY");
     if (current.head_sha.toLowerCase() !== input.expectedHeadSha.toLowerCase()) throw new Error("EXPECTED_CHANGE_REQUEST_HEAD_MISMATCH");
+    if (current.head_branch !== plan.branch_name) throw new Error("WRITE_PLAN_CHANGE_REQUEST_BRANCH_MISMATCH");
     if (current.base_branch !== audit.default_branch) throw new Error("CHANGE_REQUEST_BASE_MISMATCH");
     if (!current.mergeable || current.mergeability !== "clean") throw new Error("CHANGE_REQUEST_POLICY_NOT_SATISFIED");
 
