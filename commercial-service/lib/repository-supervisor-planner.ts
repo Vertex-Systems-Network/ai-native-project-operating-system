@@ -33,6 +33,7 @@ export type PlannerAction = {
   release_git_object: string | null;
   release_sha256: string;
   release_mode: string;
+  release_bytes: number;
   target_git_object: string | null;
   target_mode: string | null;
   reason: string;
@@ -89,7 +90,8 @@ export type FullPlannerPayload = StoredSupervisorPlanEnvelope & {
   apply_implementation:
     | "sandbox_full_plan_v1"
     | "conflict_resolution_required"
-    | "empty_repository_initialization_pending";
+    | "empty_repository_initialization_pending"
+    | "no_changes";
 };
 
 const CLASSIFICATION_BY_MODE: Record<FullPlannerMode, RepositorySupervisorClassification> = {
@@ -380,6 +382,7 @@ export function buildFullPlannerPayload(input: {
       release_git_object: file.git_object.toLowerCase(),
       release_sha256: file.sha256,
       release_mode: file.git_mode,
+      release_bytes: file.size,
       target_git_object: target?.sha ?? null,
       target_mode: target?.mode ?? null,
       reason: decision.reason,
@@ -445,13 +448,16 @@ export function buildFullPlannerPayload(input: {
     safe_to_apply:
       input.mode !== "bootstrap_empty"
       && counts.manual_merge === 0
-      && counts.migration_review === 0,
+      && counts.migration_review === 0
+      && counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform > 0,
     apply_implementation:
       input.mode === "bootstrap_empty"
         ? "empty_repository_initialization_pending"
         : counts.manual_merge > 0 || counts.migration_review > 0
           ? "conflict_resolution_required"
-          : "sandbox_full_plan_v1",
+          : counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform === 0
+            ? "no_changes"
+            : "sandbox_full_plan_v1",
   };
 }
 
@@ -484,6 +490,7 @@ export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnve
       "sandbox_full_plan_v1",
       "conflict_resolution_required",
       "empty_repository_initialization_pending",
+      "no_changes",
     ].includes(payload.apply_implementation)
   ) throw new RepositorySupervisorError(500, "full_plan_payload_invalid");
 
@@ -511,6 +518,8 @@ export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnve
       || !/^[0-9a-f]{40}$/i.test(String(action.release_git_object ?? ""))
       || !/^[0-9a-f]{64}$/i.test(action.release_sha256)
       || !["100644", "100755"].includes(action.release_mode)
+      || !Number.isSafeInteger(action.release_bytes)
+      || action.release_bytes < 0
       || (action.target_git_object !== null && !/^[0-9a-f]{40}$/i.test(action.target_git_object))
     ) throw new RepositorySupervisorError(500, "full_plan_action_invalid");
     seen.add(action.path);
