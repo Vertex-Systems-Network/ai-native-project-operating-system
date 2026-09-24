@@ -93,7 +93,7 @@ class PremiumDistributionSourceTests(unittest.TestCase):
 
     def test_api_contract_declares_premium_distribution_without_sale_claim(self) -> None:
         contract = load("blueprints/commercial/service-api-contract.json")
-        self.assertEqual(contract["schema_version"], 6)
+        self.assertEqual(contract["schema_version"], 7)
         endpoints = {(row["method"], row["path"]): row for row in contract["endpoints"]}
         metadata = endpoints[("GET", "/v1/premium/releases/current")]
         archive = endpoints[("GET", "/v1/premium/archive")]
