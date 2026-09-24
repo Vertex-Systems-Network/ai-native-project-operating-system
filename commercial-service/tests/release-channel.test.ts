@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PLAN_FEATURES } from "../lib/plans";
-import { parseTemplateReleaseManifest } from "../lib/releases";
+import { parseTemplateReleaseManifest, parseTemplateReleasePlanManifest } from "../lib/releases";
 
 function manifest() {
   return {
@@ -37,6 +37,15 @@ test("certified release manifest requires deterministic template export evidence
   assert.equal(parsed.contains_secrets, false);
   assert.equal(parsed.file_count, 1);
   assert.equal(parsed.total_bytes, 3);
+});
+
+test("planner release manifest exposes verified per-file Git identities", () => {
+  const parsed = parseTemplateReleasePlanManifest(manifest());
+  assert.equal(parsed.files.length, 1);
+  assert.equal(parsed.files[0].path, "START-HERE.md");
+  assert.equal(parsed.files[0].git_object, "3".repeat(40));
+  assert.equal(parsed.files[0].sha256, "4".repeat(64));
+  assert.equal(parsed.files[0].git_mode, "100644");
 });
 
 test("commercial release manifest rejects mutable or unverifiable identity", () => {
