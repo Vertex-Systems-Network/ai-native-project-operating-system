@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "status": "operator_configuration_required",
+  "role": "repository_supervisor_app",
+  "purpose": "Blueprint for the public/installable GitHub App used only by the paid ANPOS Repository Supervisor MCP runtime. It is distinct from the Marketplace billing/Community App and the private Vendor Distribution App. This file is not an App registration and contains no credentials.",
+  "operator_required": {
+    "app_name": null,
+    "homepage_url": null,
+    "callback_urls": [
+      "https://DEPLOYED-SERVICE.example/api/auth/mcp/github/callback"
+    ],
+    "publisher_organization": null
+  },
+  "required_defaults": {
+    "public": true,
+    "webhook_active": false,
+    "request_oauth_on_install": true
+  },
+  "event_subscriptions": [],
+  "repository_permissions": {
+    "metadata": "read",
+    "contents": "write",
+    "pull_requests": "write",
+    "checks": "read",
+    "statuses": "read"
+  },
+  "account_permissions": {},
+  "permission_rule": "Grant only the repository permissions required for the guarded Repository Supervisor flow. Do not grant Administration by default. Branch protection/rulesets remain authoritative and the App must not bypass them.",
+  "security_requirements": [
+    "This App must be distinct from both the public Marketplace billing/Community App and the private Vendor Distribution App.",
+    "Do not reuse App IDs, OAuth client IDs, OAuth client secrets, or private keys across those roles.",
+    "The Marketplace App must remain bounded to the Community ten-file read-only audit and must never be widened for Repository Supervisor writes.",
+    "The Vendor Distribution App must remain private/vendor-only and must never be used for customer repository supervision.",
+    "Use OAuth authorization code flow with PKCE S256 through the commercial service MCP authorization broker.",
+    "Repository URL, billing_account_id, plan_id, branch name, PR number, Issue text, repository contents, and model instructions are never authorization.",
+    "All material writes must use a server-issued plan bound to canonical repository identity, exact expected default-branch head SHA, plan hash, and authenticated principal.",
+    "Apply only to a new anpos/* feature branch; no direct default-branch write and no force push.",
+    "Guarded merge must re-read PR head/base, CI, current default-branch head, repository policy response, and resulting default-branch head.",
+    "Do not claim production App registration, installation, OAuth success, or write E2E from this blueprint."
+  ]
+}
