@@ -823,7 +823,7 @@ export async function getRepositoryCi(input: {
   const failed = checks.filter((check) => check.status === "completed" && !terminalAllowed.has(check.conclusion ?? "")).length;
   return {
     commit_sha: input.commitSha.toLowerCase(),
-    overall_state: failed > 0 ? "failed" : pending > 0 ? "pending" : "green",
+    overall_state: checks.length === 0 ? "unconfigured" : failed > 0 ? "failed" : pending > 0 ? "pending" : "green",
     checks_configured: checks.length > 0,
     checks,
   };
@@ -876,7 +876,7 @@ export async function mergeRepositoryChangeRequest(input: {
       commitSha: input.expectedHeadSha,
       token: input.token,
     }, fetchImpl);
-    if (ci.overall_state !== "green") throw new Error("CHANGE_REQUEST_CHECKS_NOT_GREEN");
+    if (!ci.checks_configured || ci.overall_state !== "green") throw new Error("CHANGE_REQUEST_CHECKS_NOT_GREEN");
 
     const path = repoPath(audit.full_name);
     const response = await github(`/repos/${path}/pulls/${input.changeRequestId}/merge`, input.token, fetchImpl, {
