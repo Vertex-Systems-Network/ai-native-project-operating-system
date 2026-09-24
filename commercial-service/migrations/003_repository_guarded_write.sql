@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS repository_write_plans (
   default_branch TEXT NOT NULL,
   expected_target_head_sha TEXT NOT NULL,
   created_by_github_user_id BIGINT NOT NULL,
+  billing_account_id BIGINT NOT NULL,
   plan_digest_sha256 TEXT NOT NULL,
   changes_ciphertext TEXT NOT NULL,
   change_count INTEGER NOT NULL,
@@ -15,7 +16,8 @@ CREATE TABLE IF NOT EXISTS repository_write_plans (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   applied_at TIMESTAMPTZ,
   applied_branch_name TEXT,
-  resulting_head_sha TEXT
+  resulting_head_sha TEXT,
+  opened_change_request_id BIGINT
 );
 CREATE INDEX IF NOT EXISTS repository_write_plans_lookup_idx
   ON repository_write_plans(github_repository_id, created_by_github_user_id, status, expires_at);
