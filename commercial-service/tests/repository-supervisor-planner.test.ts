@@ -88,8 +88,8 @@ test("bootstrap_empty plans verified release plus child transforms without write
   assert.equal(plan.summary.bootstrap_transform, 2);
   assert.equal(plan.summary.add_from_release, 2);
   assert.equal(plan.conflict_free, true);
-  assert.equal(plan.safe_to_apply, false);
-  assert.equal(plan.apply_implementation, "empty_repository_initialization_pending");
+  assert.equal(plan.safe_to_apply, true);
+  assert.equal(plan.apply_implementation, "guarded_empty_repository_v1");
   assert.equal(plan.requirements_83_96.initialize_without_pass_claims, true);
 });
 
