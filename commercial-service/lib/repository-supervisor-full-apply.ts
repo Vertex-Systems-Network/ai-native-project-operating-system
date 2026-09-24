@@ -36,9 +36,12 @@ type Principal = { id: number; login: string };
 const GITHUB_API = "https://api.github.com";
 const APPLY_LEASE_MINUTES = 20;
 const WRITE_ACTIONS = new Set(["add_from_release", "replace_from_release", "bootstrap_transform"]);
-const BOOTSTRAP_MODES = new Set(["bootstrap_child", "adopt_existing"]);
+const BOOTSTRAP_MODES = new Set(["bootstrap_empty", "bootstrap_child", "adopt_existing"]);
+const EMPTY_BOOTSTRAP_SEED_PATH = ".anpos-bootstrap-seed";
+const EMPTY_BOOTSTRAP_SEED_CONTENT = "ANPOS guarded empty-repository initialization seed\n";
 
-type GithubCommit = { sha?: string; tree?: { sha?: string } };
+type GithubCommit = { sha?: string; tree?: { sha?: string }; parents?: Array<{ sha?: string }> };
+type GithubContentCreate = { commit?: { sha?: string } };
 type GithubBlob = { sha?: string };
 type GithubTree = { sha?: string };
 type GithubRef = { object?: { sha?: string } };
@@ -275,6 +278,23 @@ async function markRecoveryRequired(
   );
 }
 
+async function markInitializationRecoveryRequired(
+  planId: string,
+  operationId: string,
+  seedSha: string,
+  branch: string | null,
+  head: string | null,
+): Promise<void> {
+  await db().query(
+    `UPDATE repository_supervisor_write_plans
+       SET status='apply_recovery_required',applied_branch=$3,applied_head_sha=$4,
+           initialization_seed_sha=$5,initialization_seed_path=$6,
+           apply_lease_expires_at=NULL,updated_at=NOW()
+       WHERE plan_id=$1 AND status='applying' AND apply_operation_id=$2`,
+    [planId, operationId, branch, head, seedSha, EMPTY_BOOTSTRAP_SEED_PATH],
+  );
+}
+
 async function completeApply(
   input: {
     planId: string;
@@ -284,6 +304,7 @@ async function completeApply(
     head: string;
     receipt: string;
     result: object;
+    initializationSeedSha?: string | null;
   },
 ): Promise<void> {
   await transaction(async (client) => {
@@ -299,9 +320,18 @@ async function completeApply(
     await client.query(
       `UPDATE repository_supervisor_write_plans
          SET status='applied',applied_branch=$2,applied_head_sha=$3,
-             sandbox_receipt_sha256=$4,apply_operation_id=NULL,apply_lease_expires_at=NULL,updated_at=NOW()
+             sandbox_receipt_sha256=$4,initialization_seed_sha=$5,
+             initialization_seed_path=$6,apply_operation_id=NULL,
+             apply_lease_expires_at=NULL,updated_at=NOW()
          WHERE plan_id=$1`,
-      [input.planId, input.branch, input.head, input.receipt],
+      [
+        input.planId,
+        input.branch,
+        input.head,
+        input.receipt,
+        input.initializationSeedSha ?? null,
+        input.initializationSeedSha ? EMPTY_BOOTSTRAP_SEED_PATH : null,
+      ],
     );
     await client.query(
       `INSERT INTO repository_supervisor_write_idempotency(idempotency_key,plan_id,operation,result)
@@ -327,6 +357,67 @@ async function cleanupBranch(
   return response.ok || response.status === 404;
 }
 
+async function initializeEmptyRepositorySeed(
+  repositoryFullName: string,
+  defaultBranch: string,
+  canonicalRepositoryId: string,
+  token: string,
+  fetchImpl: FetchLike,
+  onCreated: (seedSha: string) => void,
+): Promise<string> {
+  const before = await resolveGithubRepository(repositoryFullName, token, fetchImpl);
+  if (
+    before.canonical_repository_id !== canonicalRepositoryId
+    || before.default_branch !== defaultBranch
+    || before.head_sha !== null
+  ) throw new RepositorySupervisorError(409, "empty_repository_changed_replan_required");
+
+  const repoPath = repositoryPath(repositoryFullName);
+  const create = await githubRequest(
+    "PUT",
+    `/repos/${repoPath}/contents/${encodeURIComponent(EMPTY_BOOTSTRAP_SEED_PATH)}`,
+    token,
+    fetchImpl,
+    {
+      message: "Initialize repository for guarded ANPOS bootstrap",
+      content: Buffer.from(EMPTY_BOOTSTRAP_SEED_CONTENT, "utf8").toString("base64"),
+      branch: defaultBranch,
+    },
+  );
+  if (create.status === 409 || create.status === 422) {
+    throw new RepositorySupervisorError(409, "empty_repository_initialization_raced");
+  }
+  if (create.status !== 201) {
+    throw new RepositorySupervisorError(502, "github_empty_repository_seed_failed");
+  }
+  const created = await json<GithubContentCreate>(create, "github_empty_repository_seed_response_invalid");
+  const seedSha = created.commit?.sha?.toLowerCase() ?? "";
+  if (!/^[0-9a-f]{40}$/.test(seedSha)) {
+    throw new RepositorySupervisorError(502, "github_empty_repository_seed_response_invalid");
+  }
+  onCreated(seedSha);
+
+  const commitResponse = await githubRequest(
+    "GET",
+    `/repos/${repoPath}/git/commits/${seedSha}`,
+    token,
+    fetchImpl,
+  );
+  if (!commitResponse.ok) throw new RepositorySupervisorError(502, "github_empty_repository_seed_verify_failed");
+  const commit = await json<GithubCommit>(commitResponse, "github_empty_repository_seed_verify_invalid");
+  if (!Array.isArray(commit.parents) || commit.parents.length !== 0) {
+    throw new RepositorySupervisorError(409, "empty_repository_seed_not_root_commit");
+  }
+
+  const after = await resolveGithubRepository(repositoryFullName, token, fetchImpl);
+  if (
+    after.canonical_repository_id !== canonicalRepositoryId
+    || after.default_branch !== defaultBranch
+    || after.head_sha?.toLowerCase() !== seedSha
+  ) throw new RepositorySupervisorError(409, "empty_repository_seed_head_verification_failed");
+  return seedSha;
+}
+
 async function createGithubCommitFromSandbox(
   input: {
     repository_full_name: string;
@@ -334,6 +425,7 @@ async function createGithubCommitFromSandbox(
     branch: string;
     mode: string;
     outputs: SandboxFileArtifact[];
+    delete_paths?: string[];
   },
   token: string,
   fetchImpl: FetchLike,
@@ -375,6 +467,12 @@ async function createGithubCommitFromSandbox(
     }
   }
   await Promise.all(Array.from({ length: Math.min(8, input.outputs.length) }, () => worker()));
+  for (const path of input.delete_paths ?? []) {
+    if (input.outputs.some((file) => file.path === path)) {
+      throw new RepositorySupervisorError(500, "full_plan_delete_path_conflict");
+    }
+    treeEntries.push({ path, mode: "100644", type: "blob", sha: null });
+  }
 
   const treeResponse = await githubRequest(
     "POST",
@@ -455,6 +553,7 @@ export async function applyGithubSupervisorPlan(
     plan_hash: string;
     branch_name: unknown;
     idempotency_key: unknown;
+    confirm_empty_repository_initialization?: unknown;
   },
   principal: Principal,
   billingAccountId: number,
@@ -479,16 +578,28 @@ export async function applyGithubSupervisorPlan(
   }
 
   const payload = validateStoredFullPlannerPayload(record.payload);
-  if (payload.mode === "bootstrap_empty" || !record.expected_target_head_sha) {
-    throw new RepositorySupervisorError(409, "empty_repository_initialization_pending");
-  }
+  const emptyBootstrap = payload.mode === "bootstrap_empty";
   if (!payload.conflict_free || payload.apply_implementation === "conflict_resolution_required") {
     throw new RepositorySupervisorError(409, "full_plan_conflict_resolution_required");
   }
   if (payload.apply_implementation === "no_changes") {
     throw new RepositorySupervisorError(409, "full_plan_no_changes");
   }
-  if (!payload.safe_to_apply || payload.apply_implementation !== "sandbox_full_plan_v1") {
+  if (emptyBootstrap) {
+    if (input.confirm_empty_repository_initialization !== true) {
+      throw new RepositorySupervisorError(409, "empty_repository_initialization_confirmation_required");
+    }
+    if (
+      record.expected_target_head_sha !== null
+      || payload.target.expected_head_sha !== null
+      || !payload.safe_to_apply
+      || payload.apply_implementation !== "guarded_empty_repository_v1"
+    ) throw new RepositorySupervisorError(409, "empty_repository_initialization_contract_mismatch");
+  } else if (
+    !record.expected_target_head_sha
+    || !payload.safe_to_apply
+    || payload.apply_implementation !== "sandbox_full_plan_v1"
+  ) {
     throw new RepositorySupervisorError(409, "full_plan_apply_contract_mismatch");
   }
 
@@ -498,8 +609,12 @@ export async function applyGithubSupervisorPlan(
   if (
     resolution.canonical_repository_id !== record.canonical_repository_id
     || resolution.default_branch !== record.default_branch
-    || resolution.head_sha?.toLowerCase() !== record.expected_target_head_sha.toLowerCase()
-    || payload.target.expected_head_sha?.toLowerCase() !== record.expected_target_head_sha.toLowerCase()
+    || (emptyBootstrap
+      ? resolution.head_sha !== null
+      : (
+        resolution.head_sha?.toLowerCase() !== record.expected_target_head_sha!.toLowerCase()
+        || payload.target.expected_head_sha?.toLowerCase() !== record.expected_target_head_sha!.toLowerCase()
+      ))
   ) throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
 
   const currentRelease = await templateReleasePlanSnapshot();
@@ -513,6 +628,8 @@ export async function applyGithubSupervisorPlan(
 
   let branchCreated = false;
   let commitSha = "";
+  let initializationSeedSha = "";
+  let seedCreated = false;
   try {
     const materialized = await materializeTemplateReleaseFiles(materializationRequests(payload));
     const sandboxRequest = buildFullApplySandboxRequest({
@@ -524,21 +641,38 @@ export async function applyGithubSupervisorPlan(
     const outputs = verifyFullApplySandboxOutputs(payload, sandboxResult);
     const receipt = sandboxReceiptDigest(sandboxResult, outputs);
 
-    const beforeCommit = await resolveGithubRepository(record.repository_full_name, token, fetchImpl);
-    if (beforeCommit.head_sha?.toLowerCase() !== record.expected_target_head_sha.toLowerCase()) {
-      throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
+    let expectedBaseHead = record.expected_target_head_sha;
+    if (emptyBootstrap) {
+      expectedBaseHead = await initializeEmptyRepositorySeed(
+        record.repository_full_name,
+        record.default_branch,
+        record.canonical_repository_id,
+        token,
+        fetchImpl,
+        (seedSha) => {
+          initializationSeedSha = seedSha;
+          seedCreated = true;
+        },
+      );
+    } else {
+      const beforeCommit = await resolveGithubRepository(record.repository_full_name, token, fetchImpl);
+      if (beforeCommit.head_sha?.toLowerCase() !== record.expected_target_head_sha!.toLowerCase()) {
+        throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
+      }
     }
+    if (!expectedBaseHead) throw new RepositorySupervisorError(500, "full_plan_expected_base_head_missing");
 
     commitSha = await createGithubCommitFromSandbox({
       repository_full_name: record.repository_full_name,
-      expected_head_sha: record.expected_target_head_sha,
+      expected_head_sha: expectedBaseHead,
       branch,
       mode: payload.mode,
       outputs,
+      delete_paths: emptyBootstrap ? [EMPTY_BOOTSTRAP_SEED_PATH] : [],
     }, token, fetchImpl);
 
     const beforeBranch = await resolveGithubRepository(record.repository_full_name, token, fetchImpl);
-    if (beforeBranch.head_sha?.toLowerCase() !== record.expected_target_head_sha.toLowerCase()) {
+    if (beforeBranch.head_sha?.toLowerCase() !== expectedBaseHead.toLowerCase()) {
       throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
     }
 
@@ -546,7 +680,7 @@ export async function applyGithubSupervisorPlan(
     branchCreated = true;
 
     const afterBranch = await resolveGithubRepository(record.repository_full_name, token, fetchImpl);
-    if (afterBranch.head_sha?.toLowerCase() !== record.expected_target_head_sha.toLowerCase()) {
+    if (afterBranch.head_sha?.toLowerCase() !== expectedBaseHead.toLowerCase()) {
       const cleaned = await cleanupBranch(record.repository_full_name, branch, token, fetchImpl);
       branchCreated = !cleaned;
       throw new RepositorySupervisorError(409, "target_head_changed_replan_required");
@@ -557,7 +691,9 @@ export async function applyGithubSupervisorPlan(
       mode: payload.mode,
       branch_name: branch,
       resulting_head_sha: commitSha,
-      expected_target_head_sha: record.expected_target_head_sha,
+      expected_target_head_sha: expectedBaseHead,
+      initialization_seed_sha: initializationSeedSha || null,
+      initialization_seed_path: initializationSeedSha ? EMPTY_BOOTSTRAP_SEED_PATH : null,
       applied_paths: outputs.map((file) => file.path),
       sandbox_receipt_sha256: receipt,
       sandbox_driver_id: sandboxResult.driver_id,
@@ -571,15 +707,27 @@ export async function applyGithubSupervisorPlan(
       head: commitSha,
       receipt,
       result,
+      initializationSeedSha: initializationSeedSha || null,
     });
     return result;
   } catch (error) {
     if (branchCreated && commitSha) {
       const cleaned = await cleanupBranch(record.repository_full_name, branch, token, fetchImpl).catch(() => false);
-      if (!cleaned) {
-        await markRecoveryRequired(record.plan_id, operationId, branch, commitSha).catch(() => undefined);
-        throw new RepositorySupervisorError(409, "full_plan_apply_recovery_required");
-      }
+      branchCreated = !cleaned;
+    }
+    if (seedCreated && initializationSeedSha) {
+      await markInitializationRecoveryRequired(
+        record.plan_id,
+        operationId,
+        initializationSeedSha,
+        branchCreated ? branch : null,
+        branchCreated && commitSha ? commitSha : null,
+      ).catch(() => undefined);
+      throw new RepositorySupervisorError(409, "empty_repository_initialization_recovery_required");
+    }
+    if (branchCreated && commitSha) {
+      await markRecoveryRequired(record.plan_id, operationId, branch, commitSha).catch(() => undefined);
+      throw new RepositorySupervisorError(409, "full_plan_apply_recovery_required");
     }
     await resetApplyLease(record.plan_id, operationId).catch(() => undefined);
     throw error;
