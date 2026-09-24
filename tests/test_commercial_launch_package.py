@@ -29,7 +29,7 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertTrue(data["non_destructive_expiry"])
         gate_ids = {gate["id"] for gate in data["required_gates"]}
         self.assertTrue(
-            {"github_marketplace_app", "github_vendor_app", "github_app_role_separation", "vendor_app_installation"}.issubset(gate_ids)
+            {"github_marketplace_app", "github_supervisor_app", "github_vendor_app", "github_app_role_separation", "supervisor_app_installation", "vendor_app_installation", "sandbox_gateway"}.issubset(gate_ids)
         )
         self.assertNotIn("github_app", gate_ids)
         self.assertNotIn("app_installation", gate_ids)
@@ -83,9 +83,12 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         gate_ids = {gate["id"] for gate in data["required_gates"]}
         expected = {
             "github_marketplace_app",
+            "github_supervisor_app",
             "github_vendor_app",
             "github_app_role_separation",
+            "supervisor_app_installation",
             "vendor_app_installation",
+            "sandbox_gateway",
             "marketplace_publisher",
             "marketplace_installation_threshold",
             "marketplace_listing",
@@ -100,6 +103,7 @@ class CommercialLaunchPackageTests(unittest.TestCase):
 
     def test_split_app_blueprints_enforce_least_privilege(self) -> None:
         marketplace = json.loads((ROOT / "blueprints/commercial/github-marketplace-app-manifest.example.json").read_text(encoding="utf-8"))
+        supervisor = json.loads((ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json").read_text(encoding="utf-8"))
         vendor = json.loads((ROOT / "blueprints/commercial/github-vendor-app-manifest.example.json").read_text(encoding="utf-8"))
         self.assertEqual(marketplace["role"], "customer_marketplace_app")
         self.assertTrue(marketplace["required_defaults"]["public"])
@@ -112,6 +116,21 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertEqual(listing_webhook["url_path"], "/api/webhooks/github/marketplace")
         self.assertEqual(listing_webhook["secret_environment_key"], "GITHUB_WEBHOOK_SECRET")
         self.assertIn("administration:write_for_private_template_distribution", marketplace["forbidden_vendor_permissions"])
+
+        self.assertEqual(supervisor["role"], "repository_supervisor_app")
+        self.assertTrue(supervisor["required_defaults"]["public"])
+        self.assertFalse(supervisor["required_defaults"]["webhook_active"])
+        self.assertEqual(
+            supervisor["repository_permissions"],
+            {
+                "metadata": "read",
+                "contents": "write",
+                "pull_requests": "write",
+                "checks": "read",
+                "statuses": "read",
+            },
+        )
+        self.assertNotIn("administration", supervisor["repository_permissions"])
 
         self.assertEqual(vendor["role"], "vendor_distribution_app")
         self.assertFalse(vendor["required_defaults"]["public"])
@@ -130,10 +149,12 @@ class CommercialLaunchPackageTests(unittest.TestCase):
             set(data["replacements"]),
             {
                 "blueprints/commercial/github-marketplace-app-manifest.example.json",
+                "blueprints/commercial/github-supervisor-app-manifest.example.json",
                 "blueprints/commercial/github-vendor-app-manifest.example.json",
             },
         )
         self.assertIn("GITHUB_MARKETPLACE_APP_*", data["migration_rule"])
+        self.assertIn("GITHUB_SUPERVISOR_APP_", data["migration_rule"])
         self.assertIn("GITHUB_VENDOR_APP_*", data["migration_rule"])
 
     def test_vendor_launch_assets_are_classified_vendor_only(self) -> None:
@@ -144,6 +165,7 @@ class CommercialLaunchPackageTests(unittest.TestCase):
             "commercial-service",
             "blueprints/commercial/github-app-manifest.example.json",
             "blueprints/commercial/github-marketplace-app-manifest.example.json",
+            "blueprints/commercial/github-supervisor-app-manifest.example.json",
             "blueprints/commercial/github-vendor-app-manifest.example.json",
             "blueprints/commercial/github-marketplace-compliance.json",
             "blueprints/commercial/legal-pack.template.md",
