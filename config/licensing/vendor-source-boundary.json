@@ -8,6 +8,7 @@
     "blueprints/commercial/github-app-manifest.example.json",
     "blueprints/commercial/github-marketplace-app-manifest.example.json",
     "blueprints/commercial/github-vendor-app-manifest.example.json",
+    "blueprints/commercial/github-supervisor-app-manifest.example.json",
     "blueprints/commercial/github-marketplace-compliance.json",
     "blueprints/commercial/legal-pack.template.md",
     "blueprints/commercial/marketplace-listing-draft.md",
@@ -49,6 +50,7 @@
     "Vendor handoff verification must reconstruct the approved deterministic export from committed canonical Git blobs and reject extra, missing, dirty, stale, tampered, wrong-mode, or wrong-identity vendor repository content.",
     "Deployment identity verification is vendor-only launch assurance and must reject stale/wrong service artifacts before production readiness can be certified.",
     "Removing vendor-only paths must not remove core ANPOS child development, security, quality, PM, AI selection, or non-secret entitlement-reference functionality.",
-    "Repository supervisor plugin blueprints and their source-only regression tests are vendor/operator assets, must track the active ANPOS protocol baseline, and must not leak into initialized child repositories or customer-facing template exports."
+    "Repository supervisor plugin blueprints and their source-only regression tests are vendor/operator assets, must track the active ANPOS protocol baseline, and must not leak into initialized child repositories or customer-facing template exports.",
+    "Repository Supervisor GitHub App assets are vendor/operator launch architecture and must remain distinct from Marketplace billing/Community and Vendor Distribution App roles."
   ]
 }
