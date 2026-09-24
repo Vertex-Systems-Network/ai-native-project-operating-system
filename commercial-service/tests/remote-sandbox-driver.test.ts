@@ -1,0 +1,152 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  buildRemoteSandboxResponseSignature,
+  buildRemoteSandboxSignature,
+  RemoteEphemeralSandboxDriver,
+} from "../lib/remote-sandbox-driver";
+import {
+  executeWithSandboxDriver,
+  normalizeSandboxRequest,
+  SandboxRequestError,
+} from "../lib/execution-sandbox";
+
+test("sandbox source identity is immutable and normalized", () => {
+  const request = normalizeSandboxRequest({
+    workspace_id: "repo-123",
+    source: {
+      provider: "github",
+      repository_full_name: "Example/Repo",
+      commit_sha: "A".repeat(40),
+    },
+    command: ["npm", "test"],
+  });
+  assert.equal(request.source?.repository_full_name, "Example/Repo");
+  assert.equal(request.source?.commit_sha, "a".repeat(40));
+
+  assert.throws(
+    () => normalizeSandboxRequest({
+      workspace_id: "repo",
+      source: { provider: "github", repository_full_name: "https://github.com/x/y" as string, commit_sha: "a".repeat(40) },
+      command: ["true"],
+    }),
+    (error: unknown) => error instanceof SandboxRequestError && error.code === "invalid_source_identity",
+  );
+});
+
+test("remote sandbox signatures bind exact body timestamp nonce and response request id", () => {
+  const secret = "s".repeat(48);
+  const one = buildRemoteSandboxSignature({ secret, timestamp: "100", nonce: "abc", body: "{}" });
+  const two = buildRemoteSandboxSignature({ secret, timestamp: "100", nonce: "abc", body: "{\"x\":1}" });
+  assert.match(one, /^[0-9a-f]{64}$/);
+  assert.notEqual(one, two);
+  assert.notEqual(
+    buildRemoteSandboxResponseSignature({ secret, requestId: "a", body: "{}" }),
+    buildRemoteSandboxResponseSignature({ secret, requestId: "b", body: "{}" }),
+  );
+});
+
+test("remote sandbox driver sends names-only environment and validates signed destruction evidence", async () => {
+  const secret = "s".repeat(48);
+  const driver = new RemoteEphemeralSandboxDriver(
+    "anpos-remote-e2e",
+    "https://sandbox.example.test/v1/execute",
+    secret,
+    120,
+    (async (input: string | URL | Request, init?: RequestInit) => {
+      assert.equal(String(input), "https://sandbox.example.test/v1/execute");
+      assert.equal(init?.method, "POST");
+      assert.equal(init?.redirect, "error");
+      const headers = new Headers(init?.headers);
+      const body = String(init?.body);
+      const timestamp = headers.get("x-anpos-sandbox-timestamp")!;
+      const nonce = headers.get("x-anpos-sandbox-nonce")!;
+      assert.equal(
+        headers.get("x-anpos-sandbox-signature"),
+        buildRemoteSandboxSignature({ secret, timestamp, nonce, body }),
+      );
+      const payload = JSON.parse(body);
+      assert.equal(payload.workspace.source.repository_full_name, "Example/Repo");
+      assert.equal(payload.workspace.source.commit_sha, "a".repeat(40));
+      assert.equal(payload.workspace.destroy_after_execution, true);
+      assert.equal(payload.execution.network, "deny");
+      assert.deepEqual(payload.execution.environment_variable_names, ["CI", "NODE_ENV"]);
+      assert.equal(body.includes("TOKEN=value"), false);
+
+      const responseBody = JSON.stringify({
+        protocol_version: 1,
+        request_id: payload.request_id,
+        driver_id: "anpos-remote-e2e",
+        isolation: "remote_ephemeral",
+        workspace_id: "repo-123",
+        workspace_destroyed: true,
+        network: "deny",
+        exit_code: 0,
+        stdout: "ok",
+        stderr: "",
+        timed_out: false,
+        output_truncated: false,
+        duration_ms: 20,
+      });
+      return new Response(responseBody, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Anpos-Sandbox-Response-Signature": buildRemoteSandboxResponseSignature({
+            secret,
+            requestId: payload.request_id,
+            body: responseBody,
+          }),
+        },
+      });
+    }) as typeof fetch,
+  );
+
+  const result = await executeWithSandboxDriver({
+    workspace_id: "repo-123",
+    source: {
+      provider: "github",
+      repository_full_name: "Example/Repo",
+      commit_sha: "a".repeat(40),
+    },
+    command: ["npm", "test"],
+    environment_variable_names: ["CI", "NODE_ENV"],
+    network: "deny",
+  }, driver);
+  assert.equal(result.exit_code, 0);
+  assert.equal(result.isolation, "remote_ephemeral");
+});
+
+test("remote sandbox driver fails closed on unsigned or non-destroyed response", async () => {
+  const driver = new RemoteEphemeralSandboxDriver(
+    "anpos-remote-e2e",
+    "https://sandbox.example.test/v1/execute",
+    "s".repeat(48),
+    120,
+    (async () => Response.json({
+      protocol_version: 1,
+      request_id: "wrong",
+      driver_id: "anpos-remote-e2e",
+      isolation: "remote_ephemeral",
+      workspace_id: "repo",
+      workspace_destroyed: false,
+      network: "deny",
+      exit_code: 0,
+      stdout: "",
+      stderr: "",
+      timed_out: false,
+      output_truncated: false,
+      duration_ms: 1,
+    })) as typeof fetch,
+  );
+
+  await assert.rejects(
+    () => executeWithSandboxDriver({
+      workspace_id: "repo",
+      source: { provider: "github", repository_full_name: "Example/Repo", commit_sha: "a".repeat(40) },
+      command: ["true"],
+    }, driver),
+    (error: unknown) => error instanceof SandboxRequestError
+      && ["remote_sandbox_response_signature_invalid", "invalid_remote_sandbox_response"].includes(error.code),
+  );
+});
