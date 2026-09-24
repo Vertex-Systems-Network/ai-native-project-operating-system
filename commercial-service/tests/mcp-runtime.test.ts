@@ -58,6 +58,10 @@ test("tool list exposes authenticated profile plus guarded write tool metadata",
   const merge = tools.find((tool: any) => tool.name === "repository_merge_change_request");
   const plan = tools.find((tool: any) => tool.name === "repository_plan_anpos_change");
   assert.equal(plan.annotations.readOnlyHint, true);
+  assert.deepEqual(plan.inputSchema.properties.mode.enum, [
+    "bounded_change", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active",
+  ]);
+  assert.deepEqual(plan.inputSchema.required, ["mode", "repository_url", "billing_account_id"]);
   assert.equal(merge.annotations.readOnlyHint, false);
   assert.equal(merge.annotations.destructiveHint, true);
   assert.deepEqual(merge.securitySchemes, [{
