@@ -242,10 +242,10 @@ async function beginApplyLease(
     await client.query(
       `UPDATE repository_supervisor_write_plans
          SET status='applying',apply_operation_id=$2,
-             apply_lease_expires_at=NOW() + ($3 || ' minutes')::interval,
+             apply_lease_expires_at=NOW() + make_interval(mins => $3::int),
              updated_at=NOW()
          WHERE plan_id=$1 AND status='planned'`,
-      [planId, operationId, String(APPLY_LEASE_MINUTES)],
+      [planId, operationId, APPLY_LEASE_MINUTES],
     );
     return null;
   });
