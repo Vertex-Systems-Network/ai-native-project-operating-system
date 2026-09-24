@@ -686,7 +686,9 @@ def main() -> int:
         "repository_supervisor_uses_dedicated_github_app_role",
         "marketplace_app_must_not_be_widened_for_supervisor_writes",
         "supervisor_write_plan_must_be_server_issued_and_expected_head_bound",
-        "supervisor_write_forbids_direct_default_branch_and_force_push",
+        "supervisor_force_push_forbidden",
+        "supervisor_normal_non_empty_direct_default_branch_write_forbidden",
+        "supervisor_empty_repository_seed_is_only_default_branch_exception",
         "supervisor_merge_must_verify_resulting_default_branch_head",
         "sandbox_production_driver_source", "sandbox_request_signature", "sandbox_response_signature",
         "sandbox_source_binding", "sandbox_network_default_deny", "sandbox_workspace_destroy_after_execution_required",
@@ -802,7 +804,7 @@ def main() -> int:
     if supervisor_manifest.get("role") != "repository_supervisor_app":
         fail("Supervisor GitHub App manifest must declare repository_supervisor_app role")
     supervisor_permissions = supervisor_manifest.get("repository_permissions", {})
-    for permission, level in (("metadata", "read"), ("contents", "write"), ("pull_requests", "write"), ("checks", "read"), ("statuses", "read")):
+    for permission, level in (("metadata", "read"), ("contents", "write"), ("pull_requests", "write"), ("checks", "read"), ("statuses", "read"), ("workflows", "write")):
         if supervisor_permissions.get(permission) != level:
             fail(f"Supervisor GitHub App manifest missing least-privilege permission: {permission}:{level}")
     if "administration" in supervisor_permissions:
