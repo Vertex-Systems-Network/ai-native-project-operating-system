@@ -580,7 +580,7 @@ def main() -> int:
     )
     require_markers(
         "scripts/migrate.ts",
-        ("pg_advisory_lock", "checksum_sha256", "CREATE TABLE IF NOT EXISTS commercial_schema_migrations", "BEGIN", "ROLLBACK", "Applied migration checksum changed"),
+        ("async function main", "main().catch", "pg_advisory_lock", "checksum_sha256", "CREATE TABLE IF NOT EXISTS commercial_schema_migrations", "BEGIN", "ROLLBACK", "Applied migration checksum changed"),
         "commercial migration runner",
     )
     require_markers(
