@@ -387,7 +387,6 @@ async function initializeEmptyRepositorySeed(
     {
       message: "Initialize repository for guarded ANPOS bootstrap",
       content: Buffer.from(EMPTY_BOOTSTRAP_SEED_CONTENT, "utf8").toString("base64"),
-      branch: defaultBranch,
     },
   );
   if (create.status === 409 || create.status === 422) {
