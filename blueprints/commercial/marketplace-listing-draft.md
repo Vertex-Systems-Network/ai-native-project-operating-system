@@ -21,7 +21,7 @@ Core customer projects are not remotely disabled when a commercial entitlement e
 ANPOS commercial production uses **three distinct GitHub App roles**:
 
 1. **Marketplace App — public/customer-facing.** This App owns the GitHub Marketplace listing, Community consent/readiness flow, and Marketplace reconciliation. Its customer-repository permission surface remains bounded and is not widened for Repository Supervisor writes.
-2. **Repository Supervisor App — public/installable paid runtime.** This separate App owns paid customer-repository supervision. Its minimum source contract is Metadata: read, Contents: write, Pull requests: write, Checks: read, and Commit statuses: read, with no Administration permission by default.
+2. **Repository Supervisor App — public/installable paid runtime.** This separate App owns paid customer-repository supervision. Its minimum source contract is Metadata: read, Contents: write, Pull requests: write, Checks: read, Commit statuses: read, and Workflows: write only because ANPOS initialization/upgrade may create or update `.github/workflows/*`; Administration remains forbidden by default.
 3. **Vendor Distribution App — private/vendor-only.** This App is installed only on the vendor-controlled private commercial-template repository. Archive-first delivery requires Contents: read. Optional collaborator provisioning may require Administration: write on the vendor repository only.
 
 The three App roles must remain distinct and their identity/credential material must not collapse across trust boundaries. Production readiness fails closed when role separation is not evidenced. The deprecated single-App blueprint is retained only as a migration marker.
@@ -144,7 +144,7 @@ All published links must resolve to relevant working pages.
 - actual monthly and annual USD price decisions for each paid plan;
 - real Marketplace plan IDs;
 - Marketplace App ID/private key/OAuth client credentials and strong Marketplace webhook secret;
-- Repository Supervisor App ID/OAuth client ID/client secret, with exact guarded-write permissions and no Administration by default;
+- Repository Supervisor App ID/OAuth client ID/client secret, with exact guarded-write permissions including Workflows: write for ANPOS-managed workflow files and no Administration by default;
 - Vendor App ID/private key, vendor installation ID, and private commercial-template repository;
 - signed remote-ephemeral sandbox gateway configuration and live evidence before Repository Supervisor production execution is claimed;
 - production issuer/base URL;
