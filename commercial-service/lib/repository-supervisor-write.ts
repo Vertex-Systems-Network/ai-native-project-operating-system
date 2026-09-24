@@ -843,6 +843,7 @@ export async function mergeGithubWritePlanPullRequest(input: {
     || pr.merged
     || pr.head_sha !== row.applied_head_sha
     || pr.base_branch !== row.default_branch
+    || pr.base_sha?.toLowerCase() !== expectedDefaultHead.toLowerCase()
     || pr.mergeable !== true
   ) throw new RepositorySupervisorError(409, "pull_request_state_not_mergeable");
 
