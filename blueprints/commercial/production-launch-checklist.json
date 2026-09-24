@@ -116,7 +116,7 @@
       "id": "sandbox_gateway",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Deploy/configure the signed remote-ephemeral sandbox gateway, verify HTTPS-only request/response authentication, immutable GitHub commit workspace binding, network deny and destroy-after-execution evidence, and do not treat /api/ready/sandbox source/config readiness as a live gateway probe."
+      "rule": "Deploy/configure sandbox protocol v2 with HTTPS signed requests/responses, bounded SHA-256 artifact input/output, exact output allowlists, Python 3.12+ runtime, network deny and destroy-after-execution evidence. Verify a real signed artifact execution separately; /api/ready/sandbox remains source/config readiness only."
     },
     {
       "id": "webhook_public_reachability",
@@ -134,7 +134,7 @@
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 004_repository_supervisor_planner.sql, only after exact deployment identity has been confirmed."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 005_repository_supervisor_full_apply.sql, only after exact deployment identity has been confirmed."
     },
     {
       "id": "real_marketplace_events",
