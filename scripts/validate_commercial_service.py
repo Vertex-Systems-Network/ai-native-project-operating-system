@@ -56,6 +56,8 @@ def main() -> int:
     for script in ("prebuild", "build", "typecheck", "test:unit", "migrate", "certify", "verify:e2e"):
         if script not in (package.get("scripts") or {}):
             fail(f"commercial service missing npm script: {script}")
+    if (package.get("scripts") or {}).get("prebuild") != "tsx scripts/guarded-build-migrate.ts":
+        fail("commercial service prebuild must remain the guarded build migration hook")
     if package.get("devDependencies", {}).get("tsx") != "4.23.13":
         fail("commercial service test/migration TypeScript runner must remain explicitly pinned")
 
@@ -571,7 +573,7 @@ def main() -> int:
         (
             "ANPOS_PRODUCTION_MIGRATE_ON_BUILD", "VERCEL_ENV", "production",
             "EXPORT-MANIFEST.json", "source_revision", 'export_mode !== "service"',
-            "DATABASE_URL_UNPOOLED", "DATABASE_URL", "pass 1/2",
+            "DATABASE_URL_UNPOOLED", "DATABASE_URL", "guarded production migration pass",
             "complete and idempotency re-run passed",
         ),
         "guarded production build migration",
