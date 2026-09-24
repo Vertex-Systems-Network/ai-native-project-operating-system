@@ -55,7 +55,7 @@ Remain read-only and use `repository_plan_anpos_change` in `repair_partial` mode
 
 ### empty_repository
 
-Use `repository_plan_anpos_change` in `bootstrap_empty` mode with the immutable verified sanitized child release. Never copy source/vendor-only assets. The no-write plan may contain deterministic bootstrap transforms, but bootstrap_empty remains a separate guarded-initialization follow-up.
+Use `repository_plan_anpos_change` in `bootstrap_empty` mode with the immutable verified sanitized child release. Never copy source/vendor-only assets. Apply only when the plan returns `safe_to_apply=true` and `apply_implementation=guarded_empty_repository_v1`. Empty GitHub repositories require explicit confirmation because the server must create exactly one inert `.anpos-bootstrap-seed` root commit on the configured default branch before it can create the sandbox-verified `anpos/*` feature branch. The seed must be zero-parent, is removed by the feature-branch commit, and full ANPOS content still reaches the default branch only through PR/CI/merge review.
 
 ## Assurance and governance rule
 
@@ -88,11 +88,11 @@ planned file/change set
 
 If any tuple member changes, re-plan before writing.
 
-For full planner modes, the server stores the complete encrypted plan and returns a bounded action/conflict preview. `planning_complete=true` does not mean write authorization. Call `repository_apply_anpos_change` only when the exact current plan returns `safe_to_apply=true` and `apply_implementation=sandbox_full_plan_v1`. Treat `conflict_resolution_required`, `empty_repository_initialization_pending`, `no_changes`, or any `safe_to_apply=false` result as a hard stop. Never bypass manual-merge/migration-review conflicts.
+For full planner modes, the server stores the complete encrypted plan and returns a bounded action/conflict preview. `planning_complete=true` does not mean write authorization. Call `repository_apply_anpos_change` only when the exact current plan returns `safe_to_apply=true` and either `apply_implementation=sandbox_full_plan_v1` or, for a verified empty repository only, `apply_implementation=guarded_empty_repository_v1`. Empty bootstrap additionally requires `confirm_empty_repository_initialization=true`. Treat `conflict_resolution_required`, `no_changes`, or any `safe_to_apply=false` result as a hard stop. Never bypass manual-merge/migration-review conflicts.
 
 ## Write rule
 
-Normal writes must:
+Normal non-empty writes must:
 
 - create/use a feature branch;
 - supply the expected base/head SHA;
@@ -101,7 +101,7 @@ Normal writes must:
 - use the smallest required change set;
 - verify the provider response by re-reading the repository/change request.
 
-After applying an ANPOS bootstrap/adoption plan, open a PR/MR rather than writing directly to the protected default branch.
+After applying an ANPOS bootstrap/adoption plan, open a PR/MR rather than writing ANPOS content directly to the protected/default branch. The only default-branch exception is the explicitly confirmed, verified empty-repository seed required by GitHub initialization semantics; that seed contains no ANPOS project content and is removed on the feature branch before PR review.
 
 ## Development rule
 
