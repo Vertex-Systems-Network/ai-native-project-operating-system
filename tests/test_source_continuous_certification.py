@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_PATH = ".github/workflows/source-continuous-certification.yml"
+HANDOFF_WORKFLOW_PATH = ".github/workflows/immutable-vendor-handoff.yml"
 
 
 class SourceContinuousCertificationTests(unittest.TestCase):
@@ -71,6 +72,27 @@ class SourceContinuousCertificationTests(unittest.TestCase):
             "npm run certify",
         ):
             self.assertIn(marker, source)
+
+    def test_immutable_handoff_workflow_uses_verified_receipt_schema(self):
+        source = subprocess.run(
+            ["git", "show", f"HEAD:{HANDOFF_WORKFLOW_PATH}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        for marker in (
+            'service_receipt["canonical_source_revision"]',
+            'service_receipt["canonical_source_tree"]',
+            'template_receipt["canonical_source_tree"]',
+            'identity = service_receipt["artifact_identity"]',
+            'identity["source_protocol_version"]',
+            'identity["service_version"]',
+            'identity["runtime_contract"]',
+            'anpos-vendor-handoff-${{ github.sha }}',
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn('service_receipt["source_tree"]', source)
 
     def test_source_only_ci_assets_are_stripped_from_customer_template_boundary(self):
         boundary = json.loads((ROOT / "config" / "licensing" / "vendor-source-boundary.json").read_text())
