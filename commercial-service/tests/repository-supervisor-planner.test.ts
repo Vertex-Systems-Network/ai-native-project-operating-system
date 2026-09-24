@@ -93,6 +93,26 @@ test("bootstrap_empty plans verified release plus child transforms without write
   assert.equal(plan.requirements_83_96.initialize_without_pass_claims, true);
 });
 
+test("bootstrap_child transforms runtime identity even when template blobs match", () => {
+  const plan = buildFullPlannerPayload({
+    mode: "bootstrap_child",
+    audit: audit("bootstrap_child"),
+    release: RELEASE,
+    target_tree: [
+      tree(".ai/manifest.json", "a".repeat(40)),
+      tree("README.md", "b".repeat(40)),
+      tree("config/assurance/assurance-state.json", "c".repeat(40)),
+      tree("config/protocol/instance.json", "d".repeat(40)),
+    ],
+    principal_login: "octo",
+    generated_instance_id: "11111111-1111-4111-8111-111111111111",
+    generated_at: "2026-09-24T00:00:00.000Z",
+  });
+  assert.equal(plan.actions.find((row) => row.path === "config/protocol/instance.json")?.action, "bootstrap_transform");
+  assert.equal(plan.actions.find((row) => row.path === "README.md")?.action, "unchanged");
+  assert.equal(plan.actions.find((row) => row.path === ".ai/manifest.json")?.action, "unchanged");
+});
+
 test("adopt_existing never auto-overwrites collisions and preserves target-only application files", () => {
   const plan = buildFullPlannerPayload({
     mode: "adopt_existing",
