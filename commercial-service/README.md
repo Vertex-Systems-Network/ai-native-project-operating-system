@@ -52,6 +52,31 @@ Community is deliberately outside the paid `ANPOS_MARKETPLACE_PLAN_MAP`. After t
 
 The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `paid=false`. The same Marketplace plan ID cannot also appear in `ANPOS_MARKETPLACE_PLAN_MAP`, and `community` is not accepted as a paid-map target. Do not invent a placeholder production plan ID merely to make readiness pass.
 
+## Production sandbox gateway
+
+Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.4 includes a remote-ephemeral production driver source configured only through environment secrets:
+
+- `ANPOS_SANDBOX_ENDPOINT` — exact HTTPS `/v1/execute` endpoint;
+- `ANPOS_SANDBOX_DRIVER_ID` — expected gateway driver identity;
+- `ANPOS_SANDBOX_SIGNING_SECRET` — high-entropy HMAC secret stored only in secrets management;
+- `ANPOS_SANDBOX_REQUEST_SKEW_SECONDS` — accepted timestamp window contract.
+
+Each request binds an immutable GitHub `owner/repo + commit SHA`, argv without shell interpolation, names-only environment variables, network deny, timeout/output limits, and destroy-after-execution. The driver signs exact request bytes with timestamp/nonce and requires a signed exact response that proves the workspace was destroyed and network stayed denied. `GET /api/ready/sandbox` reports configuration/source readiness but deliberately does not perform or claim a live gateway probe.
+
+## Repository Supervisor production E2E
+
+Run the live verifier from the deployed/operator environment with secrets in environment variables, never CLI arguments:
+
+`npm run verify:e2e`
+
+Supported `ANPOS_E2E_MODE` values:
+
+- `read` — profile → resolve → audit → assurance at one exact head;
+- `write_prepare` — on an explicitly disposable e2e/sandbox/test repository only, create an expected-head-bound plan, feature branch and PR;
+- `write_verify_merge` — re-read PR and exact-head CI, then guarded-merge only when green.
+
+Write modes require `ANPOS_E2E_WRITE_CONFIRM=I_ACCEPT_DISPOSABLE_TEST_REPO_MUTATION`. If CI is pending, the verifier exits with code 2 and must be explicitly re-run later; it does not busy-wait. Source tests are not live E2E evidence.
+
 ## Three-App trust architecture
 
 Production uses three distinct GitHub App roles: Marketplace billing/Community, Repository Supervisor, and Vendor Distribution. The Supervisor App must not reuse Marketplace or Vendor identity/credentials; Marketplace and Vendor key separation remains independently enforced.
@@ -238,6 +263,7 @@ The migrator takes a PostgreSQL advisory lock, applies ordered migrations transa
 - `GET /api/ready/community` — Community-only configuration/database readiness; deliberately independent of paid/vendor secrets.
 - `GET /api/ready` — full commercial configuration, Marketplace/Vendor role separation, paid plan/seat/release policy, migration/schema, and database readiness.
 - `GET /api/ready/mcp` — Repository Supervisor OAuth/MCP configuration, dedicated Supervisor App separation, migration/schema and database readiness.
+- `GET /api/ready/sandbox` — signed remote-ephemeral sandbox source/config readiness; does not claim a live gateway probe.
 - `POST /api/webhooks/github/marketplace` — GitHub Marketplace webhook receiver.
 - `GET /setup/github` — Marketplace Setup entrypoint; starts PKCE GitHub App OAuth from an untrusted setup installation ID.
 - `GET /api/auth/github/callback` — OAuth callback; verifies user + installation and creates encrypted short-lived browser session.
