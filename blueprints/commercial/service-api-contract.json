@@ -8,7 +8,12 @@
       "path": "/version",
       "authentication": "public_read",
       "purpose": "Expose non-secret service/artifact identity so deployment verification can reject stale or wrong commercial artifacts.",
-      "required_fields": ["service", "service_version", "source_protocol_version", "runtime_contract"],
+      "required_fields": [
+        "service",
+        "service_version",
+        "source_protocol_version",
+        "runtime_contract"
+      ],
       "must_not_return_secrets": true,
       "cache_control": "no-store"
     },
@@ -56,8 +61,13 @@
       "authentication": "verified_github_user_access_token_or_encrypted_browser_session_plus_marketplace_app_installation_permission_verification_on_target_repository",
       "purpose": "Provide the ANPOS Community read-only Repository Readiness / Conformance Audit without requiring a paid entitlement.",
       "requires_active_paid_entitlement": false,
-      "request": {"repository": "owner/name or https://github.com/owner/name"},
-      "marketplace_app_repository_permissions": {"metadata": "read", "single_file": "read"},
+      "request": {
+        "repository": "owner/name or https://github.com/owner/name"
+      },
+      "marketplace_app_repository_permissions": {
+        "metadata": "read",
+        "single_file": "read"
+      },
       "approved_single_file_paths": [
         ".ai/manifest.json",
         "config/protocol/instance.json",
@@ -85,6 +95,22 @@
       "authentication": "verified_github_user_access_token",
       "purpose": "Return a current signed entitlement. Organization entitlements must be bound to an explicitly assigned GitHub user principal.",
       "response_contains_private_signing_material": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/plugin/entitlements/current",
+      "authentication": "verified_github_user_access_token_plus_explicit_account_binding",
+      "purpose": "Return server-authoritative plugin capability decisions derived from current Marketplace entitlement state and organization seat assignment where required.",
+      "account_binding_header": "X-Anpos-Account-Id",
+      "billing_authority": "github_marketplace",
+      "returns_signed_entitlement": false,
+      "returns_payment_data": false,
+      "capability_policy": {
+        "community_repository_readiness_audit": "active Community or paid entitlement; no paid feature requirement",
+        "repository_supervisor_read": "requires protocol_update_channel and active organization seat when account is Organization",
+        "repository_supervisor_write": "requires private_template_access plus protocol_update_channel and active organization seat, but remains fail-closed until write runtime is implemented"
+      },
+      "cache_control": "private, no-store"
     },
     {
       "method": "GET",
@@ -120,7 +146,10 @@
       "path": "/v1/premium/releases/current",
       "authentication": "verified_github_user_access_token_plus_active_premium_entitlements_and_org_seat_when_applicable",
       "purpose": "Return sanitized metadata for the exact private Premium Pack release after Marketplace reconciliation and verifier-receipt digest binding.",
-      "requires_entitlements": ["premium_blueprints", "premium_provider_adapters"],
+      "requires_entitlements": [
+        "premium_blueprints",
+        "premium_provider_adapters"
+      ],
       "premium_release_ref": "exact_40_character_git_commit_sha_only",
       "manifest": "ANPOS-PREMIUM-MANIFEST.json",
       "offline_verifier": "scripts/verify_premium_pack.py",
@@ -134,7 +163,10 @@
       "path": "/v1/premium/archive",
       "authentication": "verified_github_user_access_token_plus_active_premium_entitlements_and_org_seat_when_applicable",
       "purpose": "Issue a short-lived GitHub archive redirect for the same exact immutable Premium Pack revision after manifest and verifier-receipt digest checks.",
-      "requires_entitlements": ["premium_blueprints", "premium_provider_adapters"],
+      "requires_entitlements": [
+        "premium_blueprints",
+        "premium_provider_adapters"
+      ],
       "immutable_premium_release_ref_required": true,
       "premium_manifest_verified_before_redirect": true,
       "recommended_distribution_path": true
@@ -203,6 +235,10 @@
     "source_implementation_is_not_marketplace_activation_evidence": true,
     "no_payment_card_storage_when_processor_handles_payment": true,
     "no_remote_kill_switch_for_generated_customer_projects": true,
-    "vendor_template_access_may_be_revoked_without_modifying_generated_customer_projects": true
+    "vendor_template_access_may_be_revoked_without_modifying_generated_customer_projects": true,
+    "plugin_capability_authorization_is_server_side": true,
+    "plugin_account_binding_requires_authenticated_github_access": true,
+    "unimplemented_plugin_capabilities_fail_closed": true,
+    "plugin_response_exposes_no_payment_card_or_signing_secret_material": true
   }
 }
