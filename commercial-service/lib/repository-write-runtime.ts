@@ -151,7 +151,7 @@ export const databaseWritePlanStore: RepositoryWritePlanStore = {
   },
   async get(planId, githubUserId) {
     const result = await db().query(
-      `SELECT *, NULL::text AS branch_name, NULL::text AS resulting_head_sha
+      `SELECT *, applied_branch_name AS branch_name
          FROM repository_write_plans
         WHERE plan_id=$1 AND created_by_github_user_id=$2`,
       [planId, githubUserId],
@@ -161,15 +161,11 @@ export const databaseWritePlanStore: RepositoryWritePlanStore = {
   async markApplied(planId, branchName, resultingHeadSha) {
     const result = await db().query(
       `UPDATE repository_write_plans
-          SET status='applied', applied_at=NOW()
+          SET status='applied', applied_at=NOW(), applied_branch_name=$2, resulting_head_sha=$3
         WHERE plan_id=$1 AND status='planned'`,
-      [planId],
+      [planId, branchName, resultingHeadSha],
     );
     if (!result.rowCount) throw new Error("REPOSITORY_WRITE_PLAN_STATE_CHANGED");
-    // Branch/result identity is retained in the idempotent operation result, while the plan row
-    // intentionally stores only immutable planning input and lifecycle state.
-    void branchName;
-    void resultingHeadSha;
   },
   async beginOperation(input) {
     return transaction(async (client) => {
@@ -602,7 +598,7 @@ export async function applyRepositoryWritePlan(input: {
     if (!refResponse.ok) throw new Error("FEATURE_BRANCH_CREATE_FAILED");
 
     const verify = await github(
-      `/repos/${path}/branches/${input.branchName.split("/").map(encodeURIComponent).join("/")}`,
+      `/repos/${path}/branches/${encodeURIComponent(input.branchName)}`,
       input.token,
       fetchImpl,
     );
@@ -644,6 +640,9 @@ export async function openRepositoryChangeRequest(input: {
   assertSha(input.expectedHeadSha);
   const plan = await store.get(input.planId, input.githubUserId);
   if (!plan || plan.status !== "applied") throw new Error("APPLIED_WRITE_PLAN_REQUIRED");
+  if (plan.branch_name !== input.headBranch || plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
+    throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
+  }
   const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
   if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) throw new Error("REPOSITORY_IDENTITY_MISMATCH");
   assertFeatureBranch(input.headBranch, audit.default_branch);
