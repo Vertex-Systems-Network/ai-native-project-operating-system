@@ -730,13 +730,10 @@ export async function openRepositoryChangeRequest(input: {
   const plan = await store.get(input.planId, input.githubUserId);
   if (!plan || plan.status !== "applied") throw new Error("APPLIED_WRITE_PLAN_REQUIRED");
   if (plan.billing_account_id !== input.billingAccountId) throw new Error("WRITE_PLAN_BILLING_ACCOUNT_MISMATCH");
-  if (plan.change_request_id != null) throw new Error("WRITE_PLAN_CHANGE_REQUEST_ALREADY_OPENED");
   if (plan.branch_name !== input.headBranch || plan.resulting_head_sha?.toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
     throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
   }
-  const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
-  if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) throw new Error("REPOSITORY_IDENTITY_MISMATCH");
-  assertFeatureBranch(input.headBranch, audit.default_branch);
+  assertFeatureBranch(input.headBranch, plan.default_branch);
   const title = typeof input.title === "string" ? input.title.trim() : "";
   const body = typeof input.body === "string" ? input.body : "";
   if (!title || title.length > 256 || body.length > 64_000) throw new Error("INVALID_CHANGE_REQUEST_METADATA");
@@ -756,6 +753,13 @@ export async function openRepositoryChangeRequest(input: {
       body,
     },
   }, async () => {
+    if (plan.change_request_id != null) throw new Error("WRITE_PLAN_CHANGE_REQUEST_ALREADY_OPENED");
+    const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
+    if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) throw new Error("REPOSITORY_IDENTITY_MISMATCH");
+    if (audit.default_branch !== plan.default_branch || audit.head_sha?.toLowerCase() !== plan.expected_target_head_sha.toLowerCase()) {
+      throw new Error("EXPECTED_TARGET_HEAD_MISMATCH");
+    }
+
     const path = repoPath(audit.full_name);
     const branch = await github(
       `/repos/${path}/branches/${encodeURIComponent(input.headBranch)}`,
@@ -886,19 +890,14 @@ export async function mergeRepositoryChangeRequest(input: {
     throw new Error("APPLIED_PLAN_BRANCH_BINDING_MISMATCH");
   }
 
-  const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
-  if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) {
-    throw new Error("REPOSITORY_IDENTITY_MISMATCH");
-  }
-  const githubRepositoryId = repositoryId(audit.canonical_repository_id);
   return withIdempotency(store, {
     idempotencyKey: input.idempotencyKey,
     operation: "merge_change_request",
     planId: plan.plan_id,
-    githubRepositoryId,
+    githubRepositoryId: plan.github_repository_id,
     githubUserId: input.githubUserId,
     digestPayload: {
-      repository_id: githubRepositoryId,
+      repository_id: plan.github_repository_id,
       plan_id: plan.plan_id,
       billing_account_id: input.billingAccountId,
       change_request_id: input.changeRequestId,
@@ -907,6 +906,11 @@ export async function mergeRepositoryChangeRequest(input: {
       confirm_merge: true,
     },
   }, async () => {
+    const audit = await resolveForWrite(input.repository, input.token, fetchImpl);
+    if (repositoryId(audit.canonical_repository_id) !== plan.github_repository_id) {
+      throw new Error("REPOSITORY_IDENTITY_MISMATCH");
+    }
+
     const current = await getRepositoryChangeRequest({
       repository: audit.full_name,
       changeRequestId: input.changeRequestId,
