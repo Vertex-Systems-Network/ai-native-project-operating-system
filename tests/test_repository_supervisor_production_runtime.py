@@ -18,15 +18,30 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
         schema = load("schemas/execution-sandbox.schema.json")
         policy = load("config/runtime/execution-sandbox.json")
         Draft202012Validator(schema).validate(policy)
-        self.assertEqual(policy["schema_version"], 2)
-        self.assertEqual(policy["status"], "production_driver_source_implemented_live_gateway_evidence_pending")
+        self.assertEqual(policy["schema_version"], 3)
+        self.assertEqual(policy["status"], "artifact_channel_source_implemented_live_gateway_evidence_pending")
         driver = policy["production_driver"]
         self.assertTrue(driver["source_ready"])
         self.assertEqual(driver["live_gateway_evidence"], "pending")
-        self.assertEqual(driver["workspace_source_binding"], "github_repository_full_name_plus_immutable_commit_sha")
+        self.assertEqual(driver["protocol_version"], 2)
+        self.assertEqual(driver["workspace_source_binding"], "github_repository_full_name_plus_immutable_commit_sha_or_explicit_empty")
+        self.assertEqual(driver["artifact_channel"], "signed_bounded_input_files_plus_exact_output_allowlist")
+        self.assertEqual(driver["runtime_requirements"], ["python3>=3.12"])
         self.assertTrue(driver["workspace_destroy_after_execution"])
         self.assertEqual(policy["network"]["default"], "deny")
         self.assertFalse(policy["local_process_fallback"])
+
+    def test_full_apply_policy_requires_conflict_free_token_isolation_and_receipt(self) -> None:
+        schema = load("schemas/repository-supervisor-planner.schema.json")
+        policy = load("config/runtime/repository-supervisor-planner.json")
+        Draft202012Validator(schema).validate(policy)
+        self.assertEqual(policy["schema_version"], 2)
+        apply = policy["apply_runtime"]
+        self.assertEqual(apply["sandbox_protocol_version"], 2)
+        self.assertTrue(apply["conflict_free_required"])
+        self.assertEqual(apply["bootstrap_empty"], "pending_guarded_initialization")
+        self.assertFalse(apply["customer_provider_token_forwarded_to_sandbox"])
+        self.assertTrue(apply["merge_requires_sandbox_receipt"])
 
     def test_live_e2e_contract_is_schema_valid_and_evidence_is_not_invented(self) -> None:
         schema = load("schemas/repository-supervisor-e2e.schema.json")
@@ -46,6 +61,10 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
         role = set(load(".ai/manifest.json")["roles"]["commercial_distribution"])
         for path in [
             "commercial-service/lib/remote-sandbox-driver.ts",
+            "commercial-service/lib/repository-supervisor-full-apply.ts",
+            "commercial-service/lib/full-plan-sandbox-runner.ts",
+            "commercial-service/migrations/005_repository_supervisor_full_apply.sql",
+            "commercial-service/tests/repository-supervisor-full-apply.test.ts",
             "commercial-service/app/api/ready/sandbox/route.ts",
             "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
             "commercial-service/tests/remote-sandbox-driver.test.ts",

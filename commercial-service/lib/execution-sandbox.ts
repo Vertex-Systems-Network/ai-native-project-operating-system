@@ -1,9 +1,19 @@
+import { createHash } from "node:crypto";
+
 export type SandboxIsolation = "container" | "microvm" | "remote_ephemeral";
 
 export type SandboxSourceIdentity = {
   provider: "github";
   repository_full_name: string;
   commit_sha: string;
+};
+
+export type SandboxFileArtifact = {
+  path: string;
+  mode: "100644" | "100755";
+  content_base64: string;
+  sha256: string;
+  bytes: number;
 };
 
 export type SandboxExecutionRequest = {
@@ -14,6 +24,9 @@ export type SandboxExecutionRequest = {
   environment_variable_names?: string[];
   timeout_seconds?: number;
   max_output_bytes?: number;
+  max_artifact_bytes?: number;
+  input_files?: SandboxFileArtifact[];
+  output_paths?: string[];
   network?: "deny";
 };
 
@@ -25,6 +38,9 @@ export type NormalizedSandboxExecutionRequest = {
   environment_variable_names: string[];
   timeout_seconds: number;
   max_output_bytes: number;
+  max_artifact_bytes: number;
+  input_files: SandboxFileArtifact[];
+  output_paths: string[];
   network: "deny";
 };
 
@@ -37,6 +53,7 @@ export type SandboxExecutionResult = {
   timed_out: boolean;
   output_truncated: boolean;
   duration_ms: number;
+  output_files?: SandboxFileArtifact[];
 };
 
 export interface SandboxDriver {
@@ -58,6 +75,14 @@ const DEFAULT_TIMEOUT_SECONDS = 300;
 const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
 const DEFAULT_OUTPUT_BYTES = 512 * 1024;
 const MAX_ENV_NAMES = 64;
+const MAX_ARTIFACT_FILES = 5_000;
+const MAX_ARTIFACT_BYTES = 32 * 1024 * 1024;
+const DEFAULT_ARTIFACT_BYTES = 16 * 1024 * 1024;
+const MAX_ARTIFACT_PATH_BYTES = 1_024;
+
+function sha256Bytes(value: Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 function safeRelativeDirectory(value: string): boolean {
   if (!value || value.startsWith("/") || value.includes("\\") || /[\r\n\0]/.test(value)) return false;
@@ -70,6 +95,18 @@ function safeWorkspaceId(value: string): boolean {
 
 function safeEnvironmentName(value: string): boolean {
   return /^[A-Z_][A-Z0-9_]{0,127}$/.test(value);
+}
+
+export function safeSandboxArtifactPath(value: string): boolean {
+  if (
+    !value
+    || value.startsWith("/")
+    || value.includes("\\")
+    || /[\r\n\0]/.test(value)
+    || Buffer.byteLength(value, "utf8") > MAX_ARTIFACT_PATH_BYTES
+  ) return false;
+  const parts = value.split("/");
+  return parts.every((part) => part && part !== "." && part !== ".." && part !== ".git");
 }
 
 function normalizeSourceIdentity(source: SandboxSourceIdentity | undefined): SandboxSourceIdentity | null {
@@ -85,6 +122,64 @@ function normalizeSourceIdentity(source: SandboxSourceIdentity | undefined): San
     repository_full_name: source.repository_full_name,
     commit_sha: source.commit_sha.toLowerCase(),
   };
+}
+
+function decodeCanonicalBase64(value: string): Buffer {
+  if (typeof value !== "string" || value.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    throw new SandboxRequestError("invalid_artifact_base64");
+  }
+  const decoded = Buffer.from(value, "base64");
+  if (decoded.toString("base64") !== value) throw new SandboxRequestError("invalid_artifact_base64");
+  return decoded;
+}
+
+export function normalizeSandboxFileArtifacts(
+  files: SandboxFileArtifact[] | undefined,
+  maxBytes: number,
+  allowedPaths?: Set<string>,
+): SandboxFileArtifact[] {
+  const values = files ?? [];
+  if (!Array.isArray(values) || values.length > MAX_ARTIFACT_FILES) {
+    throw new SandboxRequestError("invalid_artifact_files");
+  }
+  const seen = new Set<string>();
+  let total = 0;
+  return values.map((file) => {
+    if (!file || typeof file !== "object" || !safeSandboxArtifactPath(file.path) || seen.has(file.path)) {
+      throw new SandboxRequestError("invalid_artifact_path");
+    }
+    seen.add(file.path);
+    if (allowedPaths && !allowedPaths.has(file.path)) throw new SandboxRequestError("unexpected_output_artifact_path");
+    if (file.mode !== "100644" && file.mode !== "100755") throw new SandboxRequestError("invalid_artifact_mode");
+    if (!/^[0-9a-f]{64}$/i.test(file.sha256)) throw new SandboxRequestError("invalid_artifact_digest");
+    if (!Number.isSafeInteger(file.bytes) || file.bytes < 0) throw new SandboxRequestError("invalid_artifact_size");
+    const decoded = decodeCanonicalBase64(file.content_base64);
+    if (decoded.length !== file.bytes || sha256Bytes(decoded) !== file.sha256.toLowerCase()) {
+      throw new SandboxRequestError("artifact_integrity_mismatch");
+    }
+    total += decoded.length;
+    if (total > maxBytes) throw new SandboxRequestError("artifact_bytes_limit_exceeded");
+    return {
+      path: file.path,
+      mode: file.mode,
+      content_base64: file.content_base64,
+      sha256: file.sha256.toLowerCase(),
+      bytes: file.bytes,
+    };
+  });
+}
+
+function normalizeOutputPaths(paths: string[] | undefined): string[] {
+  const values = paths ?? [];
+  if (!Array.isArray(values) || values.length > MAX_ARTIFACT_FILES) throw new SandboxRequestError("invalid_output_paths");
+  const seen = new Set<string>();
+  return values.map((path) => {
+    if (typeof path !== "string" || !safeSandboxArtifactPath(path) || seen.has(path)) {
+      throw new SandboxRequestError("invalid_output_path");
+    }
+    seen.add(path);
+    return path;
+  });
 }
 
 export function normalizeSandboxRequest(input: SandboxExecutionRequest): NormalizedSandboxExecutionRequest {
@@ -113,6 +208,10 @@ export function normalizeSandboxRequest(input: SandboxExecutionRequest): Normali
   if (!Number.isInteger(output) || output < 1024 || output > MAX_OUTPUT_BYTES) {
     throw new SandboxRequestError("invalid_max_output_bytes");
   }
+  const artifactBytes = input.max_artifact_bytes ?? DEFAULT_ARTIFACT_BYTES;
+  if (!Number.isInteger(artifactBytes) || artifactBytes < 1024 || artifactBytes > MAX_ARTIFACT_BYTES) {
+    throw new SandboxRequestError("invalid_max_artifact_bytes");
+  }
   if (input.network !== undefined && input.network !== "deny") {
     throw new SandboxRequestError("network_access_not_supported");
   }
@@ -124,6 +223,9 @@ export function normalizeSandboxRequest(input: SandboxExecutionRequest): Normali
     environment_variable_names: [...new Set(envNames)],
     timeout_seconds: timeout,
     max_output_bytes: output,
+    max_artifact_bytes: artifactBytes,
+    input_files: normalizeSandboxFileArtifacts(input.input_files, artifactBytes),
+    output_paths: normalizeOutputPaths(input.output_paths),
     network: "deny",
   };
 }
@@ -138,16 +240,21 @@ export async function executeWithSandboxDriver(
   const request = normalizeSandboxRequest(input);
   const result = await driver.execute(request);
   if (
-    result.driver_id !== driver.id ||
-    result.isolation !== driver.isolation ||
-    !Number.isInteger(result.exit_code) ||
-    !Number.isFinite(result.duration_ms) ||
-    result.duration_ms < 0
+    result.driver_id !== driver.id
+    || result.isolation !== driver.isolation
+    || !Number.isInteger(result.exit_code)
+    || !Number.isFinite(result.duration_ms)
+    || result.duration_ms < 0
   ) {
     throw new SandboxRequestError("invalid_sandbox_driver_result");
   }
   if (Buffer.byteLength(result.stdout, "utf8") + Buffer.byteLength(result.stderr, "utf8") > request.max_output_bytes) {
     throw new SandboxRequestError("sandbox_driver_output_limit_violation");
   }
-  return result;
+  const allowed = new Set(request.output_paths);
+  const outputFiles = normalizeSandboxFileArtifacts(result.output_files, request.max_artifact_bytes, allowed);
+  if (outputFiles.length !== request.output_paths.length || outputFiles.some((file) => !allowed.has(file.path))) {
+    throw new SandboxRequestError("sandbox_output_artifact_set_mismatch");
+  }
+  return { ...result, output_files: outputFiles };
 }

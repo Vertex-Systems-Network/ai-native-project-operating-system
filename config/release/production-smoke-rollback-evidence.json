@@ -3,7 +3,7 @@
   "status": "pending_real_production_verification",
   "scope": "commercial_production_smoke_rollback_and_recovery",
   "expected_identity": {
-    "service_version": "0.4.5",
+    "service_version": "0.4.6",
     "protocol_version": "1.4.0",
     "runtime_contract": "split-github-app-v1"
   },

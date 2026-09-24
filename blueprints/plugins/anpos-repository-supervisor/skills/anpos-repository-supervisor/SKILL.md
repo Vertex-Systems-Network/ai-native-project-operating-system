@@ -43,7 +43,7 @@ Load the target project's ANPOS router/state, protocol version, unified Requirem
 
 ### uninitialized_child
 
-Use `repository_plan_anpos_change` in `bootstrap_child` mode. The plan must be derived from the target's observed head and the selected immutable ANPOS 1.4.0-or-newer compatible release. Inspect the returned conflicts/preservation summary. Do not call apply unless the server explicitly returns `safe_to_apply=true`; current full-mode planner output remains no-write until sandbox-backed apply is available.
+Use `repository_plan_anpos_change` in `bootstrap_child` mode. The plan must be derived from the target's observed head and the selected immutable ANPOS 1.4.0-or-newer compatible release. Inspect the returned conflicts/preservation summary. Do not call apply unless the server explicitly returns `safe_to_apply=true`; current full-mode apply is allowed only for exact conflict-free non-empty plans marked sandbox_full_plan_v1.
 
 ### not_anpos
 
@@ -55,7 +55,7 @@ Remain read-only and use `repository_plan_anpos_change` in `repair_partial` mode
 
 ### empty_repository
 
-Use `repository_plan_anpos_change` in `bootstrap_empty` mode with the immutable verified sanitized child release. Never copy source/vendor-only assets. The no-write plan may contain deterministic bootstrap transforms, but current full-mode apply remains sandbox-backed follow-up work.
+Use `repository_plan_anpos_change` in `bootstrap_empty` mode with the immutable verified sanitized child release. Never copy source/vendor-only assets. The no-write plan may contain deterministic bootstrap transforms, but bootstrap_empty remains a separate guarded-initialization follow-up.
 
 ## Assurance and governance rule
 
@@ -88,7 +88,7 @@ planned file/change set
 
 If any tuple member changes, re-plan before writing.
 
-For full planner modes, the server stores the complete encrypted plan and returns a bounded action/conflict preview. `planning_complete=true` does not mean write authorization. Treat `safe_to_apply=false` or `apply_implementation=sandbox_full_plan_pending` as a hard stop; do not call `repository_apply_anpos_change` for that plan.
+For full planner modes, the server stores the complete encrypted plan and returns a bounded action/conflict preview. `planning_complete=true` does not mean write authorization. Call `repository_apply_anpos_change` only when the exact current plan returns `safe_to_apply=true` and `apply_implementation=sandbox_full_plan_v1`. Treat `conflict_resolution_required`, `empty_repository_initialization_pending`, `no_changes`, or any `safe_to_apply=false` result as a hard stop. Never bypass manual-merge/migration-review conflicts.
 
 ## Write rule
 

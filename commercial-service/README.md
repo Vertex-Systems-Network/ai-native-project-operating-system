@@ -54,22 +54,22 @@ The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `pai
 
 ## Full Repository Supervisor planner
 
-Commercial service 0.4.5 implements deterministic no-write planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.
+Commercial service 0.4.6 implements deterministic planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.
 
 Full modes bind the plan to the authenticated principal/account, canonical repository identity, immutable observed target head when present, and the operator-configured exact private-template release. Planning compares validated `EXPORT-MANIFEST.json` per-file Git object identities against a non-truncated immutable target Git tree. Target-only files are preserved; adoption collisions become manual merges; project runtime/evidence paths are preserved or marked for migration review; material AI-control drift requires assurance re-verification.
 
-The complete plan is encrypted server-side. MCP returns only a bounded preview and counts. Full-mode plans are intentionally **not applicable yet**: `repository_apply_anpos_change` rejects them until the sandbox-backed full-plan apply runtime is separately implemented and certified.
+The complete plan is encrypted server-side and MCP returns only a bounded preview and counts. Non-empty conflict-free plans may apply through `sandbox_full_plan_v1`: exact private-template Git blobs are reverified and staged into the signed remote-ephemeral sandbox, Python 3.12+ performs bootstrap transforms without host-process execution, output is exact-path/SHA-256 verified, and the service creates one expected-head feature branch plus sandbox receipt. Manual/migration conflicts remain blocked and `bootstrap_empty` remains pending a separate guarded initialization flow.
 
 ## Production sandbox gateway
 
-Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.5 includes a remote-ephemeral production driver source configured only through environment secrets:
+Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.6 includes a remote-ephemeral production driver source configured only through environment secrets:
 
 - `ANPOS_SANDBOX_ENDPOINT` — exact HTTPS `/v1/execute` endpoint;
 - `ANPOS_SANDBOX_DRIVER_ID` — expected gateway driver identity;
 - `ANPOS_SANDBOX_SIGNING_SECRET` — high-entropy HMAC secret stored only in secrets management;
 - `ANPOS_SANDBOX_REQUEST_SKEW_SECONDS` — accepted timestamp window contract.
 
-Each request binds an immutable GitHub `owner/repo + commit SHA`, argv without shell interpolation, names-only environment variables, network deny, timeout/output limits, and destroy-after-execution. The driver signs exact request bytes with timestamp/nonce and requires a signed exact response that proves the workspace was destroyed and network stayed denied. `GET /api/ready/sandbox` reports configuration/source readiness but deliberately does not perform or claim a live gateway probe.
+Sandbox protocol v2 supports bounded signed input/output artifacts with canonical base64 + SHA-256 integrity, exact output-path allowlists, argv without shell interpolation, names-only environment variables, network deny, timeout/output limits, and destroy-after-execution. Full-plan apply intentionally uses an explicit empty sandbox workspace populated only with verified release artifacts, so the customer GitHub token is never forwarded to the gateway. The driver signs exact request bytes with timestamp/nonce and requires a signed exact response that proves the workspace was destroyed and network stayed denied. `GET /api/ready/sandbox` reports configuration/source readiness but deliberately does not perform or claim a live gateway probe.
 
 ## Repository Supervisor production E2E
 
@@ -144,7 +144,7 @@ Do not grant Administration by default. Branch protection/rulesets remain author
 
 Guarded writes use a short-lived encrypted server-side plan bound to canonical repository identity, authenticated principal/billing account, exact default-branch head SHA, and deterministic plan hash. Apply creates a new `anpos/*` feature branch from an atomic Git Data commit. The service never direct-writes the default branch or force-pushes through the normal workflow. Merge re-reads PR state, exact planned head CI, current default-branch head and resulting default-branch head.
 
-The current source implements `bounded_change` planning only. Complete bootstrap/adoption/repair/upgrade plan generation remains pending.
+The source implements bounded and full bootstrap/adoption/repair/upgrade planning. Non-empty conflict-free full plans can use sandbox-backed apply; unresolved conflicts and empty-repository initialization remain pending.
 
 ### Vendor Distribution App — private/vendor-only
 

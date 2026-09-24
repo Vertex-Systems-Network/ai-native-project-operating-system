@@ -23,11 +23,12 @@
     "material_ai_drift_prefixes",
     "max_release_files",
     "max_plan_actions",
-    "rules"
+    "rules",
+    "apply_runtime"
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "status": {
       "const": "source_planner_policy"
@@ -139,10 +140,77 @@
     },
     "rules": {
       "type": "array",
-      "minItems": 8,
+      "minItems": 12,
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "apply_runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "runner",
+        "sandbox_protocol_version",
+        "eligible_modes",
+        "conflict_free_required",
+        "bootstrap_empty",
+        "conflict_resolution",
+        "customer_provider_token_forwarded_to_sandbox",
+        "verified_release_materialization",
+        "output_contract",
+        "apply_lease_minutes",
+        "merge_requires_sandbox_receipt"
+      ],
+      "properties": {
+        "source": {
+          "const": "commercial-service/lib/repository-supervisor-full-apply.ts"
+        },
+        "runner": {
+          "const": "commercial-service/lib/full-plan-sandbox-runner.ts"
+        },
+        "sandbox_protocol_version": {
+          "const": 2
+        },
+        "eligible_modes": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "bootstrap_child",
+              "adopt_existing",
+              "repair_partial",
+              "upgrade_active"
+            ]
+          }
+        },
+        "conflict_free_required": {
+          "const": true
+        },
+        "bootstrap_empty": {
+          "const": "pending_guarded_initialization"
+        },
+        "conflict_resolution": {
+          "const": "pending_user_resolved_plan"
+        },
+        "customer_provider_token_forwarded_to_sandbox": {
+          "const": false
+        },
+        "verified_release_materialization": {
+          "const": "exact_private_template_git_blobs"
+        },
+        "output_contract": {
+          "const": "exact_planned_paths_sha256_verified"
+        },
+        "apply_lease_minutes": {
+          "const": 20
+        },
+        "merge_requires_sandbox_receipt": {
+          "const": true
+        }
       }
     }
   }

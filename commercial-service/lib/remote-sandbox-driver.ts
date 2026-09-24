@@ -2,21 +2,24 @@ import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from
 import { remoteSandboxConfig } from "./env";
 import {
   SandboxRequestError,
+  normalizeSandboxFileArtifacts,
   type NormalizedSandboxExecutionRequest,
   type SandboxDriver,
   type SandboxExecutionResult,
+  type SandboxFileArtifact,
 } from "./execution-sandbox";
 
 type FetchLike = typeof fetch;
 
 type RemoteSandboxWireRequest = {
-  protocol_version: 1;
+  protocol_version: 2;
   request_id: string;
   driver_id: string;
   isolation: "remote_ephemeral";
   workspace: {
     id: string;
     mode: "ephemeral_copy_on_write";
+    base: "github_commit" | "empty";
     destroy_after_execution: true;
     source: NormalizedSandboxExecutionRequest["source"];
   };
@@ -27,6 +30,11 @@ type RemoteSandboxWireRequest = {
     timeout_seconds: number;
     max_output_bytes: number;
     network: "deny";
+  };
+  artifacts: {
+    input_files: SandboxFileArtifact[];
+    output_paths: string[];
+    max_output_bytes: number;
   };
 };
 
@@ -44,6 +52,7 @@ type RemoteSandboxWireResponse = {
   timed_out?: boolean;
   output_truncated?: boolean;
   duration_ms?: number;
+  output_files?: SandboxFileArtifact[];
 };
 
 const RESPONSE_OVERHEAD_BYTES = 64 * 1024;
@@ -88,15 +97,15 @@ function wireRequest(
   driverId: string,
   request: NormalizedSandboxExecutionRequest,
 ): RemoteSandboxWireRequest {
-  if (!request.source) throw new SandboxRequestError("sandbox_source_identity_required");
   return {
-    protocol_version: 1,
+    protocol_version: 2,
     request_id: randomUUID(),
     driver_id: driverId,
     isolation: "remote_ephemeral",
     workspace: {
       id: request.workspace_id,
       mode: "ephemeral_copy_on_write",
+      base: request.source ? "github_commit" : "empty",
       destroy_after_execution: true,
       source: request.source,
     },
@@ -108,6 +117,11 @@ function wireRequest(
       max_output_bytes: request.max_output_bytes,
       network: "deny",
     },
+    artifacts: {
+      input_files: request.input_files,
+      output_paths: request.output_paths,
+      max_output_bytes: request.max_artifact_bytes,
+    },
   };
 }
 
@@ -116,7 +130,7 @@ function validateResponse(
   request: RemoteSandboxWireRequest,
 ): SandboxExecutionResult {
   if (
-    response.protocol_version !== 1
+    response.protocol_version !== 2
     || response.request_id !== request.request_id
     || response.driver_id !== request.driver_id
     || response.isolation !== "remote_ephemeral"
@@ -132,6 +146,15 @@ function validateResponse(
     || Number(response.duration_ms) < 0
   ) throw new SandboxRequestError("invalid_remote_sandbox_response");
 
+  const outputFiles = normalizeSandboxFileArtifacts(
+    response.output_files,
+    request.artifacts.max_output_bytes,
+    new Set(request.artifacts.output_paths),
+  );
+  if (outputFiles.length !== request.artifacts.output_paths.length) {
+    throw new SandboxRequestError("sandbox_output_artifact_set_mismatch");
+  }
+
   return {
     driver_id: request.driver_id,
     isolation: "remote_ephemeral",
@@ -141,6 +164,7 @@ function validateResponse(
     timed_out: response.timed_out,
     output_truncated: response.output_truncated,
     duration_ms: Number(response.duration_ms),
+    output_files: outputFiles,
   };
 }
 
@@ -180,7 +204,7 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          "X-Anpos-Sandbox-Protocol": "1",
+          "X-Anpos-Sandbox-Protocol": "2",
           "X-Anpos-Sandbox-Driver": this.id,
           "X-Anpos-Sandbox-Timestamp": timestamp,
           "X-Anpos-Sandbox-Nonce": nonce,
@@ -202,6 +226,7 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
         throw new SandboxRequestError("remote_sandbox_authentication_failed");
       }
       if (response.status === 409) throw new SandboxRequestError("remote_sandbox_replay_or_workspace_conflict");
+      if (response.status === 413) throw new SandboxRequestError("remote_sandbox_artifact_limit_exceeded");
       if (response.status === 429) throw new SandboxRequestError("remote_sandbox_capacity_limited");
       throw new SandboxRequestError("remote_sandbox_execution_failed");
     }
@@ -209,7 +234,8 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
     const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
     if (contentType !== "application/json") throw new SandboxRequestError("invalid_remote_sandbox_response");
 
-    const maxResponseBytes = request.max_output_bytes + RESPONSE_OVERHEAD_BYTES;
+    const maxArtifactWireBytes = Math.ceil(request.max_artifact_bytes / 3) * 4;
+    const maxResponseBytes = request.max_output_bytes + maxArtifactWireBytes + RESPONSE_OVERHEAD_BYTES;
     const declared = Number(response.headers.get("content-length") ?? "0");
     if (declared && (!Number.isSafeInteger(declared) || declared > maxResponseBytes)) {
       throw new SandboxRequestError("remote_sandbox_response_too_large");

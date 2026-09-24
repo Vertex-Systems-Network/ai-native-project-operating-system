@@ -286,6 +286,107 @@ export async function templateReleasePlanSnapshot(): Promise<CommercialReleasePl
   };
 }
 
+export type TemplateReleaseMaterializationRequest = {
+  path: string;
+  git_object: string;
+  sha256: string;
+  size: number;
+  git_mode: "100644" | "100755";
+};
+
+export type MaterializedTemplateReleaseFile = TemplateReleaseMaterializationRequest & {
+  content_base64: string;
+};
+
+const MAX_TEMPLATE_MATERIALIZATION_FILES = 5_000;
+const MAX_TEMPLATE_MATERIALIZATION_BYTES = 24 * 1024 * 1024;
+const TEMPLATE_BLOB_CONCURRENCY = 8;
+
+function safeTemplateMaterializationPath(value: string): boolean {
+  if (!value || value.length > 512 || value.startsWith("/") || value.includes("\\") || /[\r\n\0]/.test(value)) return false;
+  return value.split("/").every((part) => part && part !== "." && part !== ".." && part !== ".git");
+}
+
+export async function materializeTemplateReleaseFiles(
+  files: TemplateReleaseMaterializationRequest[],
+): Promise<MaterializedTemplateReleaseFile[]> {
+  if (!Array.isArray(files) || files.length < 1 || files.length > MAX_TEMPLATE_MATERIALIZATION_FILES) {
+    throw new Error("INVALID_TEMPLATE_MATERIALIZATION_FILES");
+  }
+  const seen = new Set<string>();
+  let expectedBytes = 0;
+  const normalized = files.map((file) => {
+    if (
+      !file
+      || !safeTemplateMaterializationPath(file.path)
+      || seen.has(file.path)
+      || !/^[0-9a-f]{40}$/i.test(file.git_object)
+      || !/^[0-9a-f]{64}$/i.test(file.sha256)
+      || !Number.isSafeInteger(file.size)
+      || file.size < 0
+      || !["100644", "100755"].includes(file.git_mode)
+    ) throw new Error("INVALID_TEMPLATE_MATERIALIZATION_FILE");
+    seen.add(file.path);
+    expectedBytes += file.size;
+    if (expectedBytes > MAX_TEMPLATE_MATERIALIZATION_BYTES) {
+      throw new Error("TEMPLATE_MATERIALIZATION_BYTES_EXCEEDED");
+    }
+    return {
+      path: file.path,
+      git_object: file.git_object.toLowerCase(),
+      sha256: file.sha256.toLowerCase(),
+      size: file.size,
+      git_mode: file.git_mode,
+    };
+  });
+
+  const repository = privateTemplateRepository();
+  const token = await vendorInstallationToken(repository, "archive");
+  const results = new Array<MaterializedTemplateReleaseFile>(normalized.length);
+  let cursor = 0;
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const index = cursor++;
+      if (index >= normalized.length) return;
+      const file = normalized[index];
+      const response = await fetch(
+        `https://api.github.com/repos/${repository.owner}/${repository.repo}/git/blobs/${file.git_object}`,
+        {
+          headers: githubHeaders(token),
+          cache: "no-store",
+          signal: AbortSignal.timeout(15_000),
+        },
+      );
+      if (!response.ok) throw new Error(`TEMPLATE_RELEASE_BLOB_READ_FAILED_${response.status}`);
+      const body = await response.json() as { sha?: string; encoding?: string; content?: string; size?: number };
+      if (
+        body.sha?.toLowerCase() !== file.git_object
+        || body.encoding !== "base64"
+        || typeof body.content !== "string"
+        || Number(body.size) !== file.size
+      ) throw new Error("TEMPLATE_RELEASE_BLOB_IDENTITY_MISMATCH");
+      const compact = body.content.replace(/\s+/g, "");
+      let raw: Buffer;
+      try { raw = Buffer.from(compact, "base64"); }
+      catch { throw new Error("TEMPLATE_RELEASE_BLOB_ENCODING_INVALID"); }
+      if (
+        raw.length !== file.size
+        || createHash("sha256").update(raw).digest("hex") !== file.sha256
+      ) throw new Error("TEMPLATE_RELEASE_BLOB_DIGEST_MISMATCH");
+      results[index] = {
+        ...file,
+        content_base64: raw.toString("base64"),
+      };
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(TEMPLATE_BLOB_CONCURRENCY, normalized.length) }, () => worker()),
+  );
+  return results;
+}
+
 export async function templateArchiveRedirect(): Promise<{ repository: string; release_ref: string; location: string }> {
   const cfg = serviceConfig();
   const repository = privateTemplateRepository();

@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -169,11 +169,11 @@
           "expected_target_head_sha_optional"
         ]
       },
-      "full_mode_apply_status": "sandbox_full_plan_pending"
+      "full_mode_apply_status": "sandbox_full_plan_v1_for_non_empty_conflict_free_plans"
     },
     {
       "name": "repository_apply_anpos_change",
-      "intent": "Apply a previously generated bounded_change plan to a feature branch using optimistic concurrency. Full bootstrap/adoption/repair/upgrade planner records remain non-applicable until the separate sandbox-backed full-plan apply runtime is implemented.",
+      "intent": "Apply a server-issued plan to a new anpos/* feature branch with optimistic concurrency. bounded_change uses direct atomic Git Data writes; eligible non-empty conflict-free bootstrap/adoption/repair/upgrade plans execute verified release transformations inside the signed remote-ephemeral sandbox before the server creates one Git commit and branch.",
       "read_only": false,
       "destructive": false,
       "open_world": false,
@@ -186,19 +186,29 @@
       ],
       "required_outputs": [
         "plan_id",
+        "mode_optional",
         "branch_name",
         "resulting_head_sha",
         "applied_paths",
         "expected_target_head_sha",
+        "sandbox_receipt_sha256_optional",
+        "sandbox_driver_id_optional",
         "status"
       ],
       "server_requirements": [
         "reject_if_plan_is_stale",
-        "reject_if_target_head_changed",
-        "reject_default_branch_direct_write_by_default",
+        "reject_if_target_head_changed_before_or_after_branch_creation",
+        "reject_if_verified_private_release_identity_changed",
+        "reject_default_branch_direct_write",
         "reject_force_push",
         "reverify_authenticated_permission",
-        "reject_full_mode_apply_until_sandbox_runtime_exists"
+        "require_conflict_free_full_plan",
+        "reject_bootstrap_empty_until_guarded_initialization_flow_exists",
+        "require_signed_remote_ephemeral_sandbox_for_full_plan",
+        "require_exact_sandbox_output_allowlist_and_sha256_integrity",
+        "never_send_customer_github_token_to_sandbox",
+        "require_apply_lease_and_idempotency",
+        "require_sandbox_receipt_for_full_plan_merge"
       ]
     },
     {
@@ -338,11 +348,15 @@
     "Adoption never automatically overwrites a mismatched existing target path.",
     "Upgrade/repair never blindly resets project-specific Requirements 83-96 evidence or child runtime state.",
     "Every full-mode plan binds to the verified private-template release ref/source revision/source tree and immutable target head when one exists.",
-    "Full-mode plans remain no-write until sandbox-backed full-plan apply is separately implemented and certified."
+    "Only non-empty conflict-free full plans may enter sandbox-backed apply; manual_merge and migration_review remain hard stops.",
+    "Customer GitHub provider credentials are not forwarded to the sandbox gateway; the sandbox receives only verified release artifacts and plan metadata.",
+    "Sandbox full apply uses exact-path input/output artifacts with SHA-256 integrity and signed gateway response verification.",
+    "Full-plan GitHub merge requires the persisted sandbox receipt digest in addition to exact PR head and CI checks.",
+    "bootstrap_empty remains blocked until a guarded repository-initialization flow can preserve the no-direct-default-branch rule."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_full_planner_source_plus_guarded_bounded_apply",
+    "phase": "github_full_planner_plus_sandbox_full_apply_source",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -394,16 +408,24 @@
       "active_project_upgrade_plan_generation",
       "target_only_file_preservation",
       "requirements_83_96_evidence_preservation_planning",
-      "bounded_mcp_action_preview_with_full_encrypted_server_plan"
+      "bounded_mcp_action_preview_with_full_encrypted_server_plan",
+      "signed_sandbox_artifact_channel_v2",
+      "sandbox_python312_bootstrap_runner",
+      "verified_private_template_blob_materialization",
+      "conflict_free_non_empty_full_plan_apply",
+      "full_apply_operation_lease_and_recovery_state",
+      "sandbox_receipt_bound_full_plan_merge",
+      "customer_github_token_not_forwarded_to_sandbox"
     ],
     "not_yet_implemented": [
-      "sandbox_backed_full_plan_apply_runtime",
+      "empty_repository_guarded_initialization_flow",
+      "full_plan_conflict_resolution_runtime",
       "gitlab_adapter",
       "live_production_sandbox_gateway_evidence",
       "live_github_repository_supervisor_read_e2e_receipt",
       "live_github_repository_supervisor_write_e2e_receipt"
     ],
-    "claim_boundary": "Source implements GitHub audit/read, deterministic full bootstrap/adoption/repair/upgrade plan generation, bounded guarded writes, OAuth/MCP, and sandbox driver source. Full-mode plans are intentionally no-write and cannot be applied until the sandbox-backed full-plan apply runtime exists. Live sandbox/plugin/GitHub E2E evidence and GitLab parity remain pending.",
+    "claim_boundary": "Source implements GitHub read/audit, deterministic full planning, bounded writes, and sandbox-backed apply for non-empty conflict-free full plans. Plans with manual/migration conflicts remain blocked, bootstrap_empty remains a separate guarded-initialization problem, and live sandbox/plugin/GitHub E2E evidence plus GitLab parity remain pending.",
     "sandbox_driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
     "sandbox_readiness_endpoint": "/api/ready/sandbox",
     "e2e_verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
@@ -476,7 +498,13 @@
     "immutable_source_binding": "github_repository_full_name_plus_commit_sha",
     "network": "deny",
     "destroy_after_execution": true,
-    "live_gateway_evidence": "pending"
+    "live_gateway_evidence": "pending",
+    "protocol_version": 2,
+    "artifact_channel": "signed_bounded_input_files_plus_exact_output_allowlist",
+    "runtime_requirements": [
+      "python3>=3.12"
+    ],
+    "workspace_source_binding": "verified_release_artifacts_in_explicit_empty_workspace_for_full_apply"
   },
   "github_runtime_e2e": {
     "verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
@@ -508,6 +536,8 @@
     "upgrade_project_state": "preserve_or_migration_review",
     "requirements_83_96": "preserve_verified_evidence_and_reverify_material_ai_drift",
     "mcp_output": "bounded_action_preview_full_plan_encrypted_server_side",
-    "full_mode_apply": "pending_sandbox_runtime"
+    "full_mode_apply": "sandbox_full_plan_v1_for_non_empty_conflict_free_plans",
+    "conflict_resolution_apply": "pending",
+    "empty_repository_apply": "pending"
   }
 }

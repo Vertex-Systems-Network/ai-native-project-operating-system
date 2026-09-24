@@ -33,6 +33,7 @@ export type PlannerAction = {
   release_git_object: string | null;
   release_sha256: string;
   release_mode: string;
+  release_bytes: number;
   target_git_object: string | null;
   target_mode: string | null;
   reason: string;
@@ -85,8 +86,12 @@ export type FullPlannerPayload = StoredSupervisorPlanEnvelope & {
   };
   conflict_free: boolean;
   planning_complete: true;
-  safe_to_apply: false;
-  apply_implementation: "sandbox_full_plan_pending";
+  safe_to_apply: boolean;
+  apply_implementation:
+    | "sandbox_full_plan_v1"
+    | "conflict_resolution_required"
+    | "empty_repository_initialization_pending"
+    | "no_changes";
 };
 
 const CLASSIFICATION_BY_MODE: Record<FullPlannerMode, RepositorySupervisorClassification> = {
@@ -377,6 +382,7 @@ export function buildFullPlannerPayload(input: {
       release_git_object: file.git_object.toLowerCase(),
       release_sha256: file.sha256,
       release_mode: file.git_mode,
+      release_bytes: file.size,
       target_git_object: target?.sha ?? null,
       target_mode: target?.mode ?? null,
       reason: decision.reason,
@@ -439,9 +445,86 @@ export function buildFullPlannerPayload(input: {
     },
     conflict_free: counts.manual_merge === 0 && counts.migration_review === 0,
     planning_complete: true,
-    safe_to_apply: false,
-    apply_implementation: "sandbox_full_plan_pending",
+    safe_to_apply:
+      input.mode !== "bootstrap_empty"
+      && counts.manual_merge === 0
+      && counts.migration_review === 0
+      && counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform > 0,
+    apply_implementation:
+      input.mode === "bootstrap_empty"
+        ? "empty_repository_initialization_pending"
+        : counts.manual_merge > 0 || counts.migration_review > 0
+          ? "conflict_resolution_required"
+          : counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform === 0
+            ? "no_changes"
+            : "sandbox_full_plan_v1",
   };
+}
+
+export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnvelope): FullPlannerPayload {
+  const modes: FullPlannerMode[] = [
+    "bootstrap_empty",
+    "bootstrap_child",
+    "adopt_existing",
+    "repair_partial",
+    "upgrade_active",
+  ];
+  if (!value || value.v !== 1 || !modes.includes(value.mode as FullPlannerMode)) {
+    throw new RepositorySupervisorError(500, "full_plan_payload_invalid");
+  }
+  const payload = value as FullPlannerPayload;
+  if (
+    !payload.release
+    || !/^[0-9a-f]{40}$/i.test(payload.release.release_ref)
+    || !/^[0-9a-f]{40}$/i.test(payload.release.source_revision)
+    || !/^[0-9a-f]{40}$/i.test(payload.release.source_tree)
+    || !payload.target
+    || typeof payload.target.canonical_repository_id !== "string"
+    || typeof payload.target.repository_full_name !== "string"
+    || typeof payload.target.default_branch !== "string"
+    || !Array.isArray(payload.actions)
+    || payload.actions.length > MAX_ACTIONS
+    || typeof payload.conflict_free !== "boolean"
+    || typeof payload.safe_to_apply !== "boolean"
+    || ![
+      "sandbox_full_plan_v1",
+      "conflict_resolution_required",
+      "empty_repository_initialization_pending",
+      "no_changes",
+    ].includes(payload.apply_implementation)
+  ) throw new RepositorySupervisorError(500, "full_plan_payload_invalid");
+
+  const seen = new Set<string>();
+  const allowedActions: PlannerActionKind[] = [
+    "unchanged",
+    "add_from_release",
+    "replace_from_release",
+    "bootstrap_transform",
+    "manual_merge",
+    "preserve_project_state",
+    "migration_review",
+  ];
+  for (const action of payload.actions) {
+    if (
+      !action
+      || typeof action.path !== "string"
+      || !action.path
+      || action.path.length > 512
+      || action.path.startsWith("/")
+      || action.path.includes("\\")
+      || action.path.split("/").some((part) => !part || part === "." || part === ".." || part === ".git")
+      || seen.has(action.path)
+      || !allowedActions.includes(action.action)
+      || !/^[0-9a-f]{40}$/i.test(String(action.release_git_object ?? ""))
+      || !/^[0-9a-f]{64}$/i.test(action.release_sha256)
+      || !["100644", "100755"].includes(action.release_mode)
+      || !Number.isSafeInteger(action.release_bytes)
+      || action.release_bytes < 0
+      || (action.target_git_object !== null && !/^[0-9a-f]{40}$/i.test(action.target_git_object))
+    ) throw new RepositorySupervisorError(500, "full_plan_action_invalid");
+    seen.add(action.path);
+  }
+  return payload;
 }
 
 export async function createGithubFullAnposPlan(input: {

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "source_planner_policy",
   "protocol_baseline": "1.4.0",
   "modes": [
@@ -130,6 +130,29 @@
     "Upgrade never blindly replaces project-specific state or Requirements 83-96 evidence.",
     "Shared README, .gitignore and existing GitHub policy/workflow collisions require merge/review rather than blind replacement.",
     "Material AI-control drift marks AI assurance re-verification required.",
-    "Planner output is no-write evidence; full-mode apply remains sandbox-backed follow-up work."
-  ]
+    "Conflict-free non-empty full plans may apply only through the signed remote-ephemeral sandbox artifact channel.",
+    "Manual-merge and migration-review conflicts remain hard stops until an explicit resolved plan exists.",
+    "bootstrap_empty remains blocked until a guarded initialization flow can preserve the no-direct-default-branch rule.",
+    "Customer GitHub credentials are never forwarded to the sandbox gateway during full-plan apply.",
+    "A full-plan PR cannot merge without a persisted sandbox receipt digest."
+  ],
+  "apply_runtime": {
+    "source": "commercial-service/lib/repository-supervisor-full-apply.ts",
+    "runner": "commercial-service/lib/full-plan-sandbox-runner.ts",
+    "sandbox_protocol_version": 2,
+    "eligible_modes": [
+      "bootstrap_child",
+      "adopt_existing",
+      "repair_partial",
+      "upgrade_active"
+    ],
+    "conflict_free_required": true,
+    "bootstrap_empty": "pending_guarded_initialization",
+    "conflict_resolution": "pending_user_resolved_plan",
+    "customer_provider_token_forwarded_to_sandbox": false,
+    "verified_release_materialization": "exact_private_template_git_blobs",
+    "output_contract": "exact_planned_paths_sha256_verified",
+    "apply_lease_minutes": 20,
+    "merge_requires_sandbox_receipt": true
+  }
 }
