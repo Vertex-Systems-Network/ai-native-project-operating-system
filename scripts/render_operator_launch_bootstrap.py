@@ -55,11 +55,22 @@ MARKETPLACE_APP_ENV = [
     "GITHUB_MARKETPLACE_CLIENT_SECRET",
     "GITHUB_WEBHOOK_SECRET",
 ]
+SUPERVISOR_APP_ENV = [
+    "GITHUB_SUPERVISOR_APP_ID",
+    "GITHUB_SUPERVISOR_CLIENT_ID",
+    "GITHUB_SUPERVISOR_CLIENT_SECRET",
+]
 VENDOR_APP_ENV = [
     "GITHUB_VENDOR_APP_ID",
     "GITHUB_VENDOR_APP_PRIVATE_KEY",
     "GITHUB_VENDOR_INSTALLATION_ID",
     "ANPOS_PRIVATE_TEMPLATE_REPO",
+]
+SANDBOX_ENV = [
+    "ANPOS_SANDBOX_ENDPOINT",
+    "ANPOS_SANDBOX_DRIVER_ID",
+    "ANPOS_SANDBOX_SIGNING_SECRET",
+    "ANPOS_SANDBOX_REQUEST_SKEW_SECONDS",
 ]
 SERVICE_ENV = [
     "DATABASE_URL",
@@ -93,6 +104,7 @@ class Inputs:
     service_base_url: str
     homepage_url: str
     marketplace_app_name: str
+    supervisor_app_name: str
     vendor_app_name: str
     collaborator_provisioning: bool
 
@@ -238,6 +250,24 @@ def marketplace_registration_url(inputs: Inputs) -> str:
     return registration_url(inputs.organization, params)
 
 
+def supervisor_registration_url(inputs: Inputs) -> str:
+    callback_url = inputs.service_base_url + "/api/auth/mcp/github/callback"
+    params = [
+        ("name", inputs.supervisor_app_name),
+        ("description", "ANPOS paid Repository Supervisor application"),
+        ("url", inputs.homepage_url),
+        ("public", "true"),
+        ("webhook_active", "false"),
+        ("request_oauth_on_install", "true"),
+        ("callback_urls[]", callback_url),
+        ("contents", "write"),
+        ("pull_requests", "write"),
+        ("checks", "read"),
+        ("statuses", "read"),
+    ]
+    return registration_url(inputs.organization, params)
+
+
 def vendor_registration_url(inputs: Inputs) -> str:
     params = [
         ("name", inputs.vendor_app_name),
@@ -309,7 +339,7 @@ def render(
     setup_url = inputs.service_base_url + "/setup/github"
 
     return {
-        "schema_version": 6,
+        "schema_version": 7,
         "status": "operator_actions_required",
         "launch_authorized": False,
         "organization": inputs.organization,
@@ -364,6 +394,25 @@ def render(
                 "community_auth_flow": "marketplace_setup_url_then_pkce_github_app_oauth",
                 "environment_keys": MARKETPLACE_APP_ENV,
             },
+            "repository_supervisor": {
+                "role": "repository_supervisor_app",
+                "public": True,
+                "registration_url": supervisor_registration_url(inputs),
+                "github_app_webhook_active": False,
+                "callback_url": inputs.service_base_url + "/api/auth/mcp/github/callback",
+                "request_oauth_on_install": True,
+                "events": [],
+                "repository_permissions": {
+                    "metadata": "read",
+                    "contents": "write",
+                    "pull_requests": "write",
+                    "checks": "read",
+                    "statuses": "read",
+                },
+                "administration_permission_requested": False,
+                "environment_keys": SUPERVISOR_APP_ENV,
+                "trust_boundary": "distinct_from_marketplace_and_vendor_distribution_apps",
+            },
             "vendor_distribution": {
                 "role": "vendor_distribution_app",
                 "public": False,
@@ -375,6 +424,7 @@ def render(
             },
         },
         "service_environment_keys": SERVICE_ENV,
+        "sandbox_environment_keys": SANDBOX_ENV,
         "conditional_premium_environment_keys": PREMIUM_ENV,
         "legacy_single_app_environment_keys_forbidden": LEGACY_SINGLE_APP_ENV,
         "operator_sequence": [
@@ -389,6 +439,10 @@ def render(
             "Configure ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID only with the real operator-approved free Marketplace plan ID after that plan exists; keep Community outside ANPOS_MARKETPLACE_PLAN_MAP, which remains paid-only.",
             "Verify the Community audit permission remains single-file read for exactly the approved ten ANPOS control paths and is not broadened to application source-code access.",
             "For free-first launch, require /api/ready/community HTTP 200 plus real Setup URL -> OAuth -> installation-bound repository discovery -> audit E2E evidence; this does not prove paid/vendor readiness.",
+            "Register the dedicated public/installable Repository Supervisor App using its prefilled URL; keep it distinct from Marketplace and Vendor Distribution identities.",
+            "Generate the Supervisor OAuth client secret and configure GITHUB_SUPERVISOR_APP_ID/GITHUB_SUPERVISOR_CLIENT_ID/GITHUB_SUPERVISOR_CLIENT_SECRET only in the deployment secret manager.",
+            "Verify Supervisor permissions remain Metadata read, Contents write, Pull requests write, Checks read, and Commit statuses read; do not grant Administration by default.",
+            "Configure ANPOS_SANDBOX_ENDPOINT/ANPOS_SANDBOX_DRIVER_ID/ANPOS_SANDBOX_SIGNING_SECRET/ANPOS_SANDBOX_REQUEST_SKEW_SECONDS only after the signed remote-ephemeral gateway exists; /api/ready/sandbox is source/config readiness and is not a live gateway probe.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",
             "Install the Vendor Distribution App with Contents read on the verified private commercial-template repository; if a higher paid tier is activated, also install it on the distinct private premium repository.",
@@ -413,7 +467,9 @@ def render(
             "Community Marketplace identity must use the real ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID and must never be smuggled into the paid ANPOS_MARKETPLACE_PLAN_MAP.",
             "Paid update/archive delivery must use the exact ANPOS_COMMERCIAL_RELEASE_REF commit whose deterministic EXPORT-MANIFEST and private-repository checkout have been verified; mutable refs are forbidden.",
             "Pro/Team/Enterprise activation requires a distinct private premium repository, exact premium commit SHA, and manifest/content-set digests from a successful offline premium verifier receipt; a source contract or route is not premium payload or sale readiness.",
-            "Do not reuse App IDs or private keys across Marketplace and Vendor Distribution roles.",
+            "Do not reuse App IDs, OAuth client IDs/secrets, or private keys across Marketplace, Repository Supervisor, and Vendor Distribution roles.",
+            "Marketplace App permissions must never be widened to implement Repository Supervisor writes; the Supervisor App is a separate trust boundary.",
+            "Sandbox source/config readiness is not live gateway evidence; retain live sandbox and Repository Supervisor E2E receipts separately.",
             "Do not use legacy GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY with the split-App commercial service contract.",
             "Do not infer Marketplace approval, publisher verification, installation counts, prices, plan IDs, repository existence, premium payload existence, or production readiness from this output.",
         ],
@@ -422,10 +478,11 @@ def render(
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--organization", required=True, help="GitHub organization that will own both App registrations")
+    parser.add_argument("--organization", required=True, help="GitHub organization that will own all App registrations")
     parser.add_argument("--service-base-url", required=True, help="HTTPS base URL of the ANPOS commercial service")
     parser.add_argument("--homepage-url", required=True, help="HTTPS product/application homepage URL")
     parser.add_argument("--marketplace-app-name", default="ANPOS Marketplace")
+    parser.add_argument("--supervisor-app-name", default="ANPOS Repository Supervisor")
     parser.add_argument("--vendor-app-name", default="ANPOS Vendor Distribution")
     parser.add_argument(
         "--enable-collaborator-provisioning",
@@ -443,6 +500,7 @@ def main(argv: list[str] | None = None) -> int:
             service_base_url=normalize_https_url(args.service_base_url, "service base URL"),
             homepage_url=normalize_https_url(args.homepage_url, "homepage URL"),
             marketplace_app_name=validate_app_name(args.marketplace_app_name, "Marketplace App name"),
+            supervisor_app_name=validate_app_name(args.supervisor_app_name, "Supervisor App name"),
             vendor_app_name=validate_app_name(args.vendor_app_name, "Vendor App name"),
             collaborator_provisioning=bool(args.enable_collaborator_provisioning),
         )
