@@ -18,7 +18,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code")?.trim() ?? "";
   const state = url.searchParams.get("state")?.trim() ?? "";
-  if (!code || code.length > 4096 || !state || state.length > 512) {
+  const providerError = url.searchParams.get("error")?.trim() ?? "";
+  if (!state || state.length > 512 || (!code && !providerError) || code.length > 4096) {
     return Response.json({ ok: false, error: "oauth_callback_parameters_required" }, {
       status: 400,
       headers: { "Cache-Control": "no-store", "Set-Cookie": clearMcpOAuthCookie() },
@@ -34,6 +35,25 @@ export async function GET(request: Request) {
       headers: { "Cache-Control": "no-store", "Set-Cookie": clearMcpOAuthCookie() },
     });
   }
+
+  const downstreamError = (error: string, description: string) => {
+    const destination = new URL(pending.redirect_uri);
+    destination.searchParams.set("error", error);
+    destination.searchParams.set("error_description", description);
+    if (pending.downstream_state) destination.searchParams.set("state", pending.downstream_state);
+    destination.searchParams.set("iss", mcpOAuthConfig().publicBaseUrl);
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: destination.toString(),
+        "Set-Cookie": clearMcpOAuthCookie(),
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      },
+    });
+  };
+
+  if (providerError) return downstreamError("access_denied", "GitHub authorization was not completed.");
 
   try {
     const app = marketplaceAppConfig();
@@ -83,9 +103,6 @@ export async function GET(request: Request) {
       },
     });
   } catch {
-    return Response.json({ ok: false, error: "mcp_github_authorization_failed" }, {
-      status: 401,
-      headers: { "Cache-Control": "no-store", "Set-Cookie": clearMcpOAuthCookie() },
-    });
+    return downstreamError("access_denied", "GitHub authorization could not be completed.");
   }
 }
