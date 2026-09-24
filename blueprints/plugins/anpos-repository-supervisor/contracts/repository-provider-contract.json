@@ -92,10 +92,11 @@
     },
     {
       "name": "repository_plan_anpos_change",
-      "intent": "Create a deterministic no-write ANPOS bootstrap, adoption, repair, or upgrade plan bound to an observed repository head and immutable ANPOS release.",
+      "intent": "Create a deterministic no-write plan. The current source implementation supports bounded_change plans for explicit file upsert/delete sets; bootstrap/adoption/repair/upgrade plan generation remains a later planner milestone.",
       "read_only": true,
       "open_world": false,
       "modes": [
+        "bounded_change",
         "bootstrap_empty",
         "bootstrap_child",
         "adopt_existing",
@@ -103,24 +104,32 @@
         "upgrade_active"
       ],
       "required_inputs": [
-        "canonical_repository_id",
-        "mode",
-        "expected_target_head_sha"
+        "repository_url",
+        "billing_account_id",
+        "expected_target_head_sha",
+        "commit_message",
+        "changes"
       ],
       "required_outputs": [
         "plan_id",
-        "target_head_sha",
-        "anpos_version",
-        "anpos_release_digest",
-        "new_paths",
-        "merge_paths",
-        "preserved_paths",
-        "blocked_conflicts",
-        "validation_plan",
+        "plan_hash",
+        "canonical_repository_id",
+        "repository_full_name",
+        "default_branch",
+        "expected_target_head_sha",
+        "expires_at",
         "safe_to_apply",
-        "requirements_83_96_applicability",
-        "evidence_preservation_plan",
-        "protocol_migration_plan"
+        "changes"
+      ],
+      "source_implemented_modes": [
+        "bounded_change"
+      ],
+      "planned_modes": [
+        "bootstrap_empty",
+        "bootstrap_child",
+        "adopt_existing",
+        "repair_partial",
+        "upgrade_active"
       ]
     },
     {
@@ -130,18 +139,19 @@
       "destructive": false,
       "open_world": false,
       "required_inputs": [
-        "canonical_repository_id",
+        "billing_account_id",
         "plan_id",
-        "expected_target_head_sha",
+        "plan_hash",
         "branch_name",
         "idempotency_key"
       ],
       "required_outputs": [
+        "plan_id",
         "branch_name",
         "resulting_head_sha",
         "applied_paths",
-        "verification",
-        "assurance_state_verification"
+        "expected_target_head_sha",
+        "status"
       ],
       "server_requirements": [
         "reject_if_plan_is_stale",
@@ -158,18 +168,20 @@
       "destructive": false,
       "open_world": false,
       "required_inputs": [
-        "canonical_repository_id",
-        "head_branch",
-        "base_branch",
+        "billing_account_id",
+        "plan_id",
         "expected_head_sha",
         "title",
-        "body"
+        "body",
+        "idempotency_key"
       ],
       "required_outputs": [
-        "change_request_id",
+        "plan_id",
+        "pull_request_number",
         "url",
         "head_sha",
-        "base_sha"
+        "base_branch",
+        "status"
       ]
     },
     {
@@ -178,15 +190,20 @@
       "read_only": true,
       "open_world": false,
       "required_inputs": [
-        "canonical_repository_id",
-        "change_request_id"
+        "billing_account_id",
+        "plan_id"
       ],
       "required_outputs": [
+        "plan_id",
+        "pull_request_number",
         "state",
+        "merged",
+        "mergeable",
+        "mergeable_state",
         "head_sha",
+        "base_branch",
         "base_sha",
-        "review_state",
-        "mergeability"
+        "url"
       ]
     },
     {
@@ -212,12 +229,16 @@
       "read_only": true,
       "open_world": false,
       "required_inputs": [
-        "canonical_repository_id",
+        "billing_account_id",
+        "plan_id",
         "commit_sha"
       ],
       "required_outputs": [
+        "plan_id",
+        "commit_sha",
         "overall_state",
-        "checks"
+        "checks",
+        "statuses"
       ]
     },
     {
@@ -227,8 +248,8 @@
       "destructive": true,
       "open_world": false,
       "required_inputs": [
-        "canonical_repository_id",
-        "change_request_id",
+        "billing_account_id",
+        "plan_id",
         "expected_head_sha",
         "idempotency_key"
       ],
