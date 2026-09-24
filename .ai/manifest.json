@@ -276,7 +276,11 @@
       "commercial-service/migrations/004_repository_supervisor_planner.sql",
       "commercial-service/tests/repository-supervisor-planner.test.ts",
       "config/runtime/repository-supervisor-planner.json",
-      "schemas/repository-supervisor-planner.schema.json"
+      "schemas/repository-supervisor-planner.schema.json",
+      "commercial-service/lib/repository-supervisor-full-apply.ts",
+      "commercial-service/lib/full-plan-sandbox-runner.ts",
+      "commercial-service/migrations/005_repository_supervisor_full_apply.sql",
+      "commercial-service/tests/repository-supervisor-full-apply.test.ts"
     ]
   },
   "bootstrap_entrypoint": "scripts/bootstrap_child.py",
