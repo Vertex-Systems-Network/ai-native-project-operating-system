@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { requireGithubAccountAccessForContext, type GitHubAuthContext } from "./auth";
 import { getEntitlement, reconcileEntitlement } from "./entitlements";
 import {
@@ -221,7 +221,7 @@ async function callTool(
       const observed = await profileGithubAccount(principal.github_token, fetchImpl);
       if (observed.account_id !== `github:${principal.github_user_id}`) throw new Error("MCP_GITHUB_PRINCIPAL_MISMATCH");
       const profile = {
-        id: observed.account_id,
+        id: `prf_${createHash("sha256").update(`anpos-profile-v1:${principal.github_user_id}`).digest("hex").slice(0, 32)}`,
         name: observed.account_display_name,
         nickname: observed.account_login,
       };
