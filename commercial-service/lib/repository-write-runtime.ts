@@ -567,7 +567,13 @@ async function withIdempotency<T extends WriteOperationResult>(
     planId: input.planId,
     githubRepositoryId: input.githubRepositoryId,
     githubUserId: input.githubUserId,
-    requestDigest: requestDigest(input.digestPayload),
+    requestDigest: requestDigest({
+      operation: input.operation,
+      plan_id: input.planId,
+      github_repository_id: input.githubRepositoryId,
+      github_user_id: input.githubUserId,
+      payload: input.digestPayload,
+    }),
   });
   if (started.replay) return started.replay as T;
   try {
