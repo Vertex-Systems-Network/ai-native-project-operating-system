@@ -18,7 +18,7 @@ const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 const TOKEN_PREFIX = "anpos_mcp_";
 const SEALED_VERSION = 1;
 
-type PendingAuthorization = {
+export type PendingAuthorization = {
   v: 1;
   github_state: string;
   github_code_verifier: string;
