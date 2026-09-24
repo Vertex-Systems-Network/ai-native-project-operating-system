@@ -29,6 +29,12 @@
       "rule": "Create the customer-facing GitHub Marketplace App under the intended publisher organization. It must be public/installable by other accounts for Marketplace use, subscribe to required Marketplace events, and request only permissions justified by approved customer-facing capabilities."
     },
     {
+      "id": "github_supervisor_app",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Create a distinct public/installable Repository Supervisor GitHub App for paid customer-repository supervision. Configure the MCP OAuth callback, request only Metadata: read, Contents: write, Pull requests: write, Checks: read and Commit statuses: read, and do not grant Administration by default."
+    },
+    {
       "id": "github_vendor_app",
       "status": "pending_external",
       "evidence": null,
@@ -38,7 +44,13 @@
       "id": "github_app_role_separation",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify Marketplace and Vendor GitHub App IDs are different, private keys are not reused, and production runtime uses GITHUB_MARKETPLACE_APP_* only for Marketplace reconciliation and GITHUB_VENDOR_APP_* only for vendor-template access."
+      "rule": "Verify Marketplace, Repository Supervisor, and Vendor Distribution GitHub App identities/credentials are distinct. Marketplace remains Community/billing scoped, Supervisor owns paid customer-repository supervision, and Vendor owns private-template distribution."
+    },
+    {
+      "id": "supervisor_app_installation",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Install the Repository Supervisor App only on explicitly authorized customer/test repositories needed for live E2E and paid supervision; verify requested permissions match the dedicated Supervisor manifest and branch/ruleset policy remains authoritative."
     },
     {
       "id": "vendor_app_installation",
@@ -98,7 +110,13 @@
       "id": "vercel_production_env",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Configure production DATABASE_URL, Marketplace App ID/private key and webhook secret, distinct Vendor App ID/private key and vendor installation/repo identifiers, Marketplace mapping, Ed25519 signing key, operator token, organization seat limits, and final issuer URL. Legacy GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY must not be used as substitutes."
+      "rule": "Configure production DATABASE_URL, Marketplace App ID/private key/OAuth/webhook secret, distinct Repository Supervisor App ID/OAuth client ID/client secret, distinct Vendor App ID/private key/vendor installation/repo identifiers, Marketplace mapping, Ed25519 signing key, operator token, organization seat limits, final issuer URL, and signed sandbox-gateway settings. Legacy GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY must not be used as substitutes."
+    },
+    {
+      "id": "sandbox_gateway",
+      "status": "pending_external",
+      "evidence": null,
+      "rule": "Deploy/configure the signed remote-ephemeral sandbox gateway, verify HTTPS-only request/response authentication, immutable GitHub commit workspace binding, network deny and destroy-after-execution evidence, and do not treat /api/ready/sandbox source/config readiness as a live gateway probe."
     },
     {
       "id": "webhook_public_reachability",
