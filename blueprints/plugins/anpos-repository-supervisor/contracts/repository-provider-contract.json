@@ -1,5 +1,5 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -169,20 +169,21 @@
           "expected_target_head_sha_optional"
         ]
       },
-      "full_mode_apply_status": "sandbox_full_plan_v1_for_non_empty_conflict_free_plans"
+      "full_mode_apply_status": "sandbox_full_plan_v1_plus_guarded_empty_repository_v1"
     },
     {
       "name": "repository_apply_anpos_change",
-      "intent": "Apply a server-issued plan to a new anpos/* feature branch with optimistic concurrency. bounded_change uses direct atomic Git Data writes; eligible non-empty conflict-free bootstrap/adoption/repair/upgrade plans execute verified release transformations inside the signed remote-ephemeral sandbox before the server creates one Git commit and branch.",
+      "intent": "Apply a server-issued plan. Normal plans remain feature-branch-only. bootstrap_empty requires explicit confirmation and uses one deterministic zero-parent seed commit solely to initialize GitHub's empty repository before sandbox-verified ANPOS content is committed to an anpos/* feature branch and reviewed through a PR.",
       "read_only": false,
-      "destructive": false,
+      "destructive": true,
       "open_world": false,
       "required_inputs": [
         "billing_account_id",
         "plan_id",
         "plan_hash",
         "branch_name",
-        "idempotency_key"
+        "idempotency_key",
+        "confirm_empty_repository_initialization_optional"
       ],
       "required_outputs": [
         "plan_id",
@@ -191,6 +192,8 @@
         "resulting_head_sha",
         "applied_paths",
         "expected_target_head_sha",
+        "initialization_seed_sha_optional",
+        "initialization_seed_path_optional",
         "sandbox_receipt_sha256_optional",
         "sandbox_driver_id_optional",
         "status"
@@ -203,12 +206,18 @@
         "reject_force_push",
         "reverify_authenticated_permission",
         "require_conflict_free_full_plan",
-        "reject_bootstrap_empty_until_guarded_initialization_flow_exists",
         "require_signed_remote_ephemeral_sandbox_for_full_plan",
         "require_exact_sandbox_output_allowlist_and_sha256_integrity",
         "never_send_customer_github_token_to_sandbox",
         "require_apply_lease_and_idempotency",
-        "require_sandbox_receipt_for_full_plan_merge"
+        "require_sandbox_receipt_for_full_plan_merge",
+        "require_explicit_confirmation_for_bootstrap_empty",
+        "require_repository_still_empty_before_seed",
+        "allow_only_one_deterministic_zero_parent_seed_default_branch_exception",
+        "require_seed_root_commit_zero_parents",
+        "require_seed_head_verification_before_feature_branch_commit",
+        "require_seed_removed_on_feature_branch",
+        "mark_recovery_required_after_any_post_seed_failure"
       ]
     },
     {
@@ -348,15 +357,19 @@
     "Adoption never automatically overwrites a mismatched existing target path.",
     "Upgrade/repair never blindly resets project-specific Requirements 83-96 evidence or child runtime state.",
     "Every full-mode plan binds to the verified private-template release ref/source revision/source tree and immutable target head when one exists.",
-    "Only non-empty conflict-free full plans may enter sandbox-backed apply; manual_merge and migration_review remain hard stops.",
+    "Conflict-free non-empty full plans use sandbox_full_plan_v1; verified empty repositories use only guarded_empty_repository_v1 with explicit confirmation and root-seed verification; manual_merge and migration_review remain hard stops.",
     "Customer GitHub provider credentials are not forwarded to the sandbox gateway; the sandbox receives only verified release artifacts and plan metadata.",
     "Sandbox full apply uses exact-path input/output artifacts with SHA-256 integrity and signed gateway response verification.",
     "Full-plan GitHub merge requires the persisted sandbox receipt digest in addition to exact PR head and CI checks.",
-    "bootstrap_empty remains blocked until a guarded repository-initialization flow can preserve the no-direct-default-branch rule."
+    "Direct default-branch writes remain forbidden for normal non-empty flows; bootstrap_empty has one narrow exception for the deterministic initialization seed required by GitHub.",
+    "The empty-repository initialization seed must be the verified zero-parent root commit and the full ANPOS feature-branch commit must delete the seed before PR review.",
+    "bootstrap_empty requires explicit host/user confirmation before the seed mutation.",
+    "If any failure occurs after the empty-repository seed mutation, the plan enters recovery-required state rather than silently returning to planned.",
+    "Repository Supervisor App requires Workflows: write only because ANPOS may create or update .github/workflows files; this permission does not bypass branch or Actions policy."
   ],
   "anpos_protocol_baseline": "1.4.0",
   "implementation": {
-    "phase": "github_full_planner_plus_sandbox_full_apply_source",
+    "phase": "github_full_planner_plus_sandbox_full_apply_plus_guarded_empty_bootstrap_source",
     "source_runtime": "commercial-service/lib/repository-supervisor-runtime.ts",
     "sandbox_contract": "commercial-service/lib/execution-sandbox.ts",
     "sandbox_policy": "config/runtime/execution-sandbox.json",
@@ -415,17 +428,21 @@
       "conflict_free_non_empty_full_plan_apply",
       "full_apply_operation_lease_and_recovery_state",
       "sandbox_receipt_bound_full_plan_merge",
-      "customer_github_token_not_forwarded_to_sandbox"
+      "customer_github_token_not_forwarded_to_sandbox",
+      "guarded_empty_repository_root_seed_initialization",
+      "zero_parent_seed_commit_verification",
+      "empty_bootstrap_explicit_confirmation",
+      "seed_removed_on_feature_branch_commit",
+      "empty_bootstrap_post_seed_recovery_state"
     ],
     "not_yet_implemented": [
-      "empty_repository_guarded_initialization_flow",
       "full_plan_conflict_resolution_runtime",
       "gitlab_adapter",
       "live_production_sandbox_gateway_evidence",
       "live_github_repository_supervisor_read_e2e_receipt",
       "live_github_repository_supervisor_write_e2e_receipt"
     ],
-    "claim_boundary": "Source implements GitHub read/audit, deterministic full planning, bounded writes, and sandbox-backed apply for non-empty conflict-free full plans. Plans with manual/migration conflicts remain blocked, bootstrap_empty remains a separate guarded-initialization problem, and live sandbox/plugin/GitHub E2E evidence plus GitLab parity remain pending.",
+    "claim_boundary": "Source implements GitHub read/audit, deterministic full planning, sandbox-backed full apply, and guarded bootstrap_empty initialization through one explicitly confirmed zero-parent seed commit followed by an anpos/* feature branch and PR. Manual/migration conflict resolution, live sandbox/plugin/GitHub E2E evidence, and GitLab parity remain pending.",
     "sandbox_driver_source": "commercial-service/lib/remote-sandbox-driver.ts",
     "sandbox_readiness_endpoint": "/api/ready/sandbox",
     "e2e_verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
@@ -536,8 +553,12 @@
     "upgrade_project_state": "preserve_or_migration_review",
     "requirements_83_96": "preserve_verified_evidence_and_reverify_material_ai_drift",
     "mcp_output": "bounded_action_preview_full_plan_encrypted_server_side",
-    "full_mode_apply": "sandbox_full_plan_v1_for_non_empty_conflict_free_plans",
+    "full_mode_apply": "sandbox_full_plan_v1_plus_guarded_empty_repository_v1",
     "conflict_resolution_apply": "pending",
-    "empty_repository_apply": "pending"
+    "empty_repository_apply": "guarded_root_seed_then_feature_branch_pr_v1",
+    "empty_repository_seed_path": ".anpos-bootstrap-seed",
+    "empty_repository_seed_zero_parent_required": true,
+    "empty_repository_seed_removed_on_feature_branch": true,
+    "empty_repository_explicit_confirmation_required": true
   }
 }

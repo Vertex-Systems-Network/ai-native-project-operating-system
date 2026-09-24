@@ -121,6 +121,7 @@ def main() -> int:
         "pull_requests": "write",
         "checks": "read",
         "statuses": "read",
+        "workflows": "write",
     }
     if supervisor_app.get("repository_permissions") != expected_supervisor_permissions:
         fail("Repository Supervisor App blueprint permissions drifted")

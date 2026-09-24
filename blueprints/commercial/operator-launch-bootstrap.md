@@ -132,6 +132,7 @@ The Repository Supervisor App registration URL is prefilled as a separate public
 - Pull requests: write;
 - Checks: read;
 - Commit statuses: read;
+- Workflows: write, only because ANPOS initialization/upgrade may create or update `.github/workflows/*`;
 - no `Administration` permission by default.
 
 The Supervisor App must not reuse Marketplace or Vendor Distribution identity/credential material. Marketplace permissions must not be widened merely to implement Repository Supervisor writes.
@@ -220,7 +221,7 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 10. Create the private vendor repositories and populate them only from verified deterministic exports.
 11. Clone/check out each new private repository cleanly and run the same handoff verification again before accepting it as vendor source.
 12. Set `ANPOS_COMMERCIAL_RELEASE_REF` to the exact 40-character commit SHA of the verified private template checkout; never use a mutable ref.
-13. Register the dedicated public/installable Repository Supervisor App from its generated prefilled URL and verify the exact write/read permission set with no Administration by default.
+13. Register the dedicated public/installable Repository Supervisor App from its generated prefilled URL and verify the exact write/read permission set, including Workflows: write only for ANPOS-managed workflow-file mutations, with no Administration by default.
 14. Generate/store distinct Supervisor OAuth client credentials; never reuse Marketplace or Vendor Distribution identity/secret material.
 15. Register the private Vendor Distribution App from its generated prefilled URL.
 16. Generate/store a distinct Vendor App private key; never reuse Marketplace or Supervisor identity/key material.

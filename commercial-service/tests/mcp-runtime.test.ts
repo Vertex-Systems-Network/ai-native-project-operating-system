@@ -56,7 +56,10 @@ test("tool list exposes authenticated profile plus guarded write tool metadata",
   assert.equal(profile.annotations.readOnlyHint, true);
   assert.deepEqual(profile.securitySchemes, [{ type: "oauth2", scopes: ["anpos:profile"] }]);
   const merge = tools.find((tool: any) => tool.name === "repository_merge_change_request");
+  const apply = tools.find((tool: any) => tool.name === "repository_apply_anpos_change");
   const plan = tools.find((tool: any) => tool.name === "repository_plan_anpos_change");
+  assert.equal(apply.annotations.destructiveHint, true);
+  assert.equal(apply.inputSchema.properties.confirm_empty_repository_initialization.type, "boolean");
   assert.equal(plan.annotations.readOnlyHint, true);
   assert.deepEqual(plan.inputSchema.properties.mode.enum, [
     "bounded_change", "bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active",

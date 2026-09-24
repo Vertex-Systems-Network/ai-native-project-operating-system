@@ -35,11 +35,17 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
         schema = load("schemas/repository-supervisor-planner.schema.json")
         policy = load("config/runtime/repository-supervisor-planner.json")
         Draft202012Validator(schema).validate(policy)
-        self.assertEqual(policy["schema_version"], 2)
+        self.assertEqual(policy["schema_version"], 3)
         apply = policy["apply_runtime"]
         self.assertEqual(apply["sandbox_protocol_version"], 2)
         self.assertTrue(apply["conflict_free_required"])
-        self.assertEqual(apply["bootstrap_empty"], "pending_guarded_initialization")
+        self.assertEqual(apply["bootstrap_empty"], "guarded_root_seed_then_feature_branch_pr_v1")
+        self.assertIn("bootstrap_empty", apply["eligible_modes"])
+        self.assertEqual(apply["empty_repository_direct_default_branch_exception"], "single_verified_zero_parent_seed_only")
+        self.assertEqual(apply["empty_repository_seed_path"], ".anpos-bootstrap-seed")
+        self.assertTrue(apply["empty_repository_seed_removed_on_feature_branch"])
+        self.assertTrue(apply["empty_repository_explicit_confirmation_required"])
+        self.assertEqual(apply["empty_repository_recovery_after_seed_failure"], "apply_recovery_required")
         self.assertFalse(apply["customer_provider_token_forwarded_to_sandbox"])
         self.assertTrue(apply["merge_requires_sandbox_receipt"])
 
@@ -64,6 +70,7 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
             "commercial-service/lib/repository-supervisor-full-apply.ts",
             "commercial-service/lib/full-plan-sandbox-runner.ts",
             "commercial-service/migrations/005_repository_supervisor_full_apply.sql",
+            "commercial-service/migrations/006_guarded_empty_repository_initialization.sql",
             "commercial-service/tests/repository-supervisor-full-apply.test.ts",
             "commercial-service/app/api/ready/sandbox/route.ts",
             "commercial-service/scripts/verify-repository-supervisor-e2e.ts",

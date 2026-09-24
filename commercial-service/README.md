@@ -54,15 +54,15 @@ The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `pai
 
 ## Full Repository Supervisor planner
 
-Commercial service 0.4.6 implements deterministic planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.
+Commercial service 0.4.7 implements deterministic planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.
 
 Full modes bind the plan to the authenticated principal/account, canonical repository identity, immutable observed target head when present, and the operator-configured exact private-template release. Planning compares validated `EXPORT-MANIFEST.json` per-file Git object identities against a non-truncated immutable target Git tree. Target-only files are preserved; adoption collisions become manual merges; project runtime/evidence paths are preserved or marked for migration review; material AI-control drift requires assurance re-verification.
 
-The complete plan is encrypted server-side and MCP returns only a bounded preview and counts. Non-empty conflict-free plans may apply through `sandbox_full_plan_v1`: exact private-template Git blobs are reverified and staged into the signed remote-ephemeral sandbox, Python 3.12+ performs bootstrap transforms without host-process execution, output is exact-path/SHA-256 verified, and the service creates one expected-head feature branch plus sandbox receipt. Manual/migration conflicts remain blocked and `bootstrap_empty` remains pending a separate guarded initialization flow.
+The complete plan is encrypted server-side and MCP returns only a bounded preview and counts. Conflict-free non-empty plans apply through `sandbox_full_plan_v1`. A verified empty GitHub repository uses `guarded_empty_repository_v1` only after explicit confirmation: sandbox transformation runs first, then the service creates one inert `.anpos-bootstrap-seed` root commit through GitHub's Contents API, verifies that commit has zero parents and is the default-branch head, creates the full ANPOS `anpos/*` feature-branch commit on that seed while deleting the seed, and requires PR/CI/merge review. Any failure after the seed mutation moves the plan to recovery-required state. Manual/migration conflicts remain blocked.
 
 ## Production sandbox gateway
 
-Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.6 includes a remote-ephemeral production driver source configured only through environment secrets:
+Repository execution must not fall back to the commercial-service host process. Commercial service 0.4.7 includes a remote-ephemeral production driver source configured only through environment secrets:
 
 - `ANPOS_SANDBOX_ENDPOINT` — exact HTTPS `/v1/execute` endpoint;
 - `ANPOS_SANDBOX_DRIVER_ID` — expected gateway driver identity;

@@ -89,8 +89,8 @@ export type FullPlannerPayload = StoredSupervisorPlanEnvelope & {
   safe_to_apply: boolean;
   apply_implementation:
     | "sandbox_full_plan_v1"
+    | "guarded_empty_repository_v1"
     | "conflict_resolution_required"
-    | "empty_repository_initialization_pending"
     | "no_changes";
 };
 
@@ -446,13 +446,12 @@ export function buildFullPlannerPayload(input: {
     conflict_free: counts.manual_merge === 0 && counts.migration_review === 0,
     planning_complete: true,
     safe_to_apply:
-      input.mode !== "bootstrap_empty"
-      && counts.manual_merge === 0
+      counts.manual_merge === 0
       && counts.migration_review === 0
       && counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform > 0,
     apply_implementation:
       input.mode === "bootstrap_empty"
-        ? "empty_repository_initialization_pending"
+        ? "guarded_empty_repository_v1"
         : counts.manual_merge > 0 || counts.migration_review > 0
           ? "conflict_resolution_required"
           : counts.add_from_release + counts.replace_from_release + counts.bootstrap_transform === 0
@@ -488,8 +487,8 @@ export function validateStoredFullPlannerPayload(value: StoredSupervisorPlanEnve
     || typeof payload.safe_to_apply !== "boolean"
     || ![
       "sandbox_full_plan_v1",
+      "guarded_empty_repository_v1",
       "conflict_resolution_required",
-      "empty_repository_initialization_pending",
       "no_changes",
     ].includes(payload.apply_implementation)
   ) throw new RepositorySupervisorError(500, "full_plan_payload_invalid");

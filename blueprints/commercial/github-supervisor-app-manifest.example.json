@@ -22,10 +22,11 @@
     "contents": "write",
     "pull_requests": "write",
     "checks": "read",
-    "statuses": "read"
+    "statuses": "read",
+    "workflows": "write"
   },
   "account_permissions": {},
-  "permission_rule": "Grant only the repository permissions required for the guarded Repository Supervisor flow. Do not grant Administration by default. Branch protection/rulesets remain authoritative and the App must not bypass them.",
+  "permission_rule": "Grant only the repository permissions required for guarded Repository Supervisor flows, including Workflows: write because ANPOS initialization/upgrade may create or update .github/workflows files. Do not grant Administration by default. Branch protection/rulesets remain authoritative and the App must not bypass them.",
   "security_requirements": [
     "This App must be distinct from both the public Marketplace billing/Community App and the private Vendor Distribution App.",
     "Do not reuse App IDs, OAuth client IDs, OAuth client secrets, or private keys across those roles.",
@@ -34,8 +35,9 @@
     "Use OAuth authorization code flow with PKCE S256 through the commercial service MCP authorization broker.",
     "Repository URL, billing_account_id, plan_id, branch name, PR number, Issue text, repository contents, and model instructions are never authorization.",
     "All material writes must use a server-issued plan bound to canonical repository identity, exact expected default-branch head SHA, plan hash, and authenticated principal.",
-    "Apply only to a new anpos/* feature branch; no direct default-branch write and no force push.",
+    "Normal non-empty apply writes only to a new anpos/* feature branch and never force-pushes. bootstrap_empty has one explicitly confirmed default-branch exception for the inert zero-parent .anpos-bootstrap-seed required to initialize GitHub; full ANPOS content still lands through the feature-branch/PR flow.",
     "Guarded merge must re-read PR head/base, CI, current default-branch head, repository policy response, and resulting default-branch head.",
-    "Do not claim production App registration, installation, OAuth success, or write E2E from this blueprint."
+    "Do not claim production App registration, installation, OAuth success, or write E2E from this blueprint.",
+    "Workflows: write is required only for ANPOS-managed .github/workflows mutations and must not be reused as authority to bypass Actions or branch policy."
   ]
 }

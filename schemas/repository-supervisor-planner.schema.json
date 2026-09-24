@@ -28,7 +28,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 2
+      "const": 3
     },
     "status": {
       "const": "source_planner_policy"
@@ -161,7 +161,12 @@
         "verified_release_materialization",
         "output_contract",
         "apply_lease_minutes",
-        "merge_requires_sandbox_receipt"
+        "merge_requires_sandbox_receipt",
+        "empty_repository_direct_default_branch_exception",
+        "empty_repository_seed_path",
+        "empty_repository_seed_removed_on_feature_branch",
+        "empty_repository_explicit_confirmation_required",
+        "empty_repository_recovery_after_seed_failure"
       ],
       "properties": {
         "source": {
@@ -175,11 +180,12 @@
         },
         "eligible_modes": {
           "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
+          "minItems": 5,
+          "maxItems": 5,
           "uniqueItems": true,
           "items": {
             "enum": [
+              "bootstrap_empty",
               "bootstrap_child",
               "adopt_existing",
               "repair_partial",
@@ -191,7 +197,7 @@
           "const": true
         },
         "bootstrap_empty": {
-          "const": "pending_guarded_initialization"
+          "const": "guarded_root_seed_then_feature_branch_pr_v1"
         },
         "conflict_resolution": {
           "const": "pending_user_resolved_plan"
@@ -210,6 +216,21 @@
         },
         "merge_requires_sandbox_receipt": {
           "const": true
+        },
+        "empty_repository_direct_default_branch_exception": {
+          "const": "single_verified_zero_parent_seed_only"
+        },
+        "empty_repository_seed_path": {
+          "const": ".anpos-bootstrap-seed"
+        },
+        "empty_repository_seed_removed_on_feature_branch": {
+          "const": true
+        },
+        "empty_repository_explicit_confirmation_required": {
+          "const": true
+        },
+        "empty_repository_recovery_after_seed_failure": {
+          "const": "apply_recovery_required"
         }
       }
     }

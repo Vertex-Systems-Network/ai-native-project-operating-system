@@ -120,6 +120,8 @@ type PlanRow = {
   pull_request_number: string | number | null;
   merge_commit_sha: string | null;
   sandbox_receipt_sha256: string | null;
+  initialization_seed_sha: string | null;
+  initialization_seed_path: string | null;
   expires_at: Date | string;
 };
 
@@ -722,7 +724,16 @@ export async function openGithubWritePlanPullRequest(input: {
   );
   if (!response.ok) throw new RepositorySupervisorError(502, "github_pull_request_create_failed");
   const pull = await json<GithubPull>(response, "github_pull_request_response_invalid");
-  if (!Number.isSafeInteger(pull.number) || !pull.number || pull.head?.sha !== row.applied_head_sha) {
+  const expectedBaseHead = row.expected_target_head_sha
+    ?? (row.mode === "bootstrap_empty" ? row.initialization_seed_sha : null);
+  if (
+    !expectedBaseHead
+    || !Number.isSafeInteger(pull.number)
+    || !pull.number
+    || pull.head?.sha !== row.applied_head_sha
+    || pull.base?.ref !== row.default_branch
+    || pull.base?.sha?.toLowerCase() !== expectedBaseHead.toLowerCase()
+  ) {
     throw new RepositorySupervisorError(502, "github_pull_request_response_invalid");
   }
   const result = {
@@ -731,6 +742,7 @@ export async function openGithubWritePlanPullRequest(input: {
     url: pull.html_url ?? null,
     head_sha: pull.head.sha,
     base_branch: row.default_branch,
+    base_sha: pull.base.sha,
     status: "pr_open",
   };
   await transaction(async (client) => {
@@ -821,12 +833,15 @@ export async function mergeGithubWritePlanPullRequest(input: {
   if (row.status === "merged" && row.merge_commit_sha) {
     return { plan_id: row.plan_id, merged: true, merge_commit_sha: row.merge_commit_sha, resulting_default_branch_head_sha: row.merge_commit_sha };
   }
+  const expectedDefaultHead = row.expected_target_head_sha
+    ?? (row.mode === "bootstrap_empty" ? row.initialization_seed_sha : null);
   if (
-    !row.expected_target_head_sha
+    !expectedDefaultHead
     || row.status !== "pr_open"
     || !row.pull_request_number
     || !row.applied_head_sha
     || (row.mode !== "bounded_change" && !/^[0-9a-f]{64}$/i.test(String(row.sandbox_receipt_sha256 ?? "")))
+    || (row.mode === "bootstrap_empty" && row.initialization_seed_path !== ".anpos-bootstrap-seed")
   ) {
     throw new RepositorySupervisorError(409, "write_plan_pull_request_not_mergeable");
   }
@@ -838,6 +853,7 @@ export async function mergeGithubWritePlanPullRequest(input: {
     || pr.merged
     || pr.head_sha !== row.applied_head_sha
     || pr.base_branch !== row.default_branch
+    || pr.base_sha?.toLowerCase() !== expectedDefaultHead.toLowerCase()
     || pr.mergeable !== true
   ) throw new RepositorySupervisorError(409, "pull_request_state_not_mergeable");
 
@@ -846,7 +862,7 @@ export async function mergeGithubWritePlanPullRequest(input: {
 
   const current = await resolveGithubRepository(row.repository_full_name, token, fetchImpl);
   assertWriteTarget(current);
-  if (current.head_sha?.toLowerCase() !== row.expected_target_head_sha.toLowerCase()) {
+  if (current.head_sha?.toLowerCase() !== expectedDefaultHead.toLowerCase()) {
     throw new RepositorySupervisorError(409, "default_branch_changed_rebase_or_replan_required");
   }
 

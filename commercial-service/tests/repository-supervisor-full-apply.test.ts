@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertEmptyBootstrapRootCommit,
   buildFullApplySandboxRequest,
   verifyFullApplySandboxOutputs,
 } from "../lib/repository-supervisor-full-apply";
@@ -144,5 +145,17 @@ test("full apply rejects timeout or truncated sandbox evidence", () => {
   assert.throws(
     () => verifyFullApplySandboxOutputs(payload, result),
     /full_plan_sandbox_execution_failed/,
+  );
+});
+
+
+test("empty bootstrap seed must be the zero-parent root commit", () => {
+  assert.doesNotThrow(() => assertEmptyBootstrapRootCommit({ sha: "a".repeat(40), parents: [] }));
+  assert.throws(
+    () => assertEmptyBootstrapRootCommit({
+      sha: "b".repeat(40),
+      parents: [{ sha: "c".repeat(40) }],
+    }),
+    /empty_repository_seed_not_root_commit/,
   );
 });

@@ -264,6 +264,7 @@ def supervisor_registration_url(inputs: Inputs) -> str:
         ("pull_requests", "write"),
         ("checks", "read"),
         ("statuses", "read"),
+        ("workflows", "write"),
     ]
     return registration_url(inputs.organization, params)
 
@@ -408,6 +409,7 @@ def render(
                     "pull_requests": "write",
                     "checks": "read",
                     "statuses": "read",
+                    "workflows": "write",
                 },
                 "administration_permission_requested": False,
                 "environment_keys": SUPERVISOR_APP_ENV,
@@ -441,7 +443,7 @@ def render(
             "For free-first launch, require /api/ready/community HTTP 200 plus real Setup URL -> OAuth -> installation-bound repository discovery -> audit E2E evidence; this does not prove paid/vendor readiness.",
             "Register the dedicated public/installable Repository Supervisor App using its prefilled URL; keep it distinct from Marketplace and Vendor Distribution identities.",
             "Generate the Supervisor OAuth client secret and configure GITHUB_SUPERVISOR_APP_ID/GITHUB_SUPERVISOR_CLIENT_ID/GITHUB_SUPERVISOR_CLIENT_SECRET only in the deployment secret manager.",
-            "Verify Supervisor permissions remain Metadata read, Contents write, Pull requests write, Checks read, and Commit statuses read; do not grant Administration by default.",
+            "Verify Supervisor permissions remain Metadata read, Contents write, Pull requests write, Checks read, Commit statuses read, and Workflows write for ANPOS-managed .github/workflows mutations; do not grant Administration by default.",
             "Configure ANPOS_SANDBOX_ENDPOINT/ANPOS_SANDBOX_DRIVER_ID/ANPOS_SANDBOX_SIGNING_SECRET/ANPOS_SANDBOX_REQUEST_SKEW_SECONDS only after the signed remote-ephemeral gateway exists; /api/ready/sandbox is source/config readiness and is not a live gateway probe.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
             "Generate and store distinct App private keys in the deployment secret store; never commit them.",

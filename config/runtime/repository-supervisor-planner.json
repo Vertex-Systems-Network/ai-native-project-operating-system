@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "source_planner_policy",
   "protocol_baseline": "1.4.0",
   "modes": [
@@ -132,27 +132,36 @@
     "Material AI-control drift marks AI assurance re-verification required.",
     "Conflict-free non-empty full plans may apply only through the signed remote-ephemeral sandbox artifact channel.",
     "Manual-merge and migration-review conflicts remain hard stops until an explicit resolved plan exists.",
-    "bootstrap_empty remains blocked until a guarded initialization flow can preserve the no-direct-default-branch rule.",
     "Customer GitHub credentials are never forwarded to the sandbox gateway during full-plan apply.",
-    "A full-plan PR cannot merge without a persisted sandbox receipt digest."
+    "A full-plan PR cannot merge without a persisted sandbox receipt digest.",
+    "GitHub empty repositories may receive exactly one deterministic root seed commit only after explicit confirmation because raw Git refs cannot initialize an empty repository.",
+    "The guarded empty-repository seed must be the zero-parent root commit on the configured default branch and must be removed by the ANPOS feature-branch commit.",
+    "After the seed exists, any apply failure enters recovery-required state and must not silently reset the plan to planned.",
+    "Normal non-empty Repository Supervisor flows continue to forbid direct default-branch writes."
   ],
   "apply_runtime": {
     "source": "commercial-service/lib/repository-supervisor-full-apply.ts",
     "runner": "commercial-service/lib/full-plan-sandbox-runner.ts",
     "sandbox_protocol_version": 2,
     "eligible_modes": [
+      "bootstrap_empty",
       "bootstrap_child",
       "adopt_existing",
       "repair_partial",
       "upgrade_active"
     ],
     "conflict_free_required": true,
-    "bootstrap_empty": "pending_guarded_initialization",
+    "bootstrap_empty": "guarded_root_seed_then_feature_branch_pr_v1",
     "conflict_resolution": "pending_user_resolved_plan",
     "customer_provider_token_forwarded_to_sandbox": false,
     "verified_release_materialization": "exact_private_template_git_blobs",
     "output_contract": "exact_planned_paths_sha256_verified",
     "apply_lease_minutes": 20,
-    "merge_requires_sandbox_receipt": true
+    "merge_requires_sandbox_receipt": true,
+    "empty_repository_direct_default_branch_exception": "single_verified_zero_parent_seed_only",
+    "empty_repository_seed_path": ".anpos-bootstrap-seed",
+    "empty_repository_seed_removed_on_feature_branch": true,
+    "empty_repository_explicit_confirmation_required": true,
+    "empty_repository_recovery_after_seed_failure": "apply_recovery_required"
   }
 }

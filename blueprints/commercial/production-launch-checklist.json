@@ -32,7 +32,7 @@
       "id": "github_supervisor_app",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Create a distinct public/installable Repository Supervisor GitHub App for paid customer-repository supervision. Configure the MCP OAuth callback, request only Metadata: read, Contents: write, Pull requests: write, Checks: read and Commit statuses: read, and do not grant Administration by default."
+      "rule": "Create a distinct public/installable Repository Supervisor GitHub App for paid customer-repository supervision. Configure the MCP OAuth callback and request only Metadata: read, Contents: write, Pull requests: write, Checks: read, Commit statuses: read, and Workflows: write for ANPOS-managed .github/workflows mutations. Do not grant Administration by default."
     },
     {
       "id": "github_vendor_app",
@@ -134,7 +134,7 @@
       "id": "ready_endpoint",
       "status": "pending_external",
       "evidence": null,
-      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 005_repository_supervisor_full_apply.sql, only after exact deployment identity has been confirmed."
+      "rule": "Verify /api/ready returns HTTP 200 against production configuration, including three-App credential checks and database migrations through 006_guarded_empty_repository_initialization.sql, only after exact deployment identity has been confirmed."
     },
     {
       "id": "real_marketplace_events",

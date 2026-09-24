@@ -167,8 +167,8 @@ export const MCP_TOOL_DEFINITIONS = [
   },
   {
     name: "repository_apply_anpos_change",
-    title: "Apply planned change to feature branch",
-    description: "Apply one exact server-issued plan to a new anpos/* feature branch using the expected default-branch head and plan hash. Direct default-branch writes and force pushes are forbidden.",
+    title: "Apply planned repository change",
+    description: "Apply one exact server-issued plan. Normal plans create a new anpos/* feature branch only. bootstrap_empty requires explicit confirmation and may create one deterministic root seed commit solely to initialize GitHub's empty repository before the full ANPOS feature-branch/PR flow.",
     inputSchema: {
       type: "object",
       properties: {
@@ -177,12 +177,13 @@ export const MCP_TOOL_DEFINITIONS = [
         plan_hash: { type: "string", pattern: "^[0-9a-f]{64}$" },
         branch_name: { type: "string", pattern: "^anpos/[a-z0-9][a-z0-9._-]{1,79}$" },
         idempotency_key: { type: "string", minLength: 8, maxLength: 100 },
+        confirm_empty_repository_initialization: { type: "boolean" },
       },
       required: ["billing_account_id", "plan_id", "plan_hash", "branch_name", "idempotency_key"],
       additionalProperties: false,
     },
     outputSchema: { type: "object", additionalProperties: true },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     securitySchemes: writeSecurity,
     _meta: { securitySchemes: writeSecurity },
   },
@@ -445,6 +446,7 @@ async function callTool(
           plan_hash: requiredString(args.plan_hash, "PLAN_HASH_REQUIRED", 64),
           branch_name: args.branch_name,
           idempotency_key: args.idempotency_key,
+          confirm_empty_repository_initialization: args.confirm_empty_repository_initialization,
         }, identity, billingAccountId, principal.github_token, fetchImpl));
       }
       if (name === "repository_open_change_request") {
@@ -510,7 +512,7 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.6",
+            version: "0.4.7",
           },
         },
         instructions: "Use the authenticated profile first when account identity is unclear. Paid repository tools require an explicit billing_account_id and are always re-authorized server-side.",
@@ -530,7 +532,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.6" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.7" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };
