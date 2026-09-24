@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   auditGithubRepository,
   getGithubRepositoryAssurance,
+  listGithubRepositoryTree,
   normalizeGithubRepositoryLocator,
   profileGithubAccount,
   RepositorySupervisorError,
@@ -207,5 +208,45 @@ test("repository_get_assurance requires immutable SHA and returns evidence bound
   await assert.rejects(
     () => getGithubRepositoryAssurance("example/project", "main", "token", activeRepositoryFetch()),
     (error: unknown) => error instanceof RepositorySupervisorError && error.code === "immutable_ref_required",
+  );
+});
+
+test("repository tree inventory binds to immutable commit and rejects truncation", async () => {
+  const fetchImpl = mockFetch((url) => {
+    if (url.pathname === `/repos/example/project/git/commits/${HEAD}`) {
+      return response({ tree: { sha: "f".repeat(40) } });
+    }
+    if (url.pathname === `/repos/example/project/git/trees/${"f".repeat(40)}`) {
+      assert.equal(url.searchParams.get("recursive"), "1");
+      return response({
+        truncated: false,
+        tree: [
+          { path: "src/index.ts", mode: "100644", type: "blob", sha: "1".repeat(40), size: 12 },
+          { path: "docs", mode: "040000", type: "tree", sha: "2".repeat(40) },
+        ],
+      });
+    }
+    return response({ message: "unexpected" }, 500);
+  });
+  const tree = await listGithubRepositoryTree("example/project", HEAD, "token", fetchImpl);
+  assert.deepEqual(tree, [{
+    path: "src/index.ts",
+    mode: "100644",
+    sha: "1".repeat(40),
+    size: 12,
+  }]);
+
+  const truncatedFetch = mockFetch((url) => {
+    if (url.pathname === `/repos/example/project/git/commits/${HEAD}`) {
+      return response({ tree: { sha: "f".repeat(40) } });
+    }
+    if (url.pathname === `/repos/example/project/git/trees/${"f".repeat(40)}`) {
+      return response({ truncated: true, tree: [] });
+    }
+    return response({ message: "unexpected" }, 500);
+  });
+  await assert.rejects(
+    () => listGithubRepositoryTree("example/project", HEAD, "token", truncatedFetch),
+    (error: unknown) => error instanceof RepositorySupervisorError && error.code === "github_repository_tree_truncated",
   );
 });
