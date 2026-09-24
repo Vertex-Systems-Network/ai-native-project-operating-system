@@ -272,6 +272,7 @@ export const MCP_TOOL_DEFINITIONS = [
       properties: {
         repository_url: repositoryProperty,
         billing_account_id: billingProperty,
+        plan_id: { type: "string", minLength: 36, maxLength: 36 },
         change_request_id: { type: "integer", minimum: 1 },
         expected_head_sha: shaProperty,
         merge_method: { type: "string", enum: ["merge", "squash", "rebase"] },
@@ -281,6 +282,7 @@ export const MCP_TOOL_DEFINITIONS = [
       required: [
         "repository_url",
         "billing_account_id",
+        "plan_id",
         "change_request_id",
         "expected_head_sha",
         "merge_method",
@@ -459,6 +461,7 @@ async function callTool(
         changes: args.changes,
         commitMessage: args.commit_message,
         githubUserId: principal.github_user_id,
+        billingAccountId,
         token: principal.github_token,
       }, undefined, fetchImpl));
     }
@@ -469,6 +472,7 @@ async function callTool(
         idempotencyKey: requiredString(args.idempotency_key, "VALID_IDEMPOTENCY_KEY_REQUIRED", 100),
         confirmDeletions: args.confirm_deletions === true,
         githubUserId: principal.github_user_id,
+        billingAccountId,
         token: principal.github_token,
       }, undefined, fetchImpl));
     }
@@ -482,6 +486,7 @@ async function callTool(
         body: typeof args.body === "string" ? args.body : "",
         idempotencyKey: requiredString(args.idempotency_key, "VALID_IDEMPOTENCY_KEY_REQUIRED", 100),
         githubUserId: principal.github_user_id,
+        billingAccountId,
         token: principal.github_token,
       }, undefined, fetchImpl));
     }
@@ -504,6 +509,8 @@ async function callTool(
       if (!["merge", "squash", "rebase"].includes(mergeMethod)) throw new Error("INVALID_MERGE_METHOD");
       return toolSuccess(await mergeRepositoryChangeRequest({
         repository: requiredString(args.repository_url, "REPOSITORY_URL_REQUIRED"),
+        planId: requiredString(args.plan_id, "VALID_WRITE_PLAN_ID_REQUIRED", 36),
+        billingAccountId,
         changeRequestId: positiveInteger(args.change_request_id, "VALID_CHANGE_REQUEST_ID_REQUIRED"),
         expectedHeadSha: requiredString(args.expected_head_sha, "VALID_COMMIT_SHA_REQUIRED", 40),
         mergeMethod: mergeMethod as "merge" | "squash" | "rebase",
