@@ -66,15 +66,18 @@ test("remote sandbox driver sends names-only environment and validates signed de
         buildRemoteSandboxSignature({ secret, timestamp, nonce, body }),
       );
       const payload = JSON.parse(body);
+      assert.equal(payload.workspace.base, "github_commit");
       assert.equal(payload.workspace.source.repository_full_name, "Example/Repo");
       assert.equal(payload.workspace.source.commit_sha, "a".repeat(40));
       assert.equal(payload.workspace.destroy_after_execution, true);
       assert.equal(payload.execution.network, "deny");
       assert.deepEqual(payload.execution.environment_variable_names, ["CI", "NODE_ENV"]);
+      assert.deepEqual(payload.artifacts.output_paths, ["dist/result.txt"]);
+      assert.equal(payload.artifacts.input_files[0].path, ".anpos-input/plan.json");
       assert.equal(body.includes("TOKEN=value"), false);
 
       const responseBody = JSON.stringify({
-        protocol_version: 1,
+        protocol_version: 2,
         request_id: payload.request_id,
         driver_id: "anpos-remote-e2e",
         isolation: "remote_ephemeral",
@@ -87,6 +90,13 @@ test("remote sandbox driver sends names-only environment and validates signed de
         timed_out: false,
         output_truncated: false,
         duration_ms: 20,
+        output_files: [{
+          path: "dist/result.txt",
+          mode: "100644",
+          content_base64: Buffer.from("done").toString("base64"),
+          sha256: "a4c3ed04a95a3da14a8c0eb6b5b7294924d8b40f1f802f0294ce3f5e9a6f1f68",
+          bytes: 4,
+        }],
       });
       return new Response(responseBody, {
         status: 200,
@@ -111,10 +121,19 @@ test("remote sandbox driver sends names-only environment and validates signed de
     },
     command: ["npm", "test"],
     environment_variable_names: ["CI", "NODE_ENV"],
+    input_files: [{
+      path: ".anpos-input/plan.json",
+      mode: "100644",
+      content_base64: Buffer.from("{}").toString("base64"),
+      sha256: "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      bytes: 2,
+    }],
+    output_paths: ["dist/result.txt"],
     network: "deny",
   }, driver);
   assert.equal(result.exit_code, 0);
   assert.equal(result.isolation, "remote_ephemeral");
+  assert.equal(result.output_files?.[0].path, "dist/result.txt");
 });
 
 test("remote sandbox driver fails closed on unsigned or non-destroyed response", async () => {
@@ -124,7 +143,7 @@ test("remote sandbox driver fails closed on unsigned or non-destroyed response",
     "s".repeat(48),
     120,
     (async () => Response.json({
-      protocol_version: 1,
+      protocol_version: 2,
       request_id: "wrong",
       driver_id: "anpos-remote-e2e",
       isolation: "remote_ephemeral",
@@ -137,6 +156,7 @@ test("remote sandbox driver fails closed on unsigned or non-destroyed response",
       timed_out: false,
       output_truncated: false,
       duration_ms: 1,
+      output_files: [],
     })) as typeof fetch,
   );
 
