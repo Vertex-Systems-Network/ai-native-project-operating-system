@@ -672,8 +672,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 12:
-        fail("commercial service API contract must be schema_version 12")
+    if api_contract.get("schema_version") != 13:
+        fail("commercial service API contract must be schema_version 13")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -708,7 +708,10 @@ def main() -> int:
         "supervisor_full_plan_apply_customer_provider_token_never_forwarded_to_sandbox",
         "supervisor_full_plan_apply_signed_receipt_required_for_merge",
         "supervisor_full_plan_apply_uses_operation_lease",
-        "supervisor_full_plan_apply_conflict_resolution_pending",
+        "supervisor_full_plan_conflict_resolution_source",
+        "supervisor_full_plan_conflict_resolution_source_plan_hash_required",
+        "supervisor_full_plan_conflict_resolution_target_git_object_required",
+        "supervisor_full_plan_conflict_resolution_migration_review_ack_required",
         "supervisor_bootstrap_empty_guarded_source",
         "supervisor_bootstrap_empty_explicit_confirmation_required",
         "supervisor_bootstrap_empty_single_default_branch_seed_exception",
@@ -744,7 +747,7 @@ def main() -> int:
             fail(f"execution sandbox production driver mismatch: {key}")
 
     planner_policy = json.loads((ROOT / "config/runtime/repository-supervisor-planner.json").read_text(encoding="utf-8"))
-    if planner_policy.get("schema_version") != 3 or planner_policy.get("status") != "source_planner_policy":
+    if planner_policy.get("schema_version") != 4 or planner_policy.get("status") != "source_planner_policy":
         fail("Repository Supervisor planner policy identity is invalid")
     if planner_policy.get("modes") != ["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"]:
         fail("Repository Supervisor planner policy must define the exact full planner modes")
@@ -761,6 +764,16 @@ def main() -> int:
         fail("Repository Supervisor full apply must require sandbox protocol v2")
     if planner_apply.get("conflict_free_required") is not True:
         fail("Repository Supervisor full apply must require conflict-free plans")
+    if planner_apply.get("conflict_resolution") != "explicit_resolved_plan_v1":
+        fail("Repository Supervisor conflict resolution runtime contract is invalid")
+    for key in (
+        "conflict_resolution_requires_exact_source_plan_hash",
+        "conflict_resolution_requires_exact_target_git_object",
+        "migration_review_use_release_requires_acknowledgement",
+        "resolved_plan_is_new_immutable_plan",
+    ):
+        if planner_apply.get(key) is not True:
+            fail(f"Repository Supervisor resolved-plan policy missing: {key}")
     if planner_apply.get("bootstrap_empty") != "guarded_root_seed_then_feature_branch_pr_v1":
         fail("Repository Supervisor empty-repository apply contract is invalid")
     if planner_apply.get("eligible_modes") != ["bootstrap_empty", "bootstrap_child", "adopt_existing", "repair_partial", "upgrade_active"]:
