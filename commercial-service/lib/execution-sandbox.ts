@@ -1,7 +1,14 @@
 export type SandboxIsolation = "container" | "microvm" | "remote_ephemeral";
 
+export type SandboxSourceIdentity = {
+  provider: "github";
+  repository_full_name: string;
+  commit_sha: string;
+};
+
 export type SandboxExecutionRequest = {
   workspace_id: string;
+  source?: SandboxSourceIdentity;
   command: string[];
   working_directory?: string;
   environment_variable_names?: string[];
@@ -12,6 +19,7 @@ export type SandboxExecutionRequest = {
 
 export type NormalizedSandboxExecutionRequest = {
   workspace_id: string;
+  source: SandboxSourceIdentity | null;
   command: string[];
   working_directory: string;
   environment_variable_names: string[];
@@ -64,6 +72,21 @@ function safeEnvironmentName(value: string): boolean {
   return /^[A-Z_][A-Z0-9_]{0,127}$/.test(value);
 }
 
+function normalizeSourceIdentity(source: SandboxSourceIdentity | undefined): SandboxSourceIdentity | null {
+  if (source === undefined) return null;
+  if (
+    !source
+    || source.provider !== "github"
+    || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(source.repository_full_name)
+    || !/^[0-9a-f]{40}$/i.test(source.commit_sha)
+  ) throw new SandboxRequestError("invalid_source_identity");
+  return {
+    provider: "github",
+    repository_full_name: source.repository_full_name,
+    commit_sha: source.commit_sha.toLowerCase(),
+  };
+}
+
 export function normalizeSandboxRequest(input: SandboxExecutionRequest): NormalizedSandboxExecutionRequest {
   if (!input || typeof input !== "object") throw new SandboxRequestError("sandbox_request_required");
   if (!safeWorkspaceId(input.workspace_id)) throw new SandboxRequestError("invalid_workspace_id");
@@ -95,6 +118,7 @@ export function normalizeSandboxRequest(input: SandboxExecutionRequest): Normali
   }
   return {
     workspace_id: input.workspace_id,
+    source: normalizeSourceIdentity(input.source),
     command,
     working_directory: workingDirectory,
     environment_variable_names: [...new Set(envNames)],
