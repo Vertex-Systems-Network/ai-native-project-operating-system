@@ -14,7 +14,7 @@ export const PLUGIN_CAPABILITIES = {
     organization_seat_required: true,
   },
   repository_supervisor_write: {
-    implemented: false,
+    implemented: true,
     paid: true,
     requires_entitlements: ["private_template_access", "protocol_update_channel"],
     organization_seat_required: true,
