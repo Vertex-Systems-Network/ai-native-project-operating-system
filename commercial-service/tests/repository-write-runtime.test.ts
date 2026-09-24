@@ -378,6 +378,40 @@ test("guarded merge requires clean exact-head PR and green checks then rereads m
   assert.equal(harness.counts().mergeCalls, 1);
 });
 
+test("guarded merge fails closed when no CI check runs are configured", async () => {
+  const store = new MemoryStore();
+  const harness = githubHarness();
+  const noChecks = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(typeof input === "string" || input instanceof URL ? input.toString() : input.url);
+    if (decodeURIComponent(url.pathname) === `/repos/example/project/commits/${FEATURE_HEAD}/check-runs`) {
+      return json({ check_runs: [] });
+    }
+    return harness.fetchImpl(input, init);
+  }) as typeof fetch;
+
+  const ci = await getRepositoryCi({
+    repository: "example/project",
+    commitSha: FEATURE_HEAD,
+    token: "token",
+  }, noChecks);
+  assert.equal(ci.overall_state, "unconfigured");
+  assert.equal(ci.checks_configured, false);
+
+  await assert.rejects(
+    () => mergeRepositoryChangeRequest({
+      repository: "example/project",
+      changeRequestId: 7,
+      expectedHeadSha: FEATURE_HEAD,
+      mergeMethod: "merge",
+      confirmMerge: true,
+      idempotencyKey: "merge:no-ci:001",
+      githubUserId: 42,
+      token: "token",
+    }, store, noChecks),
+    /CHANGE_REQUEST_CHECKS_NOT_GREEN/,
+  );
+});
+
 test("generic write path rejects secret-bearing paths and non-active repositories", async () => {
   const store = new MemoryStore();
   await assert.rejects(
