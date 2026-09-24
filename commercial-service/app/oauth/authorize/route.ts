@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    const start = createMcpAuthorizationStart(new URL(request.url));
+    const start = await createMcpAuthorizationStart(new URL(request.url));
     return new Response(null, {
       status: 303,
       headers: {
