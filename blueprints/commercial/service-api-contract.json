@@ -1,5 +1,5 @@
 {
-  "schema_version": 12,
+  "schema_version": 13,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -284,6 +284,7 @@
         "repository_audit",
         "repository_get_assurance",
         "repository_plan_anpos_change",
+        "repository_resolve_plan_conflicts",
         "repository_apply_anpos_change",
         "repository_open_change_request",
         "repository_get_change_request",
@@ -302,7 +303,8 @@
         "apply": "Normal plans use one expected-head anpos/* feature-branch commit. bootstrap_empty requires explicit confirmation and may create one deterministic zero-parent .anpos-bootstrap-seed root commit on the configured default branch solely to initialize GitHub, then removes that seed in the sandbox-verified feature-branch commit.",
         "pull_request": "exact applied branch head only",
         "ci": "fresh GitHub check-runs plus legacy statuses for exact planned commit",
-        "merge": "destructive host-confirmed tool; fresh entitlement/permission, PR head/base, CI, unchanged default-branch head, repository-policy response and resulting-main verification"
+        "merge": "destructive host-confirmed tool; fresh entitlement/permission, PR head/base, CI, unchanged default-branch head, repository-policy response and resulting-main verification",
+        "resolve_conflicts": "derive a new encrypted immutable plan from the exact conflict-blocked source plan; require exact source plan hash, unchanged target head and verified release, one explicit decision per blocking path, exact target Git object binding, and acknowledgement before replacing migration-reviewed project state"
       },
       "planner_modes": [
         "bounded_change",
@@ -317,7 +319,9 @@
       "full_planner_apply_exclusions": [
         "manual_merge_conflicts",
         "migration_review_conflicts"
-      ]
+      ],
+      "full_planner_conflict_resolution_available": true,
+      "full_planner_conflict_resolution_status": "explicit_resolved_plan_v1"
     },
     {
       "method": "GET",
