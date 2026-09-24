@@ -109,6 +109,7 @@ if mode in BOOTSTRAP_MODES:
         cwd=ROOT,
         env=env,
         check=True,
+        shell=False,
         stdin=subprocess.DEVNULL,
     )
 
