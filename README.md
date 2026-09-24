@@ -544,3 +544,20 @@ ANPOS 1.4.0 defines the closed core blueprint baseline for Requirements 1–96.
 - `config/protocol/extension-contract.json` reserves REQ-97 as the next normative core requirement and defines future extension namespace, compatibility, schema-evolution, migration and deprecation rules.
 
 “Blueprint complete” means the reusable protocol/control/evidence contracts are defined and machine-validated. It does **not** claim that a specific child, runtime adapter, external deployment, Marketplace launch or future commercial tier has been implemented or certified.
+
+
+## Repository Supervisor runtime implementation
+
+The ANPOS 1.4.0 plugin blueprint now has a real first runtime slice in the vendor-only commercial service.
+
+Implemented and source-certified:
+
+- GitHub repository URL normalization and canonical resolution;
+- authenticated GitHub account profile;
+- exact default-branch head resolution;
+- bounded immutable-ref control-file reads;
+- ANPOS repository classification;
+- Requirements 83–96 assurance/governance summary and exact-ref assurance reads;
+- execution-sandbox request/driver contract with network denied by default, bounded time/output, environment names only, and no direct local-process fallback.
+
+This is the **read-only runtime foundation**, not a deployed MCP server. Write planning/apply, pull-request/CI/merge tools, a production isolation driver, GitLab parity and production MCP/OAuth transport remain subsequent milestones.
