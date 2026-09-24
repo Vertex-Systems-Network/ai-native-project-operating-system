@@ -204,11 +204,11 @@ This bridge does not make ANPOS core child development, Requirements 1–96, chi
 
 ### Guarded write foundation
 
-The currently implemented write planner mode is `bounded_change`. It accepts an explicit bounded file upsert/delete set, validates path/size/secret boundaries, sorts and hashes the plan deterministically, encrypts the full plan payload at rest, binds it to the authenticated principal/billing account/canonical repository/default branch/exact observed head SHA, and expires the plan after a short window.
+The planner supports `bounded_change` plus `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active`. Full modes read a verified private-template `EXPORT-MANIFEST.json`, compare per-file committed Git object identities against the immutable target tree, preserve target-only project files, never auto-overwrite adoption collisions, and preserve or migration-review project-specific Requirements 83–96 evidence. The full plan is encrypted server-side and MCP returns only a bounded action/conflict preview.
 
 Apply creates one Git Data tree/commit and then one new `anpos/*` branch ref. It never patches the default branch directly and never force-pushes. The PR and CI tools operate only on the server-recorded applied head. Guarded merge is destructive/confirmation-worthy and rechecks entitlement, GitHub permission, exact PR head/base, checks/statuses, unchanged default-branch head, GitHub policy response, and the resulting default-branch head.
 
-This foundation does **not** yet generate complete bootstrap/adoption/repair/upgrade plans from sanitized ANPOS releases. Those planner modes remain pending and must preserve child application code and verified Requirements 83–96 evidence.
+Full-mode plan generation is source-implemented, but those plans intentionally report `safe_to_apply=false` and `apply_implementation=sandbox_full_plan_pending`. `repository_apply_anpos_change` continues to apply only `bounded_change`; sandbox-backed full-plan apply remains a separate certification milestone.
 
 ## Production sandbox and live E2E boundary
 
@@ -286,7 +286,8 @@ Current source implementation status:
 - ✅ dedicated Supervisor GitHub App trust boundary with write scope separated from Marketplace billing/Community and Vendor Distribution roles;
 - ✅ server-issued encrypted `bounded_change` plans bound to canonical repository identity, exact default-branch head SHA and deterministic plan hash;
 - ✅ atomic Git Data commit apply to a new `anpos/*` feature branch, PR creation/re-read, exact commit CI inspection, and guarded merge with resulting-main verification;
-- ⏳ full bootstrap/adoption/repair/upgrade plan generation from sanitized ANPOS release contracts;
+- ✅ deterministic full bootstrap/adoption/repair/upgrade no-write plan generation from verified sanitized ANPOS release Git identities, with target-only/project-evidence preservation and bounded MCP previews;
+- ⏳ sandbox-backed apply runtime for full-mode plans;
 - ✅ signed remote-ephemeral production sandbox driver **source** with immutable GitHub commit binding, request/response HMAC authentication, network deny, no redirect fallback and workspace-destruction evidence;
 - ✅ fail-closed live GitHub runtime E2E verifier source with read / write_prepare / write_verify_merge phases and no CI busy-wait;
 - ⏳ live sandbox-gateway deployment evidence and live GitHub read/write E2E receipts.
@@ -295,6 +296,9 @@ Implementation references:
 
 - `commercial-service/lib/repository-supervisor-runtime.ts`
 - `commercial-service/lib/repository-supervisor-write.ts`
+- `commercial-service/lib/repository-supervisor-planner.ts`
+- `commercial-service/migrations/004_repository_supervisor_planner.sql`
+- `commercial-service/tests/repository-supervisor-planner.test.ts`
 - `commercial-service/lib/mcp-auth.ts`
 - `commercial-service/lib/mcp-runtime.ts`
 - `commercial-service/app/mcp/route.ts`
