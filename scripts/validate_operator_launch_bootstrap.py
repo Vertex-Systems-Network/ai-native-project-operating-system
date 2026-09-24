@@ -304,6 +304,7 @@ def main() -> int:
             or sq.get("pull_requests") != ["write"]
             or sq.get("checks") != ["read"]
             or sq.get("statuses") != ["read"]
+            or sq.get("workflows") != ["write"]
             or "administration" in sq
         ):
             fail("Supervisor registration must be public/installable with exact guarded-write permissions and no Administration")
@@ -344,6 +345,7 @@ def main() -> int:
         "pull_requests": "write",
         "checks": "read",
         "statuses": "read",
+        "workflows": "write",
     }:
         fail("operator renderer Supervisor permissions must match the dedicated App blueprint")
     archive = ((vendor_blueprint.get("minimum_permissions_by_capability") or {}).get("archive_first_delivery") or {})
