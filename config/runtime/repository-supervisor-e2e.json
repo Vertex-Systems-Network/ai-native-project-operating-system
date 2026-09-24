@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "source_harness_implemented_live_evidence_pending",
+  "purpose": "Production E2E certification contract for the deployed Repository Supervisor MCP and guarded GitHub runtime. Source tests do not satisfy this contract.",
+  "verifier": "commercial-service/scripts/verify-repository-supervisor-e2e.ts",
+  "modes": [
+    {
+      "id": "read",
+      "mutates_repository": false,
+      "required_tools": [
+        "repository_profile",
+        "repository_resolve",
+        "repository_audit",
+        "repository_get_assurance"
+      ]
+    },
+    {
+      "id": "write_prepare",
+      "mutates_repository": true,
+      "repository_name_guard": "must contain e2e, sandbox, or test",
+      "explicit_confirmation": "I_ACCEPT_DISPOSABLE_TEST_REPO_MUTATION",
+      "required_tools": [
+        "repository_plan_anpos_change",
+        "repository_apply_anpos_change",
+        "repository_open_change_request"
+      ]
+    },
+    {
+      "id": "write_verify_merge",
+      "mutates_repository": true,
+      "busy_wait": false,
+      "pending_ci_exit_code": 2,
+      "required_tools": [
+        "repository_get_change_request",
+        "repository_get_ci",
+        "repository_merge_change_request"
+      ],
+      "merge_requirements": [
+        "exact planned PR head is unchanged",
+        "exact planned commit CI is success",
+        "server-side entitlement and GitHub authorization are rechecked",
+        "default branch remains at the expected pre-plan head",
+        "GitHub repository policy accepts the merge",
+        "resulting default branch head equals returned merge commit"
+      ]
+    }
+  ],
+  "required_environment_variable_names": [
+    "ANPOS_E2E_BASE_URL",
+    "ANPOS_E2E_MCP_ACCESS_TOKEN",
+    "ANPOS_E2E_REPOSITORY",
+    "ANPOS_E2E_BILLING_ACCOUNT_ID",
+    "ANPOS_E2E_MODE"
+  ],
+  "write_only_environment_variable_names": [
+    "ANPOS_E2E_WRITE_CONFIRM"
+  ],
+  "resume_environment_variable_names": [
+    "ANPOS_E2E_PLAN_ID",
+    "ANPOS_E2E_PLAN_HEAD_SHA"
+  ],
+  "evidence_rules": [
+    "Access tokens are read from environment variables and are never accepted as CLI arguments.",
+    "Read E2E must bind audit and assurance to the exact resolved repository head.",
+    "Write E2E is allowed only on an explicitly named disposable e2e/sandbox/test repository with explicit confirmation.",
+    "The verifier never busy-waits for CI; pending CI exits with code 2 and requires a later explicit rerun.",
+    "A successful write E2E receipt must include the plan head, exact-head CI success, merge commit, and verified resulting default-branch head.",
+    "No source-only test, mocked fetch, or static validator may be recorded as live production E2E evidence."
+  ],
+  "live_evidence": {
+    "status": "pending",
+    "service_origin": null,
+    "repository": null,
+    "read_receipt": null,
+    "write_receipt": null,
+    "verified_at": null
+  }
+}

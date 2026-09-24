@@ -16,15 +16,16 @@
     "command",
     "environment",
     "limits",
+    "production_driver",
     "evidence",
     "rules"
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "status": {
-      "const": "runtime_contract"
+      "const": "production_driver_source_implemented_live_gateway_evidence_pending"
     },
     "implementation_scope": {
       "const": "repository_supervisor_execution"
@@ -150,7 +151,7 @@
     },
     "evidence": {
       "type": "array",
-      "minItems": 6,
+      "minItems": 10,
       "items": {
         "enum": [
           "driver_id",
@@ -158,17 +159,78 @@
           "exit_code",
           "timed_out",
           "output_truncated",
-          "duration_ms"
+          "duration_ms",
+          "immutable_source_identity",
+          "workspace_destroyed",
+          "network_denied",
+          "signed_request_response"
         ]
       },
       "uniqueItems": true
     },
     "rules": {
       "type": "array",
-      "minItems": 5,
+      "minItems": 9,
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "production_driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "readiness_endpoint",
+        "transport",
+        "request_authentication",
+        "response_authentication",
+        "replay_contract",
+        "workspace_source_binding",
+        "workspace_destroy_after_execution",
+        "redirects",
+        "source_ready",
+        "live_gateway_evidence"
+      ],
+      "properties": {
+        "id": {
+          "const": "remote_ephemeral_signed_gateway_v1"
+        },
+        "source": {
+          "const": "commercial-service/lib/remote-sandbox-driver.ts"
+        },
+        "readiness_endpoint": {
+          "const": "/api/ready/sandbox"
+        },
+        "transport": {
+          "const": "https_post"
+        },
+        "request_authentication": {
+          "const": "hmac_sha256_exact_body_hash_plus_timestamp_nonce"
+        },
+        "response_authentication": {
+          "const": "hmac_sha256_request_id_plus_exact_body_hash"
+        },
+        "replay_contract": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_source_binding": {
+          "const": "github_repository_full_name_plus_immutable_commit_sha"
+        },
+        "workspace_destroy_after_execution": {
+          "const": true
+        },
+        "redirects": {
+          "const": "forbidden"
+        },
+        "source_ready": {
+          "const": true
+        },
+        "live_gateway_evidence": {
+          "const": "pending"
+        }
       }
     }
   }

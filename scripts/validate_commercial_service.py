@@ -13,10 +13,10 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "scripts/migrate.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "scripts/migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
-    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts",
+    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
     "app/.well-known/oauth-protected-resource/route.ts", "app/.well-known/oauth-authorization-server/route.ts",
     "app/oauth/authorize/route.ts", "app/oauth/token/route.ts", "app/api/auth/mcp/github/callback/route.ts",
@@ -53,7 +53,7 @@ def main() -> int:
     package = json.loads(text("package.json") or "{}")
     if package.get("private") is not True:
         fail("commercial-service/package.json must remain private:true")
-    for script in ("build", "typecheck", "test:unit", "migrate", "certify"):
+    for script in ("build", "typecheck", "test:unit", "migrate", "certify", "verify:e2e"):
         if script not in (package.get("scripts") or {}):
             fail(f"commercial service missing npm script: {script}")
     if package.get("devDependencies", {}).get("tsx") != "4.23.13":
@@ -72,6 +72,7 @@ def main() -> int:
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
         "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
         "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS", "ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS",
+        "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET", "ANPOS_SANDBOX_REQUEST_SKEW_SECONDS",
     ):
         if name not in env_example:
             fail(f"commercial service environment contract missing {name}")
@@ -98,6 +99,8 @@ def main() -> int:
             "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
             "mcpOAuthConfigurationProblems", "mcpOAuthConfig", "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS",
             "supervisorAppConfigurationProblems", "supervisorAppConfig",
+            "remoteSandboxConfigurationProblems", "remoteSandboxConfig",
+            "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET",
             "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
             "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION", "unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION",
             "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION", "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE",
@@ -332,6 +335,48 @@ def main() -> int:
         "Repository Supervisor execution sandbox contract",
     )
     require_markers(
+        "lib/remote-sandbox-driver.ts",
+        (
+            "RemoteEphemeralSandboxDriver", "productionSandboxDriver", "buildRemoteSandboxSignature",
+            "buildRemoteSandboxResponseSignature", "remoteSandboxConfig", "remote_ephemeral",
+            "workspace_destroyed", "network", "deny", "redirect: \"error\"",
+            "X-Anpos-Sandbox-Timestamp", "X-Anpos-Sandbox-Nonce", "X-Anpos-Sandbox-Signature",
+            "remote_sandbox_response_signature_invalid", "sandbox_source_identity_required",
+        ),
+        "Remote production sandbox driver",
+    )
+    require_markers(
+        "tests/remote-sandbox-driver.test.ts",
+        (
+            "source identity is immutable and normalized",
+            "signatures bind exact body timestamp nonce and response request id",
+            "names-only environment and validates signed destruction evidence",
+            "fails closed on unsigned or non-destroyed response",
+        ),
+        "Remote sandbox driver unit tests",
+    )
+    require_markers(
+        "app/api/ready/sandbox/route.ts",
+        (
+            "remoteSandboxConfigurationProblems", "repository_supervisor_sandbox", "remote_ephemeral",
+            "source_driver_ready", "live_gateway_probe", "not_performed_by_readiness_endpoint",
+            "secret_values_in_model_request: false",
+        ),
+        "Sandbox readiness gate",
+    )
+    require_markers(
+        "scripts/verify-repository-supervisor-e2e.ts",
+        (
+            "ANPOS_E2E_MCP_ACCESS_TOKEN", "ANPOS_E2E_MODE", "write_prepare", "write_verify_merge",
+            "I_ACCEPT_DISPOSABLE_TEST_REPO_MUTATION", "does not busy-wait",
+            "repository_profile", "repository_resolve", "repository_audit", "repository_get_assurance",
+            "repository_plan_anpos_change", "repository_apply_anpos_change", "repository_open_change_request",
+            "repository_get_change_request", "repository_get_ci", "repository_merge_change_request",
+            "process.exit(2)", "resulting_default_branch_head_sha",
+        ),
+        "Repository Supervisor live E2E verifier",
+    )
+    require_markers(
         "tests/repository-supervisor-runtime.test.ts",
         (
             "repository_resolve binds canonical identity", "repository_profile returns authenticated provider account identity",
@@ -491,6 +536,7 @@ def main() -> int:
         (
             "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
             "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
+            "remote sandbox configuration fails closed on weak or unsafe gateway settings",
             "Supervisor App role cannot collapse into Marketplace or Vendor roles",
             "legacy single-app credentials do not satisfy split configuration", "Community OAuth state uses PKCE",
             "Community browser session is encrypted", "ANPOS_COMMERCIAL_RELEASE_REF", "mutable production controls",
@@ -533,12 +579,12 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 8:
-        fail("commercial service API contract must be schema_version 8")
+    if api_contract.get("schema_version") != 9:
+        fail("commercial service API contract must be schema_version 9")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
-        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/api/ready/mcp",
+        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/api/ready/mcp", "/api/ready/sandbox",
         "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
         "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
@@ -549,9 +595,49 @@ def main() -> int:
         "supervisor_write_plan_must_be_server_issued_and_expected_head_bound",
         "supervisor_write_forbids_direct_default_branch_and_force_push",
         "supervisor_merge_must_verify_resulting_default_branch_head",
+        "sandbox_production_driver_source", "sandbox_request_signature", "sandbox_response_signature",
+        "sandbox_source_binding", "sandbox_network_default_deny", "sandbox_workspace_destroy_after_execution_required",
+        "sandbox_source_ready_is_not_live_gateway_evidence", "github_runtime_e2e_verifier",
+        "github_runtime_e2e_live_evidence_contract", "github_runtime_e2e_source_harness_is_not_live_evidence",
+        "github_runtime_e2e_never_busy_waits_for_ci",
     ):
         if marker not in contract_text:
             fail(f"commercial service API contract missing marker: {marker}")
+
+    sandbox_policy = json.loads((ROOT / "config/runtime/execution-sandbox.json").read_text(encoding="utf-8"))
+    if sandbox_policy.get("schema_version") != 2:
+        fail("execution sandbox policy must be schema_version 2")
+    if sandbox_policy.get("status") != "production_driver_source_implemented_live_gateway_evidence_pending":
+        fail("execution sandbox policy must preserve source-ready/live-evidence-pending boundary")
+    production_driver = sandbox_policy.get("production_driver", {})
+    for key, expected in (
+        ("id", "remote_ephemeral_signed_gateway_v1"),
+        ("source", "commercial-service/lib/remote-sandbox-driver.ts"),
+        ("readiness_endpoint", "/api/ready/sandbox"),
+        ("transport", "https_post"),
+        ("workspace_source_binding", "github_repository_full_name_plus_immutable_commit_sha"),
+        ("workspace_destroy_after_execution", True),
+        ("redirects", "forbidden"),
+        ("source_ready", True),
+        ("live_gateway_evidence", "pending"),
+    ):
+        if production_driver.get(key) != expected:
+            fail(f"execution sandbox production driver mismatch: {key}")
+
+    e2e_contract = json.loads((ROOT / "config/runtime/repository-supervisor-e2e.json").read_text(encoding="utf-8"))
+    if e2e_contract.get("status") != "source_harness_implemented_live_evidence_pending":
+        fail("repository-supervisor-e2e.json must remain live-evidence pending until real receipts exist")
+    modes = {row.get("id"): row for row in e2e_contract.get("modes", [])}
+    if set(modes) != {"read", "write_prepare", "write_verify_merge"}:
+        fail("Repository Supervisor E2E contract must define exact read/write_prepare/write_verify_merge phases")
+    if modes.get("write_verify_merge", {}).get("busy_wait") is not False:
+        fail("Repository Supervisor E2E must not busy-wait for CI")
+    live_evidence = e2e_contract.get("live_evidence", {})
+    if live_evidence.get("status") != "pending" or any(
+        live_evidence.get(key) is not None
+        for key in ("service_origin", "repository", "read_receipt", "write_receipt", "verified_at")
+    ):
+        fail("Repository Supervisor live E2E evidence must not be invented in source")
 
     supervisor_manifest = json.loads((ROOT / "blueprints/commercial/github-supervisor-app-manifest.example.json").read_text(encoding="utf-8"))
     if supervisor_manifest.get("role") != "repository_supervisor_app":

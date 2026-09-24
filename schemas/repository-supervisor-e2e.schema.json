@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/repository-supervisor-e2e.schema.json",
+  "title": "ANPOS Repository Supervisor Production E2E Evidence Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "purpose",
+    "verifier",
+    "modes",
+    "required_environment_variable_names",
+    "write_only_environment_variable_names",
+    "resume_environment_variable_names",
+    "evidence_rules",
+    "live_evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "const": "source_harness_implemented_live_evidence_pending" },
+    "purpose": { "type": "string", "minLength": 1 },
+    "verifier": { "const": "commercial-service/scripts/verify-repository-supervisor-e2e.ts" },
+    "modes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "object" }
+    },
+    "required_environment_variable_names": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" }
+    },
+    "write_only_environment_variable_names": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" }
+    },
+    "resume_environment_variable_names": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" }
+    },
+    "evidence_rules": {
+      "type": "array",
+      "minItems": 6,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "live_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status","service_origin","repository","read_receipt","write_receipt","verified_at"],
+      "properties": {
+        "status": { "const": "pending" },
+        "service_origin": { "type": "null" },
+        "repository": { "type": "null" },
+        "read_receipt": { "type": "null" },
+        "write_receipt": { "type": "null" },
+        "verified_at": { "type": "null" }
+      }
+    }
+  }
+}

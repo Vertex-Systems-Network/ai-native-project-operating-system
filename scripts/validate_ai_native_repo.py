@@ -148,7 +148,7 @@ def validate_required_files() -> None:
         "config/integrations/linear-sync.json", "config/integrations/sync-authority.json", "config/ai/agent-catalog.json",
         "config/ai/memory-provenance.json", "config/ai/ai-evaluation-policy.json", "config/ai/responsible-ai-policy.json", "config/ai/asset-registry.json", "config/github/ruleset-policy.json", "config/github/path-ownership.json",
         "config/quality/quality-policy.json", "config/security/control-plane-policy.json", "config/security/trust-policy.json",
-        "config/security/threat-model.json", "config/runtime/budgets.json", "config/runtime/execution-sandbox.json", "config/release/release-policy.json", "config/release/progressive-delivery.json",
+        "config/security/threat-model.json", "config/runtime/budgets.json", "config/runtime/execution-sandbox.json", "config/runtime/repository-supervisor-e2e.json", "config/release/release-policy.json", "config/release/progressive-delivery.json",
         "config/data/data-governance.json", "config/product/product-validation.json", "config/product/product-analytics.json",
         "config/product/experimentation-policy.json", "config/quality/engineering-review-policy.json", "config/operations/operations-policy.json", "config/operations/runbooks-and-drills.json", "config/contracts/migration-policy.json", "config/contracts/deprecation-policy.json",
         "config/design/design-intake.json", "config/design/design-assurance.json", "config/testing/conformance-scenarios.json",
@@ -166,7 +166,7 @@ def validate_required_files() -> None:
         "schemas/responsible-ai-policy.schema.json", "schemas/compliance-profile.schema.json", "schemas/decision-records.schema.json",
         "schemas/ai-asset-registry.schema.json", "schemas/deprecation-policy.schema.json", "schemas/runbooks-and-drills.schema.json",
         "schemas/audit-journal.schema.json", "schemas/risk-register.schema.json",
-        "schemas/blueprint-completion.schema.json", "schemas/reference-e2e-matrix.schema.json", "schemas/extension-contract.schema.json", "schemas/execution-sandbox.schema.json",
+        "schemas/blueprint-completion.schema.json", "schemas/reference-e2e-matrix.schema.json", "schemas/extension-contract.schema.json", "schemas/execution-sandbox.schema.json", "schemas/repository-supervisor-e2e.schema.json",
         "scripts/bootstrap_instance.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
         "scripts/lease_control.py", "scripts/coordination_mutation.py", "scripts/consent_guard.py",
         "scripts/install_quality_capabilities.py", "scripts/configure_dependabot.py", "scripts/validate_ai_native_repo.py",
@@ -181,7 +181,7 @@ def validate_required_files() -> None:
         "blueprints/plugins/anpos-repository-supervisor/mcp.json",
         "blueprints/plugins/anpos-repository-supervisor/skills/anpos-repository-supervisor/SKILL.md",
         "blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json",
-        "tests/test_repository_supervisor_plugin_blueprint.py",
+        "tests/test_repository_supervisor_plugin_blueprint.py", "tests/test_repository_supervisor_production_runtime.py",
     ]
     for relative in required:
         if not (ROOT / relative).is_file():
@@ -236,6 +236,7 @@ def validate_json_schemas() -> None:
         "config/testing/reference-e2e-matrix.json": "schemas/reference-e2e-matrix.schema.json",
         "config/protocol/extension-contract.json": "schemas/extension-contract.schema.json",
         "config/runtime/execution-sandbox.json": "schemas/execution-sandbox.schema.json",
+        "config/runtime/repository-supervisor-e2e.json": "schemas/repository-supervisor-e2e.schema.json",
     }
     for instance_path, schema_path in mapping.items():
         schema = load_json(schema_path)

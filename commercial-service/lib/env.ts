@@ -44,6 +44,13 @@ export type SupervisorAppConfig = {
   sessionSecret: string;
 };
 
+export type RemoteSandboxConfig = {
+  endpoint: string;
+  driverId: string;
+  signingSecret: string;
+  requestSkewSeconds: number;
+};
+
 const ENV_ALIASES: Record<string, readonly string[]> = {
   GITHUB_WEBHOOK_SECRET: ["ANPOS_GITHUB_WEBHOOK_SECRET", "ANPOS_WEBHOOK_SECRET"],
   GITHUB_MARKETPLACE_APP_ID: ["ANPOS_MARKETPLACE_APP_ID"],
@@ -291,6 +298,58 @@ export function webhookConfig(): { githubWebhookSecret: string } {
   const problems = commonProblems(["GITHUB_WEBHOOK_SECRET"], false);
   if (problems.length) throw new Error(`Marketplace webhook is not configured: ${problems.join(", ")}`);
   return { githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")! };
+}
+
+export function remoteSandboxConfigurationProblems(): string[] {
+  const problems: string[] = [];
+  const endpoint = rawValue("ANPOS_SANDBOX_ENDPOINT");
+  const driverId = rawValue("ANPOS_SANDBOX_DRIVER_ID");
+  const signingSecret = rawValue("ANPOS_SANDBOX_SIGNING_SECRET");
+  const skew = rawValue("ANPOS_SANDBOX_REQUEST_SKEW_SECONDS");
+
+  if (!endpoint) problems.push("missing:ANPOS_SANDBOX_ENDPOINT");
+  else {
+    try {
+      const url = new URL(endpoint);
+      if (
+        url.protocol !== "https:"
+        || url.username
+        || url.password
+        || url.search
+        || url.hash
+        || url.pathname.replace(/\/$/, "") !== "/v1/execute"
+      ) problems.push("invalid:ANPOS_SANDBOX_ENDPOINT");
+    } catch {
+      problems.push("invalid:ANPOS_SANDBOX_ENDPOINT");
+    }
+  }
+
+  if (!driverId) problems.push("missing:ANPOS_SANDBOX_DRIVER_ID");
+  else if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,100}$/.test(driverId)) {
+    problems.push("invalid:ANPOS_SANDBOX_DRIVER_ID");
+  }
+
+  if (!signingSecret) problems.push("missing:ANPOS_SANDBOX_SIGNING_SECRET");
+  else if (signingSecret.length < 32) problems.push("weak:ANPOS_SANDBOX_SIGNING_SECRET");
+
+  if (skew) {
+    const parsed = Number(skew);
+    if (!Number.isSafeInteger(parsed) || parsed < 30 || parsed > 300) {
+      problems.push("invalid:ANPOS_SANDBOX_REQUEST_SKEW_SECONDS");
+    }
+  }
+  return [...new Set(problems)];
+}
+
+export function remoteSandboxConfig(): RemoteSandboxConfig {
+  const problems = remoteSandboxConfigurationProblems();
+  if (problems.length) throw new Error(`Remote sandbox is not configured: ${problems.join(", ")}`);
+  return {
+    endpoint: rawValue("ANPOS_SANDBOX_ENDPOINT")!,
+    driverId: rawValue("ANPOS_SANDBOX_DRIVER_ID")!,
+    signingSecret: rawValue("ANPOS_SANDBOX_SIGNING_SECRET")!,
+    requestSkewSeconds: Number(rawValue("ANPOS_SANDBOX_REQUEST_SKEW_SECONDS") ?? "120"),
+  };
 }
 
 export function supervisorAppConfigurationProblems(): string[] {

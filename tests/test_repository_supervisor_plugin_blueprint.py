@@ -15,13 +15,13 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.4.0")
+        self.assertEqual(plugin["version"], "0.4.1")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 3)
+        self.assertEqual(contract["schema_version"], 4)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
@@ -69,6 +69,20 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         ]:
             self.assertIn(tool, implementation["implemented_tools"])
         self.assertIn("full_anpos_bootstrap_adoption_upgrade_plan_generator", implementation["not_yet_implemented"])
+        self.assertNotIn("production_sandbox_driver", implementation["not_yet_implemented"])
+        self.assertIn("live_production_sandbox_gateway_evidence", implementation["not_yet_implemented"])
+        self.assertIn("live_github_repository_supervisor_read_e2e_receipt", implementation["not_yet_implemented"])
+        self.assertIn("live_github_repository_supervisor_write_e2e_receipt", implementation["not_yet_implemented"])
+        sandbox = contract["production_sandbox"]
+        self.assertEqual(sandbox["isolation"], "remote_ephemeral")
+        self.assertEqual(sandbox["network"], "deny")
+        self.assertTrue(sandbox["destroy_after_execution"])
+        self.assertEqual(sandbox["live_gateway_evidence"], "pending")
+        e2e = contract["github_runtime_e2e"]
+        self.assertEqual(e2e["modes"], ["read", "write_prepare", "write_verify_merge"])
+        self.assertFalse(e2e["busy_wait"])
+        self.assertEqual(e2e["live_read_receipt"], "pending")
+        self.assertEqual(e2e["live_write_receipt"], "pending")
 
     def test_plugin_assets_are_vendor_only(self) -> None:
         boundary = load("config/licensing/vendor-source-boundary.json")

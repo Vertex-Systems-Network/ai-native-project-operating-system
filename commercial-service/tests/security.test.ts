@@ -28,6 +28,7 @@ const MANAGED_ENV = [
   "ANPOS_PRIVATE_PREMIUM_REPO", "ANPOS_PREMIUM_RELEASE_REF",
   "ANPOS_PREMIUM_MANIFEST_SHA256", "ANPOS_PREMIUM_CONTENT_SET_SHA256",
   "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
+  "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET", "ANPOS_SANDBOX_REQUEST_SKEW_SECONDS",
 ] as const;
 
 function configure() {
@@ -58,6 +59,10 @@ function configure() {
   process.env.ANPOS_PREMIUM_CONTENT_SET_SHA256 = "d".repeat(64);
   process.env.ANPOS_PUBLIC_BASE_URL = "https://license.example.test";
   process.env.ANPOS_SESSION_SECRET = "s".repeat(48);
+  process.env.ANPOS_SANDBOX_ENDPOINT = "https://sandbox.example.test/v1/execute";
+  process.env.ANPOS_SANDBOX_DRIVER_ID = "anpos-remote-ephemeral-v1";
+  process.env.ANPOS_SANDBOX_SIGNING_SECRET = "x".repeat(48);
+  process.env.ANPOS_SANDBOX_REQUEST_SKEW_SECONDS = "120";
 }
 
 function clearManagedEnv() {
@@ -138,6 +143,21 @@ test("Marketplace and vendor GitHub App roles cannot collapse", () => {
   process.env.GITHUB_VENDOR_APP_ID = "654321";
   process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY;
   assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE"));
+});
+
+test("remote sandbox configuration fails closed on weak or unsafe gateway settings", async () => {
+  clearManagedEnv();
+  configure();
+  const { remoteSandboxConfigurationProblems } = await import("../lib/env");
+  assert.deepEqual(remoteSandboxConfigurationProblems(), []);
+
+  process.env.ANPOS_SANDBOX_ENDPOINT = "http://sandbox.example.test/v1/execute";
+  process.env.ANPOS_SANDBOX_SIGNING_SECRET = "short";
+  process.env.ANPOS_SANDBOX_REQUEST_SKEW_SECONDS = "5";
+  const problems = remoteSandboxConfigurationProblems();
+  assert.ok(problems.includes("invalid:ANPOS_SANDBOX_ENDPOINT"));
+  assert.ok(problems.includes("weak:ANPOS_SANDBOX_SIGNING_SECRET"));
+  assert.ok(problems.includes("invalid:ANPOS_SANDBOX_REQUEST_SKEW_SECONDS"));
 });
 
 test("Supervisor App role cannot collapse into Marketplace or Vendor roles", async () => {

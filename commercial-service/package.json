@@ -1,6 +1,6 @@
 {
   "name": "anpos-commercial-service",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": true,
   "packageManager": "npm@11.19.1",
   "scripts": {
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "tsx --test tests/*.test.ts",
     "migrate": "tsx scripts/migrate.ts",
-    "certify": "npm run typecheck && npm run test:unit && npm run build"
+    "certify": "npm run typecheck && npm run test:unit && npm run build",
+    "verify:e2e": "tsx scripts/verify-repository-supervisor-e2e.ts"
   },
   "engines": {
     "node": "22.x"
