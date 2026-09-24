@@ -208,7 +208,7 @@ The planner supports `bounded_change` plus `bootstrap_empty`, `bootstrap_child`,
 
 Apply creates one Git Data tree/commit and then one new `anpos/*` branch ref. It never patches the default branch directly and never force-pushes. The PR and CI tools operate only on the server-recorded applied head. Guarded merge is destructive/confirmation-worthy and rechecks entitlement, GitHub permission, exact PR head/base, checks/statuses, unchanged default-branch head, GitHub policy response, and the resulting default-branch head.
 
-Full-mode plan generation is source-implemented, but those plans intentionally report `safe_to_apply=false` and `apply_implementation=sandbox_full_plan_pending`. `repository_apply_anpos_change` continues to apply only `bounded_change`; sandbox-backed full-plan apply remains a separate certification milestone.
+Full-mode plan generation is source-implemented. Non-empty plans with no `manual_merge` or `migration_review` conflicts can now return `safe_to_apply=true` with `apply_implementation=sandbox_full_plan_v1`. Those plans execute verified release transformations only inside the signed remote-ephemeral sandbox artifact channel, then the service creates one expected-head feature-branch commit and records a sandbox receipt. Conflict-bearing plans remain blocked, and `bootstrap_empty` remains pending a separate guarded initialization flow.
 
 ## Production sandbox and live E2E boundary
 
@@ -287,7 +287,8 @@ Current source implementation status:
 - ✅ server-issued encrypted `bounded_change` plans bound to canonical repository identity, exact default-branch head SHA and deterministic plan hash;
 - ✅ atomic Git Data commit apply to a new `anpos/*` feature branch, PR creation/re-read, exact commit CI inspection, and guarded merge with resulting-main verification;
 - ✅ deterministic full bootstrap/adoption/repair/upgrade no-write plan generation from verified sanitized ANPOS release Git identities, with target-only/project-evidence preservation and bounded MCP previews;
-- ⏳ sandbox-backed apply runtime for full-mode plans;
+- ✅ sandbox-backed apply runtime for non-empty conflict-free full-mode plans, with exact release blob materialization, signed artifact I/O, Python 3.12+ isolated transformations, token isolation, operation lease/recovery, expected-head feature-branch commit and sandbox-receipt merge gate;
+- ⏳ resolved-conflict full-plan apply and guarded `bootstrap_empty` initialization;
 - ✅ signed remote-ephemeral production sandbox driver **source** with immutable GitHub commit binding, request/response HMAC authentication, network deny, no redirect fallback and workspace-destruction evidence;
 - ✅ fail-closed live GitHub runtime E2E verifier source with read / write_prepare / write_verify_merge phases and no CI busy-wait;
 - ⏳ live sandbox-gateway deployment evidence and live GitHub read/write E2E receipts.
