@@ -16,6 +16,8 @@ test("Team dashboard exposes reconciled seat capacity without activating support
     state: "active",
     features: ["private_template_access", "organization_team_features", "commercial_support"],
     billing_cycle: "monthly",
+    next_billing_date: "2026-10-04T18:00:00Z",
+    free_trial_ends_on: "2026-09-18T18:00:00Z",
     billing_updated_at: "2026-09-04T18:00:00Z",
     updated_at: "2026-09-04T18:01:00Z",
   }, [
@@ -28,6 +30,8 @@ test("Team dashboard exposes reconciled seat capacity without activating support
   assert.equal(summary.account.id, 9001);
   assert.equal(summary.plan.id, "team");
   assert.equal(summary.plan.billing_cycle, "monthly");
+  assert.equal(summary.plan.next_billing_date, "2026-10-04T18:00:00.000Z");
+  assert.equal(summary.plan.free_trial_ends_on, "2026-09-18T18:00:00.000Z");
   assert.equal(summary.plan.billing_authority, "github_marketplace");
   assert.equal(summary.seats.capacity, 5);
   assert.equal(summary.seats.active, 2);
