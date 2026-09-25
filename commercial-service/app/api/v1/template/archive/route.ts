@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { requireGithubAccountAccess } from "@/lib/auth";
 import { getEntitlement, reconcileEntitlement } from "@/lib/entitlements";
-import { templateArchiveRedirect, templateReleaseManifest } from "@/lib/github";
+import { templateArchive, templateReleaseManifest } from "@/lib/embedded-release";
 import { requestIdFrom } from "@/lib/http";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { requireActiveSeat } from "@/lib/seats";
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     if (refreshed.github_account_type === "Organization") await requireActiveSeat(accountId, user.id);
 
     const release = await templateReleaseManifest();
-    const archive = await templateArchiveRedirect();
+    const archive = await templateArchive();
     if (archive.release_ref !== release.release_ref) throw new Error("COMMERCIAL_RELEASE_REF_MISMATCH");
 
     await db().query(
@@ -49,12 +49,16 @@ export async function GET(request: Request) {
         canonical_source_tree: release.source_tree,
       })],
     );
-    return new Response(null, {
-      status: 307,
+    return new Response(archive.content, {
+      status: 200,
       headers: {
-        Location: archive.location,
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="${archive.filename}"`,
+        "Content-Length": String(archive.content.length),
+        "X-ANPOS-Release-SHA256": archive.sha256,
         "Cache-Control": "private, no-store",
         "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
