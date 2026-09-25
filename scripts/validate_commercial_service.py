@@ -13,7 +13,7 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/sandbox-live-probe.ts", "lib/releases.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/embedded-release.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/sandbox-live-probe.ts", "lib/releases.ts",
     "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "migrations/007_vercel_sandbox_gateway_replay.sql", "migrations/008_marketplace_billing_lifecycle.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts", "tests/sandbox-live-probe.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts", "app/api/ready/sandbox/live/route.ts",
@@ -135,6 +135,16 @@ def main() -> int:
             "payload?.marketplace_purchase?.account?.id",
         ),
         "Marketplace webhook",
+    )
+    require_markers(
+        "lib/embedded-release.ts",
+        (
+            "vendor-release", "EXPORT-MANIFEST.json", "anpos-commercial-template.zip",
+            "parseTemplateReleaseManifest", "parseTemplateReleasePlanManifest",
+            "TEMPLATE_RELEASE_FILE_IDENTITY_MISMATCH", "TEMPLATE_RELEASE_BLOB_DIGEST_MISMATCH",
+            "embedded:anpos-commercial-template",
+        ),
+        "embedded certified template release",
     )
     require_markers(
         "lib/releases.ts",
@@ -715,8 +725,9 @@ def main() -> int:
     require_markers(
         "app/api/v1/template/archive/route.ts",
         (
-            "templateArchiveRedirect", "templateReleaseManifest", "requireActiveSeat", "template_archive", "release_ref",
-            "canonical_source_revision", "Cache-Control", "307",
+            "templateArchive", "templateReleaseManifest", "requireActiveSeat", "template_archive", "release_ref",
+            "canonical_source_revision", "application/zip", "Content-Disposition", "X-ANPOS-Release-SHA256",
+            "Cache-Control", "nosniff", "200",
         ),
         "template archive delivery",
     )
@@ -741,9 +752,9 @@ def main() -> int:
     require_markers(
         "app/api/ready/route.ts",
         (
-            "configurationProblems", "githubMarketplaceAppPrivateKeyPem", "githubVendorAppPrivateKeyPem",
-            "github_marketplace_app_key_must_be_rsa", "github_vendor_app_key_must_be_rsa",
-            '"ed25519"', "organizationSeatCapacity", "ensureSchema",
+            "configurationProblems", "githubMarketplaceAppPrivateKeyPem",
+            "github_marketplace_app_key_must_be_rsa",
+            '"ed25519"', "marketplacePlanMap", "organizationSeatCapacity", "ensureSchema",
         ),
         "full commercial readiness gate",
     )
@@ -765,7 +776,8 @@ def main() -> int:
             "Community launch config is independent from paid and vendor secrets",
             "Community Marketplace identity stays outside paid plan mapping",
             "Community Marketplace plan identity fails closed when malformed",
-            "missing:ANPOS_VENDOR_APP_ID", "paid: false",
+            "Developer-only paid launch does not require Vendor Distribution App configuration",
+            "paid: false",
         ),
         "Community launch unit tests",
     )
