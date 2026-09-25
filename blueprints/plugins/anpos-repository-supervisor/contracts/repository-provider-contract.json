@@ -1,5 +1,5 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "status": "blueprint",
   "purpose": "Provider-neutral MCP contract for ANPOS 1.4.0 repository supervision across GitHub and GitLab, including Requirements 83–96 assurance/evidence preservation.",
   "supported_provider_blueprints": [
@@ -51,6 +51,30 @@
         "provider",
         "account_id",
         "account_display_name"
+      ]
+    },
+    {
+      "name": "repository_list_billing_accounts",
+      "intent": "Return only billing accounts server-authorized for the authenticated provider principal: the principal's own user billing account plus organization billing accounts backed by an active seat assignment and current provider account access. Include Repository Supervisor read/write capability decisions so callers never guess billing_account_id.",
+      "read_only": true,
+      "open_world": false,
+      "required_inputs": [],
+      "required_outputs": [
+        "accounts[].billing_account_id",
+        "accounts[].github_login",
+        "accounts[].github_account_type",
+        "accounts[].state",
+        "accounts[].plan_id",
+        "accounts[].capabilities.repository_supervisor_read",
+        "accounts[].capabilities.repository_supervisor_write"
+      ],
+      "server_requirements": [
+        "never_enumerate_global_billing_accounts",
+        "user_candidate_must_match_authenticated_provider_user_id",
+        "organization_candidate_requires_active_server_side_seat_assignment",
+        "organization_candidate_must_be_reverified_against_current_provider_membership",
+        "capability_decisions_come_from_server_side_entitlement_ledger",
+        "billing_account_id_is_a_selector_not_authority"
       ]
     },
     {
@@ -417,6 +441,7 @@
     "implemented_tools": [
       "repository_resolve",
       "repository_profile",
+      "repository_list_billing_accounts",
       "repository_audit",
       "repository_get_assurance",
       "repository_plan_anpos_change",
@@ -480,7 +505,10 @@
       "resolved_plan_source_hash_binding",
       "resolved_plan_target_git_object_binding",
       "migration_review_replacement_acknowledgement",
-      "immutable_resolved_plan_derivation"
+      "immutable_resolved_plan_derivation",
+      "principal_scoped_billing_account_discovery",
+      "organization_billing_candidate_requires_active_seat",
+      "discovered_billing_account_capability_matrix"
     ],
     "not_yet_implemented": [
       "gitlab_adapter",
@@ -497,7 +525,7 @@
   "commercial_authorization": {
     "authority": "commercial_service_server_side_entitlement_ledger",
     "billing_provider": "github_marketplace_for_initial_launch",
-    "account_binding": "authenticated_mcp_github_principal_plus_explicit_billing_account_id_reauthorized_server_side",
+    "account_binding": "authenticated_mcp_github_principal_plus_server_discovered_or_explicit_billing_account_id_reauthorized_server_side",
     "repository_local_entitlement_authority": false,
     "capabilities": {
       "community_repository_readiness_audit": {
@@ -523,6 +551,12 @@
         "organization_seat_required": true,
         "implementation_status": "guarded_write_runtime_source_implemented_production_e2e_pending"
       }
+    },
+    "billing_account_discovery": {
+      "source": "commercial_service_entitlement_ledger_plus_active_organization_seat_assignment",
+      "global_account_enumeration": false,
+      "provider_membership_reverification_required": true,
+      "selector_is_authority": false
     }
   },
   "mcp_transport": {
@@ -547,7 +581,12 @@
     "github_provider_token": "encrypted_server_side_only",
     "profile_tool": "repository_profile",
     "profile_meta": "openai/profile=true",
-    "github_app_role": "dedicated_repository_supervisor_app"
+    "github_app_role": "dedicated_repository_supervisor_app",
+    "billing_account_discovery_tool": "repository_list_billing_accounts",
+    "billing_account_discovery_scope": [
+      "anpos:profile",
+      "anpos:repo:read"
+    ]
   },
   "production_sandbox": {
     "policy": "config/runtime/execution-sandbox.json",
