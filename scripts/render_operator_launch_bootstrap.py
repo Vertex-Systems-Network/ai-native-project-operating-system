@@ -56,9 +56,9 @@ MARKETPLACE_APP_ENV = [
     "GITHUB_WEBHOOK_SECRET",
 ]
 SUPERVISOR_APP_ENV = [
-    "GITHUB_SUPERVISOR_APP_ID",
-    "GITHUB_SUPERVISOR_CLIENT_ID",
-    "GITHUB_SUPERVISOR_CLIENT_SECRET",
+    "ANPOS_GITHUB_SUPERVISOR_APP_ID",
+    "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID",
+    "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
 ]
 VENDOR_APP_ENV = [
     "GITHUB_VENDOR_APP_ID",
@@ -442,7 +442,7 @@ def render(
             "Verify the Community audit permission remains single-file read for exactly the approved ten ANPOS control paths and is not broadened to application source-code access.",
             "For free-first launch, require /api/ready/community HTTP 200 plus real Setup URL -> OAuth -> installation-bound repository discovery -> audit E2E evidence; this does not prove paid/vendor readiness.",
             "Register the dedicated public/installable Repository Supervisor App using its prefilled URL; keep it distinct from Marketplace and Vendor Distribution identities.",
-            "Generate the Supervisor OAuth client secret and configure GITHUB_SUPERVISOR_APP_ID/GITHUB_SUPERVISOR_CLIENT_ID/GITHUB_SUPERVISOR_CLIENT_SECRET only in the deployment secret manager.",
+            "Generate the Supervisor OAuth client secret and configure ANPOS_GITHUB_SUPERVISOR_APP_ID/ANPOS_GITHUB_SUPERVISOR_CLIENT_ID/ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET only in the deployment secret manager.",
             "Verify Supervisor permissions remain Metadata read, Contents write, Pull requests write, Checks read, Commit statuses read, and Workflows write for ANPOS-managed .github/workflows mutations; do not grant Administration by default.",
             "Configure ANPOS_SANDBOX_ENDPOINT/ANPOS_SANDBOX_DRIVER_ID/ANPOS_SANDBOX_SIGNING_SECRET/ANPOS_SANDBOX_REQUEST_SKEW_SECONDS only after the signed remote-ephemeral gateway exists; /api/ready/sandbox is source/config readiness and is not a live gateway probe.",
             "Register the private Vendor Distribution App using the prefilled URL; keep Administration write disabled unless collaborator provisioning is deliberately enabled.",
