@@ -5,6 +5,7 @@ import {
   createPaddleCheckoutTransaction,
   paddleSubscriptionSnapshot,
   verifyPaddleWebhook,
+  type PaddleSubscription,
 } from "../lib/paddle";
 import { paddlePriceForPlan, resolvePaddlePrice } from "../lib/plans";
 
@@ -83,7 +84,7 @@ test("Paddle subscription snapshot is GitHub-account and price bound", () => {
 
 test("Paddle status mapping fails closed for paused/canceled and keeps past-due grace", () => {
   configurePaddle();
-  const base = {
+  const base: Omit<PaddleSubscription, "status"> = {
     id: "sub_" + "s".repeat(26),
     customer_id: "ctm_" + "c".repeat(26),
     next_billed_at: null,
@@ -96,7 +97,7 @@ test("Paddle status mapping fails closed for paused/canceled and keeps past-due 
       anpos_billing_cycle: "month",
     },
     items: [{ status: "active", quantity: 1, recurring: true, trial_dates: null, price: { id: MONTHLY } }],
-  } as const;
+  };
   assert.equal(paddleSubscriptionSnapshot({ ...base, status: "past_due" }).state, "grace");
   assert.equal(paddleSubscriptionSnapshot({ ...base, status: "paused" }).state, "cancelled");
   assert.equal(paddleSubscriptionSnapshot({ ...base, status: "canceled" }).state, "cancelled");
