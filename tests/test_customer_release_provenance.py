@@ -30,7 +30,7 @@ class CustomerReleaseProvenanceTests(unittest.TestCase):
 
     def test_customer_release_note_is_draft_until_provenance_exists(self) -> None:
         notes = self.data["customer_notes"]
-        self.assertEqual(notes["draft_path"], "docs/releases/ANPOS-1.4.0-commercial-0.4.10.md")
+        self.assertEqual(notes["draft_path"], "docs/releases/ANPOS-1.4.0-commercial-0.5.0.md")
         self.assertTrue((ROOT / notes["draft_path"]).exists())
         self.assertFalse(notes["customer_visible_release_notes_verified"])
         gate = self.data["release_gate"]
