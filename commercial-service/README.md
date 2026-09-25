@@ -64,6 +64,14 @@ Commercial service 0.4.9 can temporarily enable one internal read-only Repositor
 
 This control does not create a Marketplace purchase and does not authorize planning or mutation tools. It only allows the matching authenticated GitHub principal to exercise the read path using its own GitHub account selector. Full commercial readiness deliberately fails closed while either test variable is present. Remove both variables immediately after the live read E2E.
 
+## Vercel-native Repository Supervisor sandbox gateway
+
+Commercial service 0.4.10 implements the signed remote-ephemeral gateway at `POST /v1/execute` using `@vercel/sandbox` 3.5.0. The gateway authenticates exact request bytes with the existing timestamp/nonce HMAC contract, claims the nonce in PostgreSQL before execution, starts a Python 3.13 Vercel Sandbox Firecracker microVM with `deny-all` networking, verifies the runtime/network policy, writes only SHA-256-verified input artifacts into the explicit-empty workspace, runs argv without shell interpolation, returns only exact allowlisted regular output files after mode/size/SHA-256 verification, stops the sandbox, and only then signs the response body.
+
+The first live gateway contract deliberately accepts only the explicit-empty workspace mode used by the current full-plan apply path. `github_commit` source mode remains protocol-defined but fail-closed until private-source credential handling is separately certified. Environment-variable forwarding is also fail-closed in this first live gateway; current full-plan apply sends no environment names or customer GitHub token to the sandbox.
+
+The current full-plan live execution budget is 240 seconds inside a 300-second gateway function budget. The broader protocol maximum of 900 seconds is not claimed as live Vercel gateway evidence. Source implementation and unit certification still do not prove the gateway is deployed or that guarded write E2E has passed; production readiness remains evidence-driven.
+
 ## Full Repository Supervisor planner
 
 Commercial service 0.4.7 implements deterministic planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.
