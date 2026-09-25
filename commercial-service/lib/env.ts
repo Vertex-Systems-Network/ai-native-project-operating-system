@@ -204,7 +204,7 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
     const vendorAppId = value("ANPOS_VENDOR_APP_ID");
     if (vendorAppId && !/^\d+$/.test(vendorAppId)) problems.push("invalid:ANPOS_VENDOR_APP_ID");
     if (marketplaceAppId && vendorAppId && marketplaceAppId === vendorAppId) {
-      problems.push("unsafe:GITHUB_APP_ROLE_SEPARATION");
+      problems.push("unsafe:ANPOS_APP_ROLE_SEPARATION");
     }
 
     const installationId = value("ANPOS_VENDOR_INSTALLATION_ID");
@@ -234,7 +234,7 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
     const marketplaceKey = pem("ANPOS_MARKETPLACE_APP_PRIVATE_KEY");
     const vendorKey = pem("ANPOS_VENDOR_APP_PRIVATE_KEY");
     if (marketplaceKey && vendorKey && marketplaceKey === vendorKey) {
-      problems.push("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE");
+      problems.push("unsafe:ANPOS_APP_PRIVATE_KEY_REUSE");
     }
     validatePrivateKeyMarker("ANPOS_ENTITLEMENT_PRIVATE_KEY", problems);
   }
@@ -423,13 +423,13 @@ export function supervisorAppConfigurationProblems(): string[] {
 
   const marketplaceAppId = value("ANPOS_MARKETPLACE_APP_ID");
   const vendorAppId = value("ANPOS_VENDOR_APP_ID");
-  if (appId && marketplaceAppId && appId === marketplaceAppId) problems.push("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION");
-  if (appId && vendorAppId && appId === vendorAppId) problems.push("unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION");
+  if (appId && marketplaceAppId && appId === marketplaceAppId) problems.push("unsafe:ANPOS_SUPERVISOR_MARKETPLACE_APP_COLLISION");
+  if (appId && vendorAppId && appId === vendorAppId) problems.push("unsafe:ANPOS_SUPERVISOR_VENDOR_APP_COLLISION");
   const marketplaceClientId = value("ANPOS_MARKETPLACE_CLIENT_ID");
-  if (clientId && marketplaceClientId && clientId === marketplaceClientId) problems.push("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION");
+  if (clientId && marketplaceClientId && clientId === marketplaceClientId) problems.push("unsafe:ANPOS_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION");
   const marketplaceClientSecret = value("ANPOS_MARKETPLACE_CLIENT_SECRET");
   if (clientSecret && marketplaceClientSecret && clientSecret === marketplaceClientSecret) {
-    problems.push("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE");
+    problems.push("unsafe:ANPOS_SUPERVISOR_MARKETPLACE_SECRET_REUSE");
   }
   return [...new Set(problems)];
 }
