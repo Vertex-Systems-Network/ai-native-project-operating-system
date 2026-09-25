@@ -153,7 +153,7 @@ export async function listBillingAccountsForPrincipal(githubUserId: number): Pro
   if (!Number.isSafeInteger(githubUserId) || githubUserId <= 0) throw new Error("VALID_GITHUB_USER_ID_REQUIRED");
   await ensureSchema();
   const result = await db().query(
-    `SELECT DISTINCT
+    `SELECT
        e.github_account_id,e.github_login,e.github_account_type,e.plan_id,e.state,e.features
      FROM entitlements e
      LEFT JOIN organization_seat_assignments s
