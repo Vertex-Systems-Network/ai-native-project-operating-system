@@ -70,7 +70,7 @@ jobs:
           assert receipt["target_repository_revision"] is None
           PY
 
-      - name: Neutralize any residual temporary Supervisor grant keys
+      - name: Batch-remove residual temporary Supervisor grant keys
         shell: bash
         run: |
           set -euo pipefail
@@ -108,30 +108,20 @@ jobs:
           payload = api("GET", f"/v9/projects/{project_id}/env?{query}")
           envs = payload.get("envs", []) if isinstance(payload, dict) else []
           matches = [item for item in envs if item.get("key") in wanted and item.get("id")]
-
           for item in matches:
               safe = {
                   "id": item.get("id"),
                   "key": item.get("key"),
                   "type": item.get("type"),
                   "target": item.get("target"),
-                  "gitBranch": item.get("gitBranch"),
-                  "customEnvironmentIds": item.get("customEnvironmentIds") or [],
               }
-              print("Neutralizing residual temporary grant env:", json.dumps(safe, sort_keys=True))
-              body = {
-                  "key": item["key"],
-                  "value": " ",
-                  "type": item.get("type") or "encrypted",
-                  "target": item.get("target") or ["production"],
-                  "customEnvironmentIds": item.get("customEnvironmentIds") or [],
-                  "comment": "Temporary Repository Supervisor read grant disabled",
-              }
-              if item.get("gitBranch"):
-                  body["gitBranch"] = item["gitBranch"]
-              api("PATCH", f"/v9/projects/{project_id}/env/{item['id']}?{query}", body)
-
-          print("Residual temporary grant keys neutralized:", len(matches))
+              print("Batch-removing temporary grant env:", json.dumps(safe, sort_keys=True))
+          ids = [str(item["id"]) for item in matches]
+          if ids:
+              result = api("DELETE", f"/v1/projects/{project_id}/env?{query}", {"ids": ids})
+              print("Batch remove result:", json.dumps({"deleted": result.get("deleted"), "ids": result.get("ids")}, sort_keys=True))
+          else:
+              print("No temporary grant env records remain.")
           PY
 
       - name: Deploy exact verified service to Vercel production
