@@ -185,6 +185,10 @@ def main() -> int:
         ),
         "principal-scoped billing account discovery",
     )
+    entitlement_source = text("lib/entitlements.ts")
+    if "SELECT DISTINCT" in entitlement_source and "LOWER(e.github_login)" in entitlement_source:
+        fail("billing account discovery must not combine SELECT DISTINCT with a non-selected LOWER(github_login) ORDER BY expression")
+
     require_markers(
         "app/setup/github/route.ts",
         (
