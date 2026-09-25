@@ -25,7 +25,7 @@ Blueprint presence is never proof that a capability is enabled, purchased, conne
 
 The commercial runtime uses the `ANPOS_*` environment namespace for Marketplace, Vendor Distribution, entitlement, seat, and operator configuration. New production deployments must not require environment variables whose names begin with `GITHUB_`; historical legacy names are not launch configuration.
 
-Current paid-launch sequence remains fail-closed: configure real Marketplace plan IDs, distinct Marketplace/Supervisor/Vendor App identities, verified private template distribution, signing/seat/operator controls, then prove purchase/change/cancel reconciliation and Repository Supervisor entitlement E2E before paid launch is called ready. Marketplace reconciliation now preserves billing cycle, next billing date, and free-trial end time for customer-facing subscription status.
+Current paid-launch sequence remains fail-closed. The runtime now supports two paid billing authorities: GitHub Marketplace when its external eligibility gates are satisfied, and a direct Paddle adapter for verified GitHub users. Paddle checkout derives the GitHub numeric account ID server-side, uses provider price IDs from ANPOS configuration, verifies signed raw-body subscription webhooks with replay-safe event IDs, and reconciles the same entitlement ledger without storing payment-card data. Vendor distribution, signing/seat/operator controls, real provider configuration, legal/business approval, and live purchase/cancel E2E evidence are still required before production sales are called ready.
 
 ## Persistent source continuous certification in 1.3.13
 
