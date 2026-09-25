@@ -531,11 +531,17 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "007_vercel_sandbox_gateway_replay.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "sandbox_gateway_request_nonces", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "008_marketplace_billing_lifecycle.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "sandbox_gateway_request_nonces", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
         fail("normal commercial request runtime must not execute CREATE TABLE migrations")
+
+    require_markers(
+        "migrations/008_marketplace_billing_lifecycle.sql",
+        ("next_billing_date", "free_trial_ends_on"),
+        "Marketplace billing lifecycle migration",
+    )
 
     require_markers(
         "migrations/001_baseline.sql",
