@@ -11,7 +11,7 @@ import {
 
 type FetchLike = typeof fetch;
 
-type RemoteSandboxWireRequest = {
+export type RemoteSandboxWireRequest = {
   protocol_version: 2;
   request_id: string;
   driver_id: string;
@@ -38,7 +38,7 @@ type RemoteSandboxWireRequest = {
   };
 };
 
-type RemoteSandboxWireResponse = {
+export type RemoteSandboxWireResponse = {
   protocol_version?: number;
   request_id?: string;
   driver_id?: string;
@@ -72,6 +72,36 @@ function sameHex(left: string, right: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+export function verifyRemoteSandboxResponseSignature(input: {
+  secret: string;
+  requestId: string;
+  body: string;
+  signature: string;
+}): boolean {
+  return sameHex(
+    input.signature,
+    buildRemoteSandboxResponseSignature({
+      secret: input.secret,
+      requestId: input.requestId,
+      body: input.body,
+    }),
+  );
+}
+
+export function remoteSandboxTrustedSourceHeaders(endpoint: string): Record<string, string> {
+  const token = process.env.VERCEL_OIDC_TOKEN?.trim() ?? "";
+  const publicBase = process.env.ANPOS_PUBLIC_BASE_URL?.trim() ?? "";
+  if (!token || !publicBase || /[\r\n]/.test(token) || token.split(".").length !== 3) return {};
+  try {
+    const endpointUrl = new URL(endpoint);
+    const publicUrl = new URL(publicBase);
+    if (endpointUrl.origin !== publicUrl.origin) return {};
+  } catch {
+    return {};
+  }
+  return { "x-vercel-trusted-oidc-idp-token": token };
+}
+
 function canonicalBody(request: RemoteSandboxWireRequest): string {
   return JSON.stringify(request);
 }
@@ -93,13 +123,14 @@ export function buildRemoteSandboxResponseSignature(input: {
   return hmacHex(input.secret, `response.${input.requestId}.${sha256(input.body)}`);
 }
 
-function wireRequest(
+export function buildRemoteSandboxWireRequest(
   driverId: string,
   request: NormalizedSandboxExecutionRequest,
+  requestId: string = randomUUID(),
 ): RemoteSandboxWireRequest {
   return {
     protocol_version: 2,
-    request_id: randomUUID(),
+    request_id: requestId,
     driver_id: driverId,
     isolation: "remote_ephemeral",
     workspace: {
@@ -125,7 +156,7 @@ function wireRequest(
   };
 }
 
-function validateResponse(
+export function validateRemoteSandboxWireResponse(
   response: RemoteSandboxWireResponse,
   request: RemoteSandboxWireRequest,
 ): SandboxExecutionResult {
@@ -180,7 +211,7 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
   ) {}
 
   async execute(request: NormalizedSandboxExecutionRequest): Promise<SandboxExecutionResult> {
-    const wire = wireRequest(this.id, request);
+    const wire = buildRemoteSandboxWireRequest(this.id, request);
     const body = canonicalBody(wire);
     const timestamp = String(Math.floor(Date.now() / 1000));
     const nonce = randomBytes(18).toString("base64url");
@@ -202,6 +233,7 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
       response = await this.fetchImpl(this.endpoint, {
         method: "POST",
         headers: {
+          ...remoteSandboxTrustedSourceHeaders(this.endpoint),
           Accept: "application/json",
           "Content-Type": "application/json",
           "X-Anpos-Sandbox-Protocol": "2",
@@ -245,19 +277,19 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
     if (raw.length > maxResponseBytes) throw new SandboxRequestError("remote_sandbox_response_too_large");
     const responseBody = raw.toString("utf8");
     const responseSignature = response.headers.get("x-anpos-sandbox-response-signature") ?? "";
-    const expectedResponseSignature = buildRemoteSandboxResponseSignature({
+    if (!verifyRemoteSandboxResponseSignature({
       secret: this.signingSecret,
       requestId: wire.request_id,
       body: responseBody,
-    });
-    if (!sameHex(responseSignature, expectedResponseSignature)) {
+      signature: responseSignature,
+    })) {
       throw new SandboxRequestError("remote_sandbox_response_signature_invalid");
     }
 
     let parsed: RemoteSandboxWireResponse;
     try { parsed = JSON.parse(responseBody) as RemoteSandboxWireResponse; }
     catch { throw new SandboxRequestError("invalid_remote_sandbox_response"); }
-    return validateResponse(parsed, wire);
+    return validateRemoteSandboxWireResponse(parsed, wire);
   }
 }
 
