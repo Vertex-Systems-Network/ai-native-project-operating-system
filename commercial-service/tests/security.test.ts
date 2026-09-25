@@ -161,11 +161,11 @@ test("Marketplace and vendor GitHub App roles cannot collapse", () => {
   clearManagedEnv();
   configure();
   process.env.ANPOS_VENDOR_APP_ID = process.env.ANPOS_MARKETPLACE_APP_ID;
-  assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_ROLE_SEPARATION"));
+  assert.ok(configurationProblems().includes("unsafe:ANPOS_APP_ROLE_SEPARATION"));
 
   process.env.ANPOS_VENDOR_APP_ID = "654321";
   process.env.ANPOS_VENDOR_APP_PRIVATE_KEY = process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY;
-  assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE"));
+  assert.ok(configurationProblems().includes("unsafe:ANPOS_APP_PRIVATE_KEY_REUSE"));
 });
 
 test("remote sandbox configuration fails closed on weak or unsafe gateway settings", async () => {
@@ -189,18 +189,18 @@ test("Supervisor App role cannot collapse into Marketplace or Vendor roles", asy
   const { supervisorAppConfigurationProblems } = await import("../lib/env");
 
   process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.ANPOS_MARKETPLACE_APP_ID;
-  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION"));
+  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:ANPOS_SUPERVISOR_MARKETPLACE_APP_COLLISION"));
 
   process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.ANPOS_VENDOR_APP_ID;
-  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION"));
+  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:ANPOS_SUPERVISOR_VENDOR_APP_COLLISION"));
 
   process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = process.env.ANPOS_MARKETPLACE_CLIENT_ID;
-  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION"));
+  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:ANPOS_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION"));
 
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = process.env.ANPOS_MARKETPLACE_CLIENT_SECRET;
-  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE"));
+  assert.ok(supervisorAppConfigurationProblems().includes("unsafe:ANPOS_SUPERVISOR_MARKETPLACE_SECRET_REUSE"));
 });
 
 test("legacy single-app credentials do not satisfy split configuration", () => {
