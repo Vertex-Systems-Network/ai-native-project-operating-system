@@ -35,25 +35,28 @@ test("sandbox source identity is immutable and normalized", () => {
   );
 });
 
-test("Vercel trusted-source token is forwarded only to the exact public service origin", () => {
+test("Vercel trusted-source token is fetched only for the exact public service origin", async () => {
   const priorBase = process.env.ANPOS_PUBLIC_BASE_URL;
-  const priorToken = process.env.VERCEL_OIDC_TOKEN;
   process.env.ANPOS_PUBLIC_BASE_URL = "https://anpos.example.test";
-  process.env.VERCEL_OIDC_TOKEN = "header.payload.signature";
+  let calls = 0;
+  const provider = async () => {
+    calls += 1;
+    return "header.payload.signature";
+  };
   try {
     assert.deepEqual(
-      remoteSandboxTrustedSourceHeaders("https://anpos.example.test/v1/execute"),
+      await remoteSandboxTrustedSourceHeaders("https://anpos.example.test/v1/execute", provider),
       { "x-vercel-trusted-oidc-idp-token": "header.payload.signature" },
     );
+    assert.equal(calls, 1);
     assert.deepEqual(
-      remoteSandboxTrustedSourceHeaders("https://other.example.test/v1/execute"),
+      await remoteSandboxTrustedSourceHeaders("https://other.example.test/v1/execute", provider),
       {},
     );
+    assert.equal(calls, 1);
   } finally {
     if (priorBase === undefined) delete process.env.ANPOS_PUBLIC_BASE_URL;
     else process.env.ANPOS_PUBLIC_BASE_URL = priorBase;
-    if (priorToken === undefined) delete process.env.VERCEL_OIDC_TOKEN;
-    else process.env.VERCEL_OIDC_TOKEN = priorToken;
   }
 });
 
