@@ -139,7 +139,7 @@ const EXECUTOR_SOURCE = [
   "}",
   "Path(" + JSON.stringify(EXECUTOR_RESULT_PATH) + ").write_text(json.dumps(result, sort_keys=True, separators=(',', ':')), encoding='utf-8')",
   "",
-].join("\\n");
+].join("\n");
 
 const COLLECTOR_SOURCE = [
   "from __future__ import annotations",
@@ -171,7 +171,7 @@ const COLLECTOR_SOURCE = [
   "    })",
   "Path(" + JSON.stringify(OUTPUT_META_PATH) + ").write_text(json.dumps(rows, sort_keys=True, separators=(',', ':')), encoding='utf-8')",
   "",
-].join("\\n");
+].join("\n");
 
 function sha256(value: Buffer | string): string {
   return createHash("sha256").update(value).digest("hex");
