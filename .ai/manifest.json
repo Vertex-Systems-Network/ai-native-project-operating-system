@@ -288,6 +288,7 @@
       "commercial-service/lib/vercel-sandbox-gateway.ts",
       "commercial-service/app/v1/execute/route.ts",
       "commercial-service/migrations/007_vercel_sandbox_gateway_replay.sql",
+      "commercial-service/migrations/008_marketplace_billing_lifecycle.sql",
       "commercial-service/tests/vercel-sandbox-gateway.test.ts"
     ]
   },
