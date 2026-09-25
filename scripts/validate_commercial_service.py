@@ -86,6 +86,9 @@ def main() -> int:
             fail(f"commercial service environment contract missing {name}")
     if "GITHUB_APP_ID=" in env_example or "GITHUB_APP_PRIVATE_KEY=" in env_example:
         fail("commercial service environment contract must not advertise legacy single-App credentials")
+    for line in env_example.splitlines():
+        if line.startswith("GITHUB_"):
+            fail(f"commercial production environment key must use ANPOS namespace, not GITHUB_ prefix: {line.split('=', 1)[0]}")
     if "ANPOS_COLLABORATOR_PROVISIONING_ENABLED=false" not in env_example:
         fail("collaborator provisioning must be off by default in the environment example")
     if "Keep Community outside ANPOS_MARKETPLACE_PLAN_MAP" not in env_example:
