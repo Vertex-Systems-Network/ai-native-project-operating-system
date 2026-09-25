@@ -15,7 +15,6 @@ test("production sandbox live probe verifies signed execution and replay rejecti
     "ANPOS_SANDBOX_SIGNING_SECRET",
     "ANPOS_SANDBOX_REQUEST_SKEW_SECONDS",
     "ANPOS_PUBLIC_BASE_URL",
-    "VERCEL_OIDC_TOKEN",
   ] as const;
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   const secret = "s".repeat(48);
@@ -24,7 +23,6 @@ test("production sandbox live probe verifies signed execution and replay rejecti
   process.env.ANPOS_SANDBOX_SIGNING_SECRET = secret;
   process.env.ANPOS_SANDBOX_REQUEST_SKEW_SECONDS = "120";
   process.env.ANPOS_PUBLIC_BASE_URL = "https://anpos.example.test";
-  process.env.VERCEL_OIDC_TOKEN = "header.payload.signature";
 
   let calls = 0;
   let firstBody = "";
@@ -85,7 +83,7 @@ test("production sandbox live probe verifies signed execution and replay rejecti
       assert.equal(body, firstBody);
       assert.equal(headers.get("x-anpos-sandbox-nonce"), firstNonce);
       return Response.json({ ok: false, error: "sandbox_request_replayed" }, { status: 409 });
-    }) as typeof fetch);
+    }) as typeof fetch, async () => "header.payload.signature");
 
     assert.equal(calls, 2);
     assert.equal(evidence.driver_id, "remote_ephemeral_signed_gateway_v1");
