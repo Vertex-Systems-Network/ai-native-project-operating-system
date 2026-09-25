@@ -77,6 +77,7 @@ jobs:
           node <<'NODE'
           const { generateKeyPairSync, randomBytes } = require("node:crypto");
 
+          (async () => {
           const token = process.env.VERCEL_TOKEN;
           const projectId = process.env.VERCEL_PROJECT_ID;
           const teamId = process.env.VERCEL_ORG_ID;
@@ -128,6 +129,10 @@ jobs:
           const failed = Array.isArray(result?.failed) ? result.failed.length : 0;
           if (failed) throw new Error(`Vercel env bootstrap reported ${failed} failed records`);
           console.log("Internal ANPOS production secrets configured.");
+          })().catch((error) => {
+            console.error(error instanceof Error ? error.message : String(error));
+            process.exit(1);
+          });
           NODE
 
       - name: Deploy exact verified service to Vercel production
