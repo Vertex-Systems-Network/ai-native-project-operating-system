@@ -15,16 +15,20 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
     def test_plugin_identity_is_anpos_14_aware(self) -> None:
         plugin = load("blueprints/plugins/anpos-repository-supervisor/plugin.json")
         self.assertEqual(plugin["name"], "anpos-repository-supervisor")
-        self.assertEqual(plugin["version"], "0.8.0")
+        self.assertEqual(plugin["version"], "0.8.1")
         self.assertIn("ANPOS 1.4.0", plugin["description"])
         self.assertIn("Requirements 83–96", plugin["description"])
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 8)
+        self.assertEqual(contract["schema_version"], 9)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
+        self.assertIn("repository_list_billing_accounts", names)
+        billing = next(tool for tool in contract["tools"] if tool["name"] == "repository_list_billing_accounts")
+        self.assertTrue(billing["read_only"])
+        self.assertIn("never_enumerate_global_billing_accounts", billing["server_requirements"])
         audit = next(tool for tool in contract["tools"] if tool["name"] == "repository_audit")
         self.assertIn("anpos_protocol_version", audit["required_outputs"])
         self.assertIn("assurance_state_summary", audit["required_outputs"])
