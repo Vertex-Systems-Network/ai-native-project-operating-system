@@ -77,6 +77,8 @@ def main() -> int:
         (
             'SERVICE_REPOSITORY_NAME = "anpos-commercial-service"',
             'TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"',
+            'EMBEDDED_TEMPLATE_DIR = PurePosixPath("vendor-release/template")',
+            'EMBEDDED_TEMPLATE_ARCHIVE = PurePosixPath("vendor-release/anpos-commercial-template.zip")',
             'VENDOR_BOUNDARY_REPOSITORY_PATH = "config/licensing/vendor-source-boundary.json"',
             'source_material": "committed_git_blobs_at_head"',
             '"cat-file", "blob"',
@@ -90,6 +92,10 @@ def main() -> int:
             'canonical-minus-vendor-only-paths',
             'path_matches_vendor_only(entry.path, vendor_only_paths)',
             'contains_secrets": False',
+            "write_deterministic_zip",
+            "embed_certified_template_release",
+            "generated:embedded-certified-template-manifest",
+            "generated:embedded-certified-template-archive",
         ),
         "vendor exporter",
     )
@@ -118,6 +124,7 @@ def main() -> int:
         (
             "test_service_export_strips_prefix_and_uses_committed_blob_provenance",
             "test_template_export_excludes_all_vendor_only_paths",
+            "test_embedded_template_archive_is_deterministic",
             "test_untracked_secret_is_never_exported",
             "test_tracked_secret_like_file_fails_closed",
             "test_dirty_tracked_tree_rejected_but_override_still_exports_head_blob",
