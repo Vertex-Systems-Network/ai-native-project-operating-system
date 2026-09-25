@@ -114,7 +114,7 @@ class CommercialLaunchPackageTests(unittest.TestCase):
         self.assertTrue(listing_webhook["required"])
         self.assertEqual(listing_webhook["event"], "marketplace_purchase")
         self.assertEqual(listing_webhook["url_path"], "/api/webhooks/github/marketplace")
-        self.assertEqual(listing_webhook["secret_environment_key"], "GITHUB_WEBHOOK_SECRET")
+        self.assertEqual(listing_webhook["secret_environment_key"], "ANPOS_GITHUB_WEBHOOK_SECRET")
         self.assertIn("administration:write_for_private_template_distribution", marketplace["forbidden_vendor_permissions"])
 
         self.assertEqual(supervisor["role"], "repository_supervisor_app")
