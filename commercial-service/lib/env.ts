@@ -51,6 +51,13 @@ export type RemoteSandboxConfig = {
   requestSkewSeconds: number;
 };
 
+export type InternalSupervisorReadTestGrant = {
+  githubLogin: string;
+  expiresAt: string;
+};
+
+const INTERNAL_SUPERVISOR_READ_TEST_MAX_TTL_MS = 48 * 60 * 60 * 1000;
+
 const ENV_ALIASES: Record<string, readonly string[]> = {
   GITHUB_WEBHOOK_SECRET: ["ANPOS_GITHUB_WEBHOOK_SECRET", "ANPOS_WEBHOOK_SECRET"],
   GITHUB_MARKETPLACE_APP_ID: ["ANPOS_MARKETPLACE_APP_ID"],
@@ -247,6 +254,49 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
   return [...new Set(problems)];
 }
 
+export function internalSupervisorReadTestGrantConfigured(): boolean {
+  return Boolean(
+    rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN")
+    || rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT"),
+  );
+}
+
+export function internalSupervisorReadTestConfigurationProblems(now = new Date()): string[] {
+  const problems: string[] = [];
+  const login = rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN");
+  const expiresAt = rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT");
+  if (!login && !expiresAt) return problems;
+  if (!login) problems.push("missing:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN");
+  else if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(login)) {
+    problems.push("invalid:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN");
+  }
+  if (!expiresAt) problems.push("missing:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT");
+  else {
+    const expiresAtMs = Date.parse(expiresAt);
+    if (!Number.isFinite(expiresAtMs)) {
+      problems.push("invalid:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT");
+    } else if (expiresAtMs <= now.getTime()) {
+      problems.push("expired:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT");
+    } else if (expiresAtMs - now.getTime() > INTERNAL_SUPERVISOR_READ_TEST_MAX_TTL_MS) {
+      problems.push("unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_TTL_TOO_LONG");
+    }
+  }
+  return [...new Set(problems)];
+}
+
+export function internalSupervisorReadTestGrant(now = new Date()): InternalSupervisorReadTestGrant | null {
+  if (internalSupervisorReadTestConfigurationProblems(now).length) return null;
+  const githubLogin = rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN");
+  const expiresAt = rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT");
+  if (!githubLogin || !expiresAt) return null;
+  return { githubLogin, expiresAt };
+}
+
+export function internalSupervisorReadTestGrantActiveForLogin(login: string, now = new Date()): boolean {
+  const grant = internalSupervisorReadTestGrant(now);
+  return Boolean(grant && grant.githubLogin.toLowerCase() === login.trim().toLowerCase());
+}
+
 function premiumPaidPlanConfigured(): boolean {
   const raw = value("ANPOS_MARKETPLACE_PLAN_MAP");
   if (!raw) return false;
@@ -285,6 +335,10 @@ export function communityLaunchConfigurationProblems(): string[] {
 export function configurationProblems(): string[] {
   const problems = commonProblems(FULL_REQUIRED, true);
   if (premiumPaidPlanConfigured()) problems.push(...premiumDistributionConfigurationProblems());
+  if (internalSupervisorReadTestGrantConfigured()) {
+    problems.push(...internalSupervisorReadTestConfigurationProblems());
+    problems.push("unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_ACTIVE");
+  }
   return [...new Set(problems)];
 }
 
