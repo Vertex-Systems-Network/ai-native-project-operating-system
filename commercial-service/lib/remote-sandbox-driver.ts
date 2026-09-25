@@ -1,4 +1,5 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { getVercelOidcToken } from "@vercel/oidc";
 import { remoteSandboxConfig } from "./env";
 import {
   SandboxRequestError,
@@ -88,10 +89,14 @@ export function verifyRemoteSandboxResponseSignature(input: {
   );
 }
 
-export function remoteSandboxTrustedSourceHeaders(endpoint: string): Record<string, string> {
-  const token = process.env.VERCEL_OIDC_TOKEN?.trim() ?? "";
+export type VercelOidcTokenProvider = () => string | undefined | Promise<string | undefined>;
+
+export async function remoteSandboxTrustedSourceHeaders(
+  endpoint: string,
+  tokenProvider: VercelOidcTokenProvider = getVercelOidcToken,
+): Promise<Record<string, string>> {
   const publicBase = process.env.ANPOS_PUBLIC_BASE_URL?.trim() ?? "";
-  if (!token || !publicBase || /[\r\n]/.test(token) || token.split(".").length !== 3) return {};
+  if (!publicBase) return {};
   try {
     const endpointUrl = new URL(endpoint);
     const publicUrl = new URL(publicBase);
@@ -99,6 +104,14 @@ export function remoteSandboxTrustedSourceHeaders(endpoint: string): Record<stri
   } catch {
     return {};
   }
+
+  let token = "";
+  try {
+    token = (await tokenProvider())?.trim() ?? "";
+  } catch {
+    return {};
+  }
+  if (!token || /[\r\n]/.test(token) || token.split(".").length !== 3) return {};
   return { "x-vercel-trusted-oidc-idp-token": token };
 }
 
@@ -228,12 +241,13 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
       1_200_000,
     );
     const timer = setTimeout(() => controller.abort(), outerTimeoutMs);
+    const trustedSourceHeaders = await remoteSandboxTrustedSourceHeaders(this.endpoint);
     let response: Response;
     try {
       response = await this.fetchImpl(this.endpoint, {
         method: "POST",
         headers: {
-          ...remoteSandboxTrustedSourceHeaders(this.endpoint),
+          ...trustedSourceHeaders,
           Accept: "application/json",
           "Content-Type": "application/json",
           "X-Anpos-Sandbox-Protocol": "2",
