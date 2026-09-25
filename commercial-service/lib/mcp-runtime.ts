@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { requireGithubAccountAccessForContext, type GitHubAuthContext } from "./auth";
 import { getEntitlement, listBillingAccountsForPrincipal, reconcileEntitlement } from "./entitlements";
+import { internalSupervisorReadTestGrantActiveForLogin } from "./env";
 import {
   mcpBearerChallenge,
   requireMcpScope,
@@ -401,6 +402,14 @@ async function authorizeRepositorySupervisorCapability(
   requestId: string,
   capability: "repository_supervisor_read" | "repository_supervisor_write",
 ): Promise<void> {
+  if (
+    capability === "repository_supervisor_read"
+    && billingAccountId === principal.github_user_id
+    && internalSupervisorReadTestGrantActiveForLogin(principal.github_login)
+  ) {
+    return;
+  }
+
   const current = await getEntitlement(billingAccountId);
   if (!current) throw new Error("ENTITLEMENT_NOT_FOUND");
 
@@ -536,6 +545,28 @@ async function callTool(
             },
           },
         });
+      }
+      if (internalSupervisorReadTestGrantActiveForLogin(principal.github_login)) {
+        const internalAccount = {
+          billing_account_id: principal.github_user_id,
+          github_login: principal.github_login,
+          github_account_type: "User" as const,
+          state: "internal_test",
+          plan_id: "internal_read_test",
+          capabilities: {
+            repository_supervisor_read: {
+              allowed: true,
+              reason: "internal_read_test_grant",
+            },
+            repository_supervisor_write: {
+              allowed: false,
+              reason: "internal_read_test_grant_read_only",
+            },
+          },
+        };
+        const ownIndex = accounts.findIndex((account) => account.billing_account_id === principal.github_user_id);
+        if (ownIndex >= 0) accounts.splice(ownIndex, 1);
+        accounts.unshift(internalAccount);
       }
       return toolSuccess({ accounts });
     }
@@ -673,7 +704,7 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.8",
+            version: "0.4.9",
           },
         },
         instructions: "Use repository_profile first when account identity is unclear, then repository_list_billing_accounts to select a server-authorized billing_account_id. Paid repository tools remain re-authorized server-side.",
@@ -693,7 +724,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.8" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.9" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };

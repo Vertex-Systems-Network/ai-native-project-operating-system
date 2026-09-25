@@ -74,6 +74,7 @@ def main() -> int:
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
         "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
         "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS", "ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS",
+        "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN", "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT",
         "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET", "ANPOS_SANDBOX_REQUEST_SKEW_SECONDS",
     ):
         if name not in env_example:
@@ -100,6 +101,9 @@ def main() -> int:
             "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
             "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
             "mcpOAuthConfigurationProblems", "mcpOAuthConfig", "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS",
+            "internalSupervisorReadTestConfigurationProblems", "internalSupervisorReadTestGrantActiveForLogin",
+            "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN", "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT",
+            "unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_ACTIVE", "unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_TTL_TOO_LONG",
             "supervisorAppConfigurationProblems", "supervisorAppConfig",
             "remoteSandboxConfigurationProblems", "remoteSandboxConfig",
             "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET",
@@ -274,6 +278,7 @@ def main() -> int:
         (
             "MCP_TOOL_DEFINITIONS", "server/discover", "2026-07-28", "repository_profile",
             '"openai/profile": true', "repository_list_billing_accounts", "listBillingAccountsForPrincipal", "buildPluginCapabilityMatrix",
+            "internalSupervisorReadTestGrantActiveForLogin", "internal_read_test_grant", "internal_read_test_grant_read_only",
             "repository_resolve", "repository_audit", "repository_get_assurance",
             "billing_account_id", "authorizeRepositorySupervisorCapability", "requireMcpScope",
             "repository_plan_anpos_change", "repository_apply_anpos_change", "repository_open_change_request",
@@ -330,6 +335,7 @@ def main() -> int:
         (
             "mcpOAuthConfigurationProblems", "ensureSchema", "repository_supervisor_mcp",
             "protected_resource_metadata", "authorization_server_metadata", "supervisorAppConfigurationProblems", "write_scope_available: true",
+            "internalSupervisorReadTestConfigurationProblems", "internal_read_test_active",
         ),
         "MCP readiness gate",
     )
@@ -705,8 +711,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 15:
-        fail("commercial service API contract must be schema_version 15")
+    if api_contract.get("schema_version") != 16:
+        fail("commercial service API contract must be schema_version 16")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",

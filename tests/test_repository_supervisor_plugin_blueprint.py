@@ -21,7 +21,7 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
 
     def test_provider_contract_binds_anpos_14_assurance(self) -> None:
         contract = load("blueprints/plugins/anpos-repository-supervisor/contracts/repository-provider-contract.json")
-        self.assertEqual(contract["schema_version"], 9)
+        self.assertEqual(contract["schema_version"], 10)
         self.assertEqual(contract["anpos_protocol_baseline"], "1.4.0")
         names = {tool["name"] for tool in contract["tools"]}
         self.assertIn("repository_get_assurance", names)
@@ -97,6 +97,9 @@ class RepositorySupervisorPluginBlueprintTests(unittest.TestCase):
         self.assertEqual(transport["issued_scopes"], ["anpos:profile", "anpos:repo:read", "anpos:repo:write"])
         self.assertTrue(transport["write_scope_available"])
         self.assertEqual(transport["github_app_role"], "dedicated_repository_supervisor_app")
+        self.assertEqual(transport["internal_read_e2e_grant"]["maximum_ttl_hours"], 48)
+        self.assertFalse(transport["internal_read_e2e_grant"]["planning_or_write_authorized"])
+        self.assertFalse(transport["internal_read_e2e_grant"]["billing_evidence"])
         for tool in [
             "repository_plan_anpos_change", "repository_resolve_plan_conflicts", "repository_apply_anpos_change",
             "repository_open_change_request", "repository_get_change_request",
