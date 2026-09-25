@@ -25,7 +25,7 @@ Blueprint presence is never proof that a capability is enabled, purchased, conne
 
 The commercial runtime uses the `ANPOS_*` environment namespace for Marketplace, Vendor Distribution, entitlement, seat, and operator configuration. New production deployments must not require environment variables whose names begin with `GITHUB_`; historical legacy names are not launch configuration.
 
-Current paid-launch sequence remains fail-closed: configure real Marketplace plan IDs, distinct Marketplace/Supervisor/Vendor App identities, verified private template distribution, signing/seat/operator controls, then prove purchase/change/cancel reconciliation and Repository Supervisor entitlement E2E before paid launch is called ready.
+Current paid-launch sequence remains fail-closed: configure real Marketplace plan IDs, distinct Marketplace/Supervisor/Vendor App identities, verified private template distribution, signing/seat/operator controls, then prove purchase/change/cancel reconciliation and Repository Supervisor entitlement E2E before paid launch is called ready. Marketplace reconciliation now preserves billing cycle, next billing date, and free-trial end time for customer-facing subscription status.
 
 ## Persistent source continuous certification in 1.3.13
 
