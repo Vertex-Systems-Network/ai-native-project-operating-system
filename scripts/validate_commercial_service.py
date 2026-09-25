@@ -60,6 +60,8 @@ def main() -> int:
         fail("commercial service prebuild must remain the guarded build migration hook")
     if package.get("devDependencies", {}).get("tsx") != "4.23.13":
         fail("commercial service test/migration TypeScript runner must remain explicitly pinned")
+    if package.get("dependencies", {}).get("@vercel/oidc") != "3.2.0":
+        fail("commercial service must pin @vercel/oidc 3.2.0 for protected same-origin sandbox calls")
 
     env_example = text(".env.example")
     for name in (
@@ -272,6 +274,17 @@ def main() -> int:
             "anpos:profile", "anpos:repo:read", "anpos:repo:write",
         ),
         "Repository Supervisor MCP OAuth broker",
+    )
+    require_markers(
+        "lib/remote-sandbox-driver.ts",
+        (
+            'import { getVercelOidcToken } from "@vercel/oidc";',
+            "await getVercelOidcToken()",
+            "remoteSandboxTrustedSourceHeaders",
+            "endpointUrl.origin !== publicUrl.origin",
+            "x-vercel-trusted-oidc-idp-token",
+        ),
+        "protected same-origin sandbox OIDC forwarding",
     )
     require_markers(
         "lib/mcp-runtime.ts",
