@@ -47,9 +47,26 @@ test("Community launch config is independent from paid and vendor secrets", () =
 
   const fullProblems = configurationProblems();
   assert.ok(fullProblems.includes("missing:ANPOS_MARKETPLACE_PLAN_MAP"));
-  assert.ok(fullProblems.includes("missing:ANPOS_VENDOR_APP_ID"));
   assert.ok(fullProblems.includes("missing:ANPOS_ENTITLEMENT_PRIVATE_KEY"));
   assert.ok(fullProblems.includes("missing:ANPOS_ORG_SEAT_LIMITS"));
+});
+
+
+test("Developer-only paid launch does not require Vendor Distribution App configuration", () => {
+  clearManagedEnv();
+  configureCommunityOnly();
+  process.env.ANPOS_MARKETPLACE_PLAN_MAP = JSON.stringify({ "9001": "developer" });
+  process.env.ANPOS_ENTITLEMENT_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nembedded-release-test\n-----END PRIVATE KEY-----";
+  process.env.ANPOS_ENTITLEMENT_KEY_ID = "developer-key";
+  process.env.ANPOS_OPERATOR_TOKEN = "o".repeat(48);
+  process.env.ANPOS_ORG_SEAT_LIMITS = JSON.stringify({ developer: 1 });
+
+  const problems = configurationProblems();
+  assert.equal(problems.includes("missing:ANPOS_VENDOR_APP_ID"), false);
+  assert.equal(problems.includes("missing:ANPOS_VENDOR_APP_PRIVATE_KEY"), false);
+  assert.equal(problems.includes("missing:ANPOS_VENDOR_INSTALLATION_ID"), false);
+  assert.equal(problems.includes("missing:ANPOS_PRIVATE_TEMPLATE_REPO"), false);
+  assert.equal(problems.includes("missing:ANPOS_COMMERCIAL_RELEASE_REF"), false);
 });
 
 test("Community Marketplace identity stays outside paid plan mapping", () => {
