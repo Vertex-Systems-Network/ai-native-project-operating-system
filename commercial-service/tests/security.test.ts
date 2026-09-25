@@ -24,6 +24,8 @@ const MANAGED_ENV = [
   "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_ENTITLEMENT_ISSUER",
   "ANPOS_OPERATOR_TOKEN", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS",
+  "ANPOS_PAID_BILLING_PROVIDER", "ANPOS_PADDLE_ENVIRONMENT", "ANPOS_PADDLE_API_KEY", "ANPOS_PADDLE_WEBHOOK_SECRET",
+  "ANPOS_PADDLE_CLIENT_TOKEN", "ANPOS_PADDLE_CHECKOUT_URL", "ANPOS_PADDLE_WEBHOOK_TOLERANCE_SECONDS", "ANPOS_PADDLE_PRICE_MAP",
   "ANPOS_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF",
   "ANPOS_PRIVATE_PREMIUM_REPO", "ANPOS_PREMIUM_RELEASE_REF",
   "ANPOS_PREMIUM_MANIFEST_SHA256", "ANPOS_PREMIUM_CONTENT_SET_SHA256",
@@ -166,6 +168,27 @@ test("Marketplace and vendor GitHub App roles cannot collapse", () => {
   process.env.ANPOS_VENDOR_APP_ID = "654321";
   process.env.ANPOS_VENDOR_APP_PRIVATE_KEY = process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY;
   assert.ok(configurationProblems().includes("unsafe:ANPOS_APP_PRIVATE_KEY_REUSE"));
+});
+
+test("Paddle paid provider is validated without requiring paid Marketplace plan IDs", async () => {
+  clearManagedEnv();
+  configure();
+  process.env.ANPOS_PAID_BILLING_PROVIDER = "paddle";
+  delete process.env.ANPOS_MARKETPLACE_PLAN_MAP;
+  delete process.env.ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID;
+  process.env.ANPOS_PADDLE_ENVIRONMENT = "sandbox";
+  process.env.ANPOS_PADDLE_API_KEY = "pdl_sdbx_apikey_" + "x".repeat(32);
+  process.env.ANPOS_PADDLE_WEBHOOK_SECRET = "p".repeat(48);
+  process.env.ANPOS_PADDLE_CLIENT_TOKEN = "test_" + "c".repeat(32);
+  process.env.ANPOS_PADDLE_CHECKOUT_URL = "https://license.example.test/billing/checkout";
+  process.env.ANPOS_PADDLE_PRICE_MAP = JSON.stringify({
+    "developer:month": "pri_" + "a".repeat(26),
+    "developer:year": "pri_" + "b".repeat(26),
+  });
+  const problems = configurationProblems();
+  assert.equal(problems.includes("missing:ANPOS_MARKETPLACE_PLAN_MAP"), false);
+  assert.equal(problems.includes("missing:ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID"), false);
+  assert.equal(problems.some((problem) => problem.includes("ANPOS_PADDLE_")), false);
 });
 
 test("remote sandbox configuration fails closed on weak or unsafe gateway settings", async () => {
