@@ -1,6 +1,6 @@
 import { createHash, createPrivateKey, sign } from "node:crypto";
 import packageJson from "@/package.json";
-import { marketplaceAppConfig, premiumDistributionConfig, serviceConfig } from "./env";
+import { marketplaceAppConfig, premiumDistributionConfig, serviceConfig, vendorDistributionConfig } from "./env";
 import { parsePremiumReleaseManifest, type VerifiedPremiumRelease } from "./premium-releases";
 import {
   parseTemplateReleaseManifest,
@@ -24,7 +24,7 @@ function githubAppJwt(role: GitHubAppRole): string {
     appId = cfg.githubMarketplaceAppId;
     privateKeyPem = cfg.githubMarketplaceAppPrivateKeyPem;
   } else {
-    const cfg = serviceConfig();
+    const cfg = vendorDistributionConfig();
     appId = cfg.githubVendorAppId;
     privateKeyPem = cfg.githubVendorAppPrivateKeyPem;
   }
@@ -49,7 +49,7 @@ function privateRepository(full: string): { full: string; owner: string; repo: s
 }
 
 function privateTemplateRepository(): { full: string; owner: string; repo: string } {
-  return privateRepository(serviceConfig().privateTemplateRepo);
+  return privateRepository(vendorDistributionConfig().privateTemplateRepo);
 }
 
 function privatePremiumRepository(): { full: string; owner: string; repo: string } {
@@ -198,7 +198,7 @@ async function vendorInstallationToken(
   repository: { full: string; owner: string; repo: string },
   operation: "archive" | "collaborator",
 ): Promise<string> {
-  const cfg = serviceConfig();
+  const cfg = vendorDistributionConfig();
   const installationId = cfg.githubVendorInstallationId;
   const permissions = operation === "collaborator"
     ? { administration: "write" }
@@ -222,7 +222,7 @@ export type CommercialReleaseMetadata = VerifiedTemplateRelease & {
 };
 
 export async function templateReleaseManifest(): Promise<CommercialReleaseMetadata> {
-  const cfg = serviceConfig();
+  const cfg = vendorDistributionConfig();
   const repository = privateTemplateRepository();
   const token = await vendorInstallationToken(repository, "archive");
   const response = await fetch(
@@ -257,7 +257,7 @@ export type CommercialReleasePlanSnapshot = VerifiedTemplateReleasePlan & {
 };
 
 export async function templateReleasePlanSnapshot(): Promise<CommercialReleasePlanSnapshot> {
-  const cfg = serviceConfig();
+  const cfg = vendorDistributionConfig();
   const repository = privateTemplateRepository();
   const token = await vendorInstallationToken(repository, "archive");
   const response = await fetch(
@@ -388,7 +388,7 @@ export async function materializeTemplateReleaseFiles(
 }
 
 export async function templateArchiveRedirect(): Promise<{ repository: string; release_ref: string; location: string }> {
-  const cfg = serviceConfig();
+  const cfg = vendorDistributionConfig();
   const repository = privateTemplateRepository();
   const token = await vendorInstallationToken(repository, "archive");
   const response = await fetch(
