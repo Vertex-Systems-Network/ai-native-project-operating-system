@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         canonical_source_tree: release.source_tree,
       })],
     );
-    return new Response(archive.content, {
+    return new Response(new Uint8Array(archive.content), {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
