@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import packageJson from "../package.json";
-import { templateReleasePlanSnapshot, type CommercialReleasePlanSnapshot } from "./github";
+import { templateReleasePlanSnapshot, type CommercialReleasePlanSnapshot } from "./embedded-release";
 import {
   auditGithubRepository,
   listGithubRepositoryTree,
