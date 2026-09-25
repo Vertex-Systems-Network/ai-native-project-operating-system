@@ -126,14 +126,14 @@ def main() -> int:
             fail(f"operator launch renderer must not accept secret/business-authority CLI flag: {forbidden}")
 
     for marker in (
-        "GITHUB_MARKETPLACE_APP_ID",
-        "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+        "ANPOS_MARKETPLACE_APP_ID",
+        "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
         "ANPOS_GITHUB_SUPERVISOR_APP_ID",
         "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID",
         "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
-        "GITHUB_VENDOR_APP_ID",
-        "GITHUB_VENDOR_APP_PRIVATE_KEY",
-        "GITHUB_VENDOR_INSTALLATION_ID",
+        "ANPOS_VENDOR_APP_ID",
+        "ANPOS_VENDOR_APP_PRIVATE_KEY",
+        "ANPOS_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO",
         "ANPOS_COMMERCIAL_RELEASE_REF",
         "ANPOS_SANDBOX_ENDPOINT",
@@ -292,7 +292,7 @@ def main() -> int:
             fail("operator handoff must identify the separate Marketplace listing webhook surface")
         if listing_webhook.get("event") != "marketplace_purchase" or listing_webhook.get("url") != "https://license.example.test/api/webhooks/github/marketplace":
             fail("operator handoff Marketplace listing webhook is invalid")
-        if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":
+        if listing_webhook.get("secret_environment_key") != "ANPOS_GITHUB_WEBHOOK_SECRET":
             fail("operator handoff must bind the Marketplace listing webhook secret environment key")
         if "administration" in mq or "contents" in mq:
             fail("Marketplace registration URL must not request Supervisor/vendor repository permissions")
@@ -353,14 +353,14 @@ def main() -> int:
         fail("operator renderer depends on archive-only Vendor App blueprint")
 
     for env_name in (
-        "GITHUB_MARKETPLACE_APP_ID",
-        "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
+        "ANPOS_MARKETPLACE_APP_ID",
+        "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
         "ANPOS_GITHUB_SUPERVISOR_APP_ID",
         "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID",
         "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
-        "GITHUB_VENDOR_APP_ID",
-        "GITHUB_VENDOR_APP_PRIVATE_KEY",
-        "GITHUB_VENDOR_INSTALLATION_ID",
+        "ANPOS_VENDOR_APP_ID",
+        "ANPOS_VENDOR_APP_PRIVATE_KEY",
+        "ANPOS_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO",
         "ANPOS_COMMERCIAL_RELEASE_REF",
         "ANPOS_SANDBOX_ENDPOINT",
@@ -391,9 +391,9 @@ def main() -> int:
         "Marketplace listing webhook",
         "Repository Supervisor App",
         "private Vendor Distribution App",
-        "GITHUB_MARKETPLACE_APP_ID",
+        "ANPOS_MARKETPLACE_APP_ID",
         "ANPOS_GITHUB_SUPERVISOR_APP_ID",
-        "GITHUB_VENDOR_APP_ID",
+        "ANPOS_VENDOR_APP_ID",
         "ANPOS_COMMERCIAL_RELEASE_REF",
         "40-character lowercase Git commit SHA",
         "/api/v1/releases/current",
