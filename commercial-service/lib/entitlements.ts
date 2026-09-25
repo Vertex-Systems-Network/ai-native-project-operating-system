@@ -63,6 +63,32 @@ async function audit(client: PoolClient, requestId: string, eventType: string, a
   );
 }
 
+function storedEntitlementResult(row: any): ReconciledEntitlement {
+  const rawState = String(row?.state ?? "cancelled");
+  const state: ReconciledEntitlement["state"] = ["active", "trial", "grace"].includes(rawState)
+    ? rawState as ReconciledEntitlement["state"]
+    : "cancelled";
+  const accountType = row?.github_account_type === "Organization"
+    ? "Organization"
+    : row?.github_account_type === "User"
+      ? "User"
+      : null;
+  const provider = row?.billing_provider === "paddle" ? "paddle" : "github_marketplace";
+  const features = Array.isArray(row?.features) ? row.features.map(String) : [];
+  return {
+    state,
+    github_account_id: Number(row?.github_account_id ?? 0),
+    github_account_type: accountType,
+    github_login: row?.github_login == null ? null : String(row.github_login),
+    plan_id: row?.plan_id == null ? null : String(row.plan_id),
+    seats: row?.seats == null ? null : Number(row.seats),
+    entitlements: features,
+    signed_entitlement: row?.signed_envelope ?? null,
+    seat_assignment_required: accountType === "Organization" && state !== "cancelled" && features.length > 0,
+    billing_provider: provider,
+  };
+}
+
 async function applyAccessRevocation(result: ReconciledEntitlement, requestId: string): Promise<void> {
   if (result.state !== "cancelled" && result.entitlements.includes("private_template_access")) return;
   const revoked = await revokeAllTemplateGrantsForSource(result.github_account_id, requestId);
@@ -172,7 +198,7 @@ async function persistNormalizedEntitlement(
 async function cancelMarketplaceEntitlement(accountId: number, requestId: string): Promise<ReconciledEntitlement> {
   const existing = await getEntitlement(accountId);
   if (existing?.billing_provider && existing.billing_provider !== "github_marketplace") {
-    throw new Error("BILLING_PROVIDER_MISMATCH");
+    return storedEntitlementResult(existing);
   }
   await db().query(
     "UPDATE entitlements SET state='cancelled',signed_envelope=NULL,expires_at=NOW(),billing_provider_status='absent',updated_at=NOW() WHERE github_account_id=$1 AND billing_provider='github_marketplace'",
@@ -214,6 +240,11 @@ export async function reconcileMarketplaceEntitlement(
   }
   const marketplacePlanId = subscription.marketplace_purchase.plan.id;
   const resolvedPlan = resolveMarketplacePlan(marketplacePlanId);
+  const existing = await getEntitlement(accountId);
+  if (paidBillingProvider() !== "github_marketplace") {
+    if (resolvedPlan.paid) throw new Error("BILLING_PROVIDER_MISMATCH");
+    if (existing?.billing_provider === "paddle") return storedEntitlementResult(existing);
+  }
   return persistNormalizedEntitlement({
     githubAccountId: subscription.id,
     githubAccountType: subscription.type as "User" | "Organization",
@@ -244,6 +275,15 @@ export async function reconcilePaddleSubscription(
   const snapshot = paddleSubscriptionSnapshot(await getPaddleSubscription(subscriptionId));
   if (expectedAccountId != null && snapshot.githubAccountId !== expectedAccountId) {
     throw new Error("PADDLE_ACCOUNT_BINDING_MISMATCH");
+  }
+  const existing = await getEntitlement(snapshot.githubAccountId);
+  if (
+    existing?.billing_provider === "paddle"
+    && existing.billing_provider_subscription_id
+    && String(existing.billing_provider_subscription_id) !== snapshot.providerSubscriptionId
+    && ACTIVE_STATES.has(String(existing.state))
+  ) {
+    return storedEntitlementResult(existing);
   }
   return persistNormalizedEntitlement({
     githubAccountId: snapshot.githubAccountId,
