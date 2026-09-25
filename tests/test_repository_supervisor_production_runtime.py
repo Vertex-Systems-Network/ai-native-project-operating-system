@@ -18,8 +18,8 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
         schema = load("schemas/execution-sandbox.schema.json")
         policy = load("config/runtime/execution-sandbox.json")
         Draft202012Validator(schema).validate(policy)
-        self.assertEqual(policy["schema_version"], 3)
-        self.assertEqual(policy["status"], "artifact_channel_source_implemented_live_gateway_evidence_pending")
+        self.assertEqual(policy["schema_version"], 4)
+        self.assertEqual(policy["status"], "vercel_gateway_source_implemented_live_gateway_evidence_pending")
         driver = policy["production_driver"]
         self.assertTrue(driver["source_ready"])
         self.assertEqual(driver["live_gateway_evidence"], "pending")
@@ -27,6 +27,15 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
         self.assertEqual(driver["workspace_source_binding"], "github_repository_full_name_plus_immutable_commit_sha_or_explicit_empty")
         self.assertEqual(driver["artifact_channel"], "signed_bounded_input_files_plus_exact_output_allowlist")
         self.assertEqual(driver["runtime_requirements"], ["python3>=3.12"])
+        self.assertEqual(driver["gateway_source"], "commercial-service/lib/vercel-sandbox-gateway.ts")
+        self.assertEqual(driver["gateway_route"], "/v1/execute")
+        self.assertEqual(driver["gateway_runtime"], "vercel_sandbox_python3.13")
+        self.assertEqual(driver["gateway_network_policy"], "deny-all")
+        self.assertEqual(driver["gateway_replay_ledger"], "sandbox_gateway_request_nonces")
+        self.assertEqual(driver["gateway_live_execution_timeout_seconds"], 240)
+        self.assertEqual(driver["gateway_function_max_duration_seconds"], 300)
+        self.assertEqual(driver["gateway_workspace_base_modes_live"], ["empty"])
+        self.assertFalse(driver["environment_variable_forwarding_live"])
         self.assertTrue(driver["workspace_destroy_after_execution"])
         self.assertEqual(policy["network"]["default"], "deny")
         self.assertFalse(policy["local_process_fallback"])
@@ -76,6 +85,10 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
             "commercial-service/lib/full-plan-sandbox-runner.ts",
             "commercial-service/migrations/005_repository_supervisor_full_apply.sql",
             "commercial-service/migrations/006_guarded_empty_repository_initialization.sql",
+            "commercial-service/migrations/007_vercel_sandbox_gateway_replay.sql",
+            "commercial-service/lib/vercel-sandbox-gateway.ts",
+            "commercial-service/app/v1/execute/route.ts",
+            "commercial-service/tests/vercel-sandbox-gateway.test.ts",
             "commercial-service/tests/repository-supervisor-full-apply.test.ts",
             "commercial-service/app/api/ready/sandbox/route.ts",
             "commercial-service/scripts/verify-repository-supervisor-e2e.ts",

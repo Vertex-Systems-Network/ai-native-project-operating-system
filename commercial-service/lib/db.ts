@@ -1,7 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import { databaseConfig } from "./env";
 
-const REQUIRED_MIGRATION = "006_guarded_empty_repository_initialization.sql";
+const REQUIRED_MIGRATION = "007_vercel_sandbox_gateway_replay.sql";
 let pool: Pool | null = null;
 let schemaReady = false;
 
@@ -38,7 +38,8 @@ export async function ensureSchema(): Promise<void> {
         to_regclass('public.mcp_oauth_authorization_codes') AS mcp_oauth_authorization_codes,
         to_regclass('public.mcp_oauth_access_tokens') AS mcp_oauth_access_tokens,
         to_regclass('public.repository_supervisor_write_plans') AS repository_supervisor_write_plans,
-        to_regclass('public.repository_supervisor_write_idempotency') AS repository_supervisor_write_idempotency
+        to_regclass('public.repository_supervisor_write_idempotency') AS repository_supervisor_write_idempotency,
+        to_regclass('public.sandbox_gateway_request_nonces') AS sandbox_gateway_request_nonces
     `);
     if (Object.values(tables.rows[0] ?? {}).some((value) => value == null)) {
       throw new Error("COMMERCIAL_DATABASE_SCHEMA_INCOMPLETE");

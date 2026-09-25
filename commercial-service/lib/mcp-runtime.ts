@@ -704,7 +704,7 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.9",
+            version: "0.4.10",
           },
         },
         instructions: "Use repository_profile first when account identity is unclear, then repository_list_billing_accounts to select a server-authorized billing_account_id. Paid repository tools remain re-authorized server-side.",
@@ -724,7 +724,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.9" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.10" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };

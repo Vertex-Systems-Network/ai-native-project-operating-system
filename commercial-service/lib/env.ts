@@ -44,11 +44,14 @@ export type SupervisorAppConfig = {
   sessionSecret: string;
 };
 
-export type RemoteSandboxConfig = {
-  endpoint: string;
+export type SandboxGatewayConfig = {
   driverId: string;
   signingSecret: string;
   requestSkewSeconds: number;
+};
+
+export type RemoteSandboxConfig = SandboxGatewayConfig & {
+  endpoint: string;
 };
 
 export type InternalSupervisorReadTestGrant = {
@@ -354,12 +357,42 @@ export function webhookConfig(): { githubWebhookSecret: string } {
   return { githubWebhookSecret: value("GITHUB_WEBHOOK_SECRET")! };
 }
 
-export function remoteSandboxConfigurationProblems(): string[] {
+export function sandboxGatewayConfigurationProblems(): string[] {
   const problems: string[] = [];
-  const endpoint = rawValue("ANPOS_SANDBOX_ENDPOINT");
   const driverId = rawValue("ANPOS_SANDBOX_DRIVER_ID");
   const signingSecret = rawValue("ANPOS_SANDBOX_SIGNING_SECRET");
   const skew = rawValue("ANPOS_SANDBOX_REQUEST_SKEW_SECONDS");
+
+  if (!driverId) problems.push("missing:ANPOS_SANDBOX_DRIVER_ID");
+  else if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,100}$/.test(driverId)) {
+    problems.push("invalid:ANPOS_SANDBOX_DRIVER_ID");
+  }
+
+  if (!signingSecret) problems.push("missing:ANPOS_SANDBOX_SIGNING_SECRET");
+  else if (signingSecret.length < 32) problems.push("weak:ANPOS_SANDBOX_SIGNING_SECRET");
+
+  if (skew) {
+    const parsed = Number(skew);
+    if (!Number.isSafeInteger(parsed) || parsed < 30 || parsed > 300) {
+      problems.push("invalid:ANPOS_SANDBOX_REQUEST_SKEW_SECONDS");
+    }
+  }
+  return [...new Set(problems)];
+}
+
+export function sandboxGatewayConfig(): SandboxGatewayConfig {
+  const problems = sandboxGatewayConfigurationProblems();
+  if (problems.length) throw new Error(`Sandbox gateway is not configured: ${problems.join(", ")}`);
+  return {
+    driverId: rawValue("ANPOS_SANDBOX_DRIVER_ID")!,
+    signingSecret: rawValue("ANPOS_SANDBOX_SIGNING_SECRET")!,
+    requestSkewSeconds: Number(rawValue("ANPOS_SANDBOX_REQUEST_SKEW_SECONDS") ?? "120"),
+  };
+}
+
+export function remoteSandboxConfigurationProblems(): string[] {
+  const problems = [...sandboxGatewayConfigurationProblems()];
+  const endpoint = rawValue("ANPOS_SANDBOX_ENDPOINT");
 
   if (!endpoint) problems.push("missing:ANPOS_SANDBOX_ENDPOINT");
   else {
@@ -375,21 +408,6 @@ export function remoteSandboxConfigurationProblems(): string[] {
       ) problems.push("invalid:ANPOS_SANDBOX_ENDPOINT");
     } catch {
       problems.push("invalid:ANPOS_SANDBOX_ENDPOINT");
-    }
-  }
-
-  if (!driverId) problems.push("missing:ANPOS_SANDBOX_DRIVER_ID");
-  else if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,100}$/.test(driverId)) {
-    problems.push("invalid:ANPOS_SANDBOX_DRIVER_ID");
-  }
-
-  if (!signingSecret) problems.push("missing:ANPOS_SANDBOX_SIGNING_SECRET");
-  else if (signingSecret.length < 32) problems.push("weak:ANPOS_SANDBOX_SIGNING_SECRET");
-
-  if (skew) {
-    const parsed = Number(skew);
-    if (!Number.isSafeInteger(parsed) || parsed < 30 || parsed > 300) {
-      problems.push("invalid:ANPOS_SANDBOX_REQUEST_SKEW_SECONDS");
     }
   }
   return [...new Set(problems)];

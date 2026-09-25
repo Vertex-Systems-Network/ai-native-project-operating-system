@@ -369,6 +369,34 @@ def main() -> int:
         "Repository Supervisor execution sandbox contract",
     )
     require_markers(
+        "lib/vercel-sandbox-gateway.ts",
+        (
+            "Sandbox.create", 'runtime: "python3.13"', 'networkPolicy: "deny-all"', "persistent: false",
+            "sandbox_gateway_request_nonces", "buildRemoteSandboxSignature", "buildRemoteSandboxResponseSignature",
+            "sandbox_request_replayed", "sandbox_gateway_source_mode_not_implemented",
+            "sandbox_gateway_environment_names_not_implemented", "MAX_LIVE_EXECUTION_SECONDS = 240",
+            "workspace_destroyed: true", "safeSandboxArtifactPath", "sandbox_output_integrity_mismatch",
+            "root not in resolved.parents", "sandbox_network_deny_not_enforced",
+        ),
+        "Vercel sandbox gateway",
+    )
+    require_markers(
+        "app/v1/execute/route.ts",
+        ("handleSandboxGatewayRequest", "sandboxGatewayConfigurationProblems", "maxDuration = 300", "sandbox_gateway_internal_error"),
+        "Vercel sandbox gateway route",
+    )
+    require_markers(
+        "migrations/007_vercel_sandbox_gateway_replay.sql",
+        ("sandbox_gateway_request_nonces", "PRIMARY KEY", "request_id UUID NOT NULL UNIQUE", "expires_at"),
+        "sandbox replay migration",
+    )
+    require_markers(
+        "tests/vercel-sandbox-gateway.test.ts",
+        ("signed Vercel sandbox gateway request executes with deny-all", "rejects bad signatures", "rejects replayed nonce"),
+        "Vercel sandbox gateway tests",
+    )
+
+    require_markers(
         "lib/remote-sandbox-driver.ts",
         (
             "RemoteEphemeralSandboxDriver", "productionSandboxDriver", "buildRemoteSandboxSignature",
@@ -461,7 +489,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "006_guarded_empty_repository_initialization.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "007_vercel_sandbox_gateway_replay.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "sandbox_gateway_request_nonces", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -516,6 +544,14 @@ def main() -> int:
             ".anpos-bootstrap-seed",
         ),
         "Repository Supervisor guarded empty initialization migration",
+    )
+    require_markers(
+        "migrations/007_vercel_sandbox_gateway_replay.sql",
+        (
+            "sandbox_gateway_request_nonces", "nonce TEXT PRIMARY KEY", "request_id UUID NOT NULL UNIQUE",
+            "expires_at TIMESTAMPTZ NOT NULL", "sandbox_gateway_request_nonces_expires_at_idx",
+        ),
+        "Vercel sandbox gateway replay migration",
     )
     require_markers(
         "lib/repository-supervisor-planner.ts",
@@ -711,12 +747,12 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 16:
-        fail("commercial service API contract must be schema_version 16")
+    if api_contract.get("schema_version") != 17:
+        fail("commercial service API contract must be schema_version 17")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
-        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/api/ready/mcp", "/api/ready/sandbox",
+        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/v1/execute", "/api/ready/mcp", "/api/ready/sandbox",
         "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
         "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
@@ -733,7 +769,16 @@ def main() -> int:
         "supervisor_merge_must_verify_resulting_default_branch_head",
         "sandbox_production_driver_source", "sandbox_request_signature", "sandbox_response_signature",
         "sandbox_source_binding", "sandbox_network_default_deny", "sandbox_workspace_destroy_after_execution_required",
-        "sandbox_source_ready_is_not_live_gateway_evidence", "github_runtime_e2e_verifier",
+        "sandbox_source_ready_is_not_live_gateway_evidence",
+        "sandbox_vercel_gateway_source",
+        "sandbox_vercel_gateway_route",
+        "sandbox_vercel_gateway_microvm_required",
+        "sandbox_vercel_gateway_network_deny_all_required",
+        "sandbox_vercel_gateway_durable_replay_ledger_required",
+        "sandbox_vercel_gateway_signed_success_requires_workspace_destroyed",
+        "sandbox_vercel_gateway_live_empty_workspace_only",
+        "sandbox_vercel_gateway_environment_forwarding_forbidden",
+        "sandbox_vercel_gateway_live_execution_timeout_seconds", "github_runtime_e2e_verifier",
         "github_runtime_e2e_live_evidence_contract", "github_runtime_e2e_source_harness_is_not_live_evidence",
         "github_runtime_e2e_never_busy_waits_for_ci",
         "supervisor_full_planner_source", "supervisor_full_planner_verified_release_identity_required",
@@ -766,9 +811,9 @@ def main() -> int:
             fail(f"commercial service API contract missing marker: {marker}")
 
     sandbox_policy = json.loads((ROOT / "config/runtime/execution-sandbox.json").read_text(encoding="utf-8"))
-    if sandbox_policy.get("schema_version") != 3:
-        fail("execution sandbox policy must be schema_version 3")
-    if sandbox_policy.get("status") != "artifact_channel_source_implemented_live_gateway_evidence_pending":
+    if sandbox_policy.get("schema_version") != 4:
+        fail("execution sandbox policy must be schema_version 4")
+    if sandbox_policy.get("status") != "vercel_gateway_source_implemented_live_gateway_evidence_pending":
         fail("execution sandbox policy must preserve source-ready/live-evidence-pending boundary")
     production_driver = sandbox_policy.get("production_driver", {})
     for key, expected in (
@@ -783,6 +828,15 @@ def main() -> int:
         ("redirects", "forbidden"),
         ("source_ready", True),
         ("live_gateway_evidence", "pending"),
+        ("gateway_source", "commercial-service/lib/vercel-sandbox-gateway.ts"),
+        ("gateway_route", "/v1/execute"),
+        ("gateway_runtime", "vercel_sandbox_python3.13"),
+        ("gateway_isolation", "firecracker_microvm"),
+        ("gateway_network_policy", "deny-all"),
+        ("gateway_replay_ledger", "sandbox_gateway_request_nonces"),
+        ("gateway_live_execution_timeout_seconds", 240),
+        ("gateway_function_max_duration_seconds", 300),
+        ("environment_variable_forwarding_live", False),
     ):
         if production_driver.get(key) != expected:
             fail(f"execution sandbox production driver mismatch: {key}")

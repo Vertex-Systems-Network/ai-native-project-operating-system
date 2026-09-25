@@ -153,7 +153,7 @@ export function buildFullApplySandboxRequest(input: {
     source: undefined,
     command: ["python3", ".anpos-input/apply.py"],
     working_directory: "workspace",
-    timeout_seconds: 900,
+    timeout_seconds: 240,
     max_output_bytes: 512 * 1024,
     max_artifact_bytes: 32 * 1024 * 1024,
     environment_variable_names: [],
