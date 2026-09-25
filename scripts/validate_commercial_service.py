@@ -489,7 +489,7 @@ def main() -> int:
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "006_guarded_empty_repository_initialization.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "007_vercel_sandbox_gateway_replay.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "sandbox_gateway_request_nonces", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
@@ -544,6 +544,14 @@ def main() -> int:
             ".anpos-bootstrap-seed",
         ),
         "Repository Supervisor guarded empty initialization migration",
+    )
+    require_markers(
+        "migrations/007_vercel_sandbox_gateway_replay.sql",
+        (
+            "sandbox_gateway_request_nonces", "nonce TEXT PRIMARY KEY", "request_id UUID NOT NULL UNIQUE",
+            "expires_at TIMESTAMPTZ NOT NULL", "sandbox_gateway_request_nonces_expires_at_idx",
+        ),
+        "Vercel sandbox gateway replay migration",
     )
     require_markers(
         "lib/repository-supervisor-planner.ts",
@@ -744,7 +752,7 @@ def main() -> int:
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
-        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/api/ready/mcp", "/api/ready/sandbox",
+        "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token", "/mcp", "/v1/execute", "/api/ready/mcp", "/api/ready/sandbox",
         "organization_consumption_requires_explicit_seat_principal", "community_repository_audit_must_not_read_application_source",
         "paid_release_ref_must_be_immutable_commit_sha", "paid_release_manifest_must_be_verified_before_metadata_or_archive_delivery",
         "protocol_update_channel", '"single_file": "read"', "not_persisted_by_repository_audit",
