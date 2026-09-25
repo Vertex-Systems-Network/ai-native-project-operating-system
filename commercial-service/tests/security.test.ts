@@ -19,7 +19,7 @@ const MANAGED_ENV = [
   "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
   "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
   "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
-  "GITHUB_SUPERVISOR_APP_ID", "GITHUB_SUPERVISOR_CLIENT_ID", "GITHUB_SUPERVISOR_CLIENT_SECRET",
+  "ANPOS_GITHUB_SUPERVISOR_APP_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
   "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
   "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_ENTITLEMENT_ISSUER",
@@ -38,9 +38,9 @@ function configure() {
   process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nmarketplace-placeholder\n-----END RSA PRIVATE KEY-----";
   process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.test-client-123456";
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
-  process.env.GITHUB_SUPERVISOR_APP_ID = "777777";
-  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
-  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
   process.env.GITHUB_VENDOR_APP_ID = "654321";
   process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nvendor-placeholder\n-----END RSA PRIVATE KEY-----";
   process.env.ANPOS_ENTITLEMENT_PRIVATE_KEY = entitlementPrivateKey;
@@ -165,18 +165,18 @@ test("Supervisor App role cannot collapse into Marketplace or Vendor roles", asy
   configure();
   const { supervisorAppConfigurationProblems } = await import("../lib/env");
 
-  process.env.GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION"));
 
-  process.env.GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_VENDOR_APP_ID;
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_VENDOR_APP_ID;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION"));
 
-  process.env.GITHUB_SUPERVISOR_APP_ID = "777777";
-  process.env.GITHUB_SUPERVISOR_CLIENT_ID = process.env.GITHUB_MARKETPLACE_CLIENT_ID;
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = process.env.GITHUB_MARKETPLACE_CLIENT_ID;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION"));
 
-  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
-  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = process.env.GITHUB_MARKETPLACE_CLIENT_SECRET;
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = process.env.GITHUB_MARKETPLACE_CLIENT_SECRET;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE"));
 });
 
