@@ -17,12 +17,12 @@ const MAX_TEMPLATE_MATERIALIZATION_FILES = 5_000;
 const MAX_TEMPLATE_MATERIALIZATION_BYTES = 24 * 1024 * 1024;
 
 export type CommercialReleaseMetadata = VerifiedTemplateRelease & {
-  repository: "embedded:anpos-commercial-template";
+  repository: string;
   release_ref: string;
 };
 
 export type CommercialReleasePlanSnapshot = VerifiedTemplateReleasePlan & {
-  repository: "embedded:anpos-commercial-template";
+  repository: string;
   release_ref: string;
 };
 
