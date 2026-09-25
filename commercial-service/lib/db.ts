@@ -1,7 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import { databaseConfig } from "./env";
 
-const REQUIRED_MIGRATION = "007_vercel_sandbox_gateway_replay.sql";
+const REQUIRED_MIGRATION = "008_marketplace_billing_lifecycle.sql";
 let pool: Pool | null = null;
 let schemaReady = false;
 
