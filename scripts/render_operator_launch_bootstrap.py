@@ -49,11 +49,11 @@ COMMUNITY_AUDIT_PATHS = [
 ]
 
 MARKETPLACE_APP_ENV = [
-    "GITHUB_MARKETPLACE_APP_ID",
-    "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
-    "GITHUB_MARKETPLACE_CLIENT_ID",
-    "GITHUB_MARKETPLACE_CLIENT_SECRET",
-    "GITHUB_WEBHOOK_SECRET",
+    "ANPOS_MARKETPLACE_APP_ID",
+    "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
+    "ANPOS_MARKETPLACE_CLIENT_ID",
+    "ANPOS_MARKETPLACE_CLIENT_SECRET",
+    "ANPOS_GITHUB_WEBHOOK_SECRET",
 ]
 SUPERVISOR_APP_ENV = [
     "ANPOS_GITHUB_SUPERVISOR_APP_ID",
@@ -61,9 +61,9 @@ SUPERVISOR_APP_ENV = [
     "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
 ]
 VENDOR_APP_ENV = [
-    "GITHUB_VENDOR_APP_ID",
-    "GITHUB_VENDOR_APP_PRIVATE_KEY",
-    "GITHUB_VENDOR_INSTALLATION_ID",
+    "ANPOS_VENDOR_APP_ID",
+    "ANPOS_VENDOR_APP_PRIVATE_KEY",
+    "ANPOS_VENDOR_INSTALLATION_ID",
     "ANPOS_PRIVATE_TEMPLATE_REPO",
 ]
 SANDBOX_ENV = [
@@ -387,7 +387,7 @@ def render(
                     "required": True,
                     "event": "marketplace_purchase",
                     "url": inputs.service_base_url + "/api/webhooks/github/marketplace",
-                    "secret_environment_key": "GITHUB_WEBHOOK_SECRET",
+                    "secret_environment_key": "ANPOS_GITHUB_WEBHOOK_SECRET",
                 },
                 "repository_permissions": {"metadata": "read", "single_file": "read"},
                 "single_file_paths": list(COMMUNITY_AUDIT_PATHS),
@@ -435,9 +435,9 @@ def render(
             "Create the private vendor repositories and populate them only from verified deterministic exports; verify a clean checkout again after the initial push.",
             "After the verified private template push, set ANPOS_COMMERCIAL_RELEASE_REF to that repository's exact 40-character commit SHA; never use main, a branch, or a mutable tag for paid delivery.",
             "Register the public Marketplace App using the prefilled URL; verify the Setup URL, OAuth callback, setup-on-update behavior, and Community single-file permission set before saving the App.",
-            "After creating the draft GitHub Marketplace listing, configure its separate Marketplace listing webhook at /api/webhooks/github/marketplace, subscribe to marketplace_purchase there, and store its strong secret as GITHUB_WEBHOOK_SECRET. Do not add marketplace_purchase to normal GitHub App event subscriptions.",
+            "After creating the draft GitHub Marketplace listing, configure its separate Marketplace listing webhook at /api/webhooks/github/marketplace, subscribe to marketplace_purchase there, and store its strong secret as ANPOS_GITHUB_WEBHOOK_SECRET. Do not add marketplace_purchase to normal GitHub App event subscriptions.",
             "Keep request OAuth on install disabled. Marketplace purchase/setup redirects land on /setup/github, which starts the explicit PKCE GitHub App OAuth flow.",
-            "Generate the Marketplace App client secret in GitHub, store it only in the deployment secret manager, and configure GITHUB_MARKETPLACE_CLIENT_ID/GITHUB_MARKETPLACE_CLIENT_SECRET plus ANPOS_PUBLIC_BASE_URL/ANPOS_SESSION_SECRET.",
+            "Generate the Marketplace App client secret in GitHub, store it only in the deployment secret manager, and configure ANPOS_MARKETPLACE_CLIENT_ID/ANPOS_MARKETPLACE_CLIENT_SECRET plus ANPOS_PUBLIC_BASE_URL/ANPOS_SESSION_SECRET.",
             "Configure ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID only with the real operator-approved free Marketplace plan ID after that plan exists; keep Community outside ANPOS_MARKETPLACE_PLAN_MAP, which remains paid-only.",
             "Verify the Community audit permission remains single-file read for exactly the approved ten ANPOS control paths and is not broadened to application source-code access.",
             "For free-first launch, require /api/ready/community HTTP 200 plus real Setup URL -> OAuth -> installation-bound repository discovery -> audit E2E evidence; this does not prove paid/vendor readiness.",
