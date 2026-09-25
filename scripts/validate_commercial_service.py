@@ -175,6 +175,17 @@ def main() -> int:
         "GitHub authentication",
     )
     require_markers(
+        "lib/entitlements.ts",
+        (
+            "listBillingAccountsForPrincipal",
+            "organization_seat_assignments",
+            "s.status='active'",
+            "e.github_account_type='User' AND e.github_account_id=$1",
+            "e.github_account_type='Organization' AND s.github_user_id=$1",
+        ),
+        "principal-scoped billing account discovery",
+    )
+    require_markers(
         "app/setup/github/route.ts",
         (
             "marketplaceAppConfig", "installation_id", "createOAuthFlowState", "https://github.com/login/oauth/authorize",
@@ -258,7 +269,8 @@ def main() -> int:
         "lib/mcp-runtime.ts",
         (
             "MCP_TOOL_DEFINITIONS", "server/discover", "2026-07-28", "repository_profile",
-            '"openai/profile": true', "repository_resolve", "repository_audit", "repository_get_assurance",
+            '"openai/profile": true', "repository_list_billing_accounts", "listBillingAccountsForPrincipal", "buildPluginCapabilityMatrix",
+            "repository_resolve", "repository_audit", "repository_get_assurance",
             "billing_account_id", "authorizeRepositorySupervisorCapability", "requireMcpScope",
             "repository_plan_anpos_change", "repository_apply_anpos_change", "repository_open_change_request",
             "repository_get_change_request", "repository_get_ci", "repository_merge_change_request",
@@ -689,8 +701,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 14:
-        fail("commercial service API contract must be schema_version 14")
+    if api_contract.get("schema_version") != 15:
+        fail("commercial service API contract must be schema_version 15")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",

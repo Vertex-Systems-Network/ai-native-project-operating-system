@@ -52,6 +52,12 @@ Community is deliberately outside the paid `ANPOS_MARKETPLACE_PLAN_MAP`. After t
 
 The service resolves that ID to `plan_id=community`, `entitlements=[]`, and `paid=false`. The same Marketplace plan ID cannot also appear in `ANPOS_MARKETPLACE_PLAN_MAP`, and `community` is not accepted as a paid-map target. Do not invent a placeholder production plan ID merely to make readiness pass.
 
+## Repository Supervisor billing-account discovery
+
+Commercial service 0.4.8 adds the read-only MCP tool `repository_list_billing_accounts`. It removes the need for users or models to guess numeric `billing_account_id` values.
+
+The server candidate set is deliberately narrow: the authenticated GitHub user's own entitlement account plus organization entitlement accounts for which that user has an active server-side seat assignment. Organization candidates are then re-verified against current GitHub membership before they are returned. The response includes the current server-side `repository_supervisor_read` and `repository_supervisor_write` capability decisions and reasons. It never enumerates the global entitlement ledger, and a returned billing account ID remains only a selector; every paid repository tool re-authorizes the principal, entitlement, organization seat and provider access.
+
 ## Full Repository Supervisor planner
 
 Commercial service 0.4.7 implements deterministic planning for `bootstrap_empty`, `bootstrap_child`, `adopt_existing`, `repair_partial`, and `upgrade_active` in addition to the existing bounded-change planner.

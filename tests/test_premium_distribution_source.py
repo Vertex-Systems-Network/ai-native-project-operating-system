@@ -13,12 +13,12 @@ def load(path: str) -> dict:
 
 
 class PremiumDistributionSourceTests(unittest.TestCase):
-    def test_runtime_identity_and_lock_are_047(self) -> None:
+    def test_runtime_identity_and_lock_are_048(self) -> None:
         package = load("commercial-service/package.json")
         lock = load("commercial-service/package-lock.json")
-        self.assertEqual(package["version"], "0.4.7")
-        self.assertEqual(lock["version"], "0.4.7")
-        self.assertEqual(lock["packages"][""]["version"], "0.4.7")
+        self.assertEqual(package["version"], "0.4.8")
+        self.assertEqual(lock["version"], "0.4.8")
+        self.assertEqual(lock["packages"][""]["version"], "0.4.8")
         self.assertEqual(package["anpos"]["source_protocol_version"], "1.4.0")
         self.assertEqual(package["anpos"]["runtime_contract"], "split-github-app-v1")
 
@@ -93,7 +93,7 @@ class PremiumDistributionSourceTests(unittest.TestCase):
 
     def test_api_contract_declares_premium_distribution_without_sale_claim(self) -> None:
         contract = load("blueprints/commercial/service-api-contract.json")
-        self.assertEqual(contract["schema_version"], 14)
+        self.assertEqual(contract["schema_version"], 15)
         endpoints = {(row["method"], row["path"]): row for row in contract["endpoints"]}
         metadata = endpoints[("GET", "/v1/premium/releases/current")]
         archive = endpoints[("GET", "/v1/premium/archive")]

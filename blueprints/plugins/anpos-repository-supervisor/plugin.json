@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "anpos-repository-supervisor",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Initialize, adopt, upgrade, audit, and supervise GitHub or GitLab repositories using the ANPOS 1.4.0 Requirements 83–96 workflow.",
   "author": {
     "name": "Vertex Systems Network"

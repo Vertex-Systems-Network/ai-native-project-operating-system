@@ -55,6 +55,17 @@ test("tool list exposes authenticated profile plus guarded write tool metadata",
   assert.equal(profile._meta["openai/profile"], true);
   assert.equal(profile.annotations.readOnlyHint, true);
   assert.deepEqual(profile.securitySchemes, [{ type: "oauth2", scopes: ["anpos:profile"] }]);
+  const billingAccounts = tools.find((tool: any) => tool.name === "repository_list_billing_accounts");
+  assert.equal(billingAccounts.annotations.readOnlyHint, true);
+  assert.deepEqual(billingAccounts.inputSchema, { type: "object", properties: {}, additionalProperties: false });
+  assert.deepEqual(billingAccounts.securitySchemes, [{
+    type: "oauth2",
+    scopes: ["anpos:profile", "anpos:repo:read"],
+  }]);
+  assert.equal(
+    billingAccounts.outputSchema.properties.accounts.items.properties.billing_account_id.minimum,
+    1,
+  );
   const merge = tools.find((tool: any) => tool.name === "repository_merge_change_request");
   const apply = tools.find((tool: any) => tool.name === "repository_apply_anpos_change");
   const plan = tools.find((tool: any) => tool.name === "repository_plan_anpos_change");
@@ -75,7 +86,7 @@ test("tool list exposes authenticated profile plus guarded write tool metadata",
     type: "oauth2",
     scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
   }]);
-  assert.equal(MCP_TOOL_DEFINITIONS.length, 11);
+  assert.equal(MCP_TOOL_DEFINITIONS.length, 12);
 });
 
 test("repository_profile returns one stable opaque profile from validated credentials", async () => {

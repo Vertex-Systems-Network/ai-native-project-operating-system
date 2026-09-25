@@ -1,12 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import { requireGithubAccountAccessForContext, type GitHubAuthContext } from "./auth";
-import { getEntitlement, reconcileEntitlement } from "./entitlements";
+import { getEntitlement, listBillingAccountsForPrincipal, reconcileEntitlement } from "./entitlements";
 import {
   mcpBearerChallenge,
   requireMcpScope,
   type McpPrincipal,
 } from "./mcp-auth";
-import { requirePluginCapability, type PluginEntitlementSnapshot } from "./plugin-entitlements";
+import { buildPluginCapabilityMatrix, requirePluginCapability, type PluginEntitlementSnapshot } from "./plugin-entitlements";
 import {
   auditGithubRepository,
   getGithubRepositoryAssurance,
@@ -56,6 +56,55 @@ const profileOutputSchema = {
   additionalProperties: false,
 };
 
+const billingAccountsOutputSchema = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  type: "object",
+  properties: {
+    accounts: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          billing_account_id: { type: "integer", minimum: 1 },
+          github_login: { type: "string", minLength: 1 },
+          github_account_type: { type: "string", enum: ["User", "Organization"] },
+          state: { type: "string", minLength: 1 },
+          plan_id: { anyOf: [{ type: "string" }, { type: "null" }] },
+          capabilities: {
+            type: "object",
+            properties: {
+              repository_supervisor_read: {
+                type: "object",
+                properties: {
+                  allowed: { type: "boolean" },
+                  reason: { type: "string", minLength: 1 },
+                },
+                required: ["allowed", "reason"],
+                additionalProperties: false,
+              },
+              repository_supervisor_write: {
+                type: "object",
+                properties: {
+                  allowed: { type: "boolean" },
+                  reason: { type: "string", minLength: 1 },
+                },
+                required: ["allowed", "reason"],
+                additionalProperties: false,
+              },
+            },
+            required: ["repository_supervisor_read", "repository_supervisor_write"],
+            additionalProperties: false,
+          },
+        },
+        required: ["billing_account_id", "github_login", "github_account_type", "state", "plan_id", "capabilities"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["accounts"],
+  additionalProperties: false,
+};
+
 export const MCP_TOOL_DEFINITIONS = [
   {
     name: "repository_profile",
@@ -69,6 +118,16 @@ export const MCP_TOOL_DEFINITIONS = [
       "openai/profile": true,
       securitySchemes: profileSecurity,
     },
+  },
+  {
+    name: "repository_list_billing_accounts",
+    title: "List authorized billing accounts",
+    description: "Return only billing accounts bound to the authenticated GitHub principal: the principal's own user account and organization accounts with an active assigned seat, re-verified against current GitHub account access. Includes current Repository Supervisor capability decisions so callers never need to guess billing_account_id.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    outputSchema: billingAccountsOutputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: readSecurity,
+    _meta: { securitySchemes: readSecurity },
   },
   {
     name: "repository_resolve",
@@ -429,6 +488,58 @@ async function callTool(
       return toolSuccess(profile);
     }
 
+    if (name === "repository_list_billing_accounts") {
+      requireMcpScope(principal, "anpos:profile");
+      requireMcpScope(principal, "anpos:repo:read");
+      const candidates = await listBillingAccountsForPrincipal(principal.github_user_id);
+      const context: GitHubAuthContext = {
+        user: {
+          id: principal.github_user_id,
+          login: principal.github_login,
+          type: "User",
+        },
+        token: principal.github_token,
+      };
+      const accounts = [];
+      for (const candidate of candidates) {
+        try {
+          await requireGithubAccountAccessForContext(context, candidate);
+        } catch {
+          continue;
+        }
+        const snapshot: PluginEntitlementSnapshot = {
+          state: candidate.state,
+          github_account_id: candidate.github_account_id,
+          github_account_type: candidate.github_account_type,
+          github_login: candidate.github_login,
+          plan_id: candidate.plan_id,
+          entitlements: candidate.entitlements,
+        };
+        const matrix = await buildPluginCapabilityMatrix(
+          snapshot,
+          { id: principal.github_user_id, login: principal.github_login },
+        );
+        accounts.push({
+          billing_account_id: candidate.github_account_id,
+          github_login: candidate.github_login,
+          github_account_type: candidate.github_account_type,
+          state: candidate.state,
+          plan_id: candidate.plan_id,
+          capabilities: {
+            repository_supervisor_read: {
+              allowed: matrix.repository_supervisor_read.allowed,
+              reason: matrix.repository_supervisor_read.reason,
+            },
+            repository_supervisor_write: {
+              allowed: matrix.repository_supervisor_write.allowed,
+              reason: matrix.repository_supervisor_write.reason,
+            },
+          },
+        });
+      }
+      return toolSuccess({ accounts });
+    }
+
     requireMcpScope(principal, "anpos:profile");
     requireMcpScope(principal, "anpos:repo:read");
     const billingAccountId = positiveAccountId(args.billing_account_id);
@@ -562,10 +673,10 @@ export async function handleMcpRpc(
         _meta: {
           "io.modelcontextprotocol/serverInfo": {
             name: "anpos-repository-supervisor",
-            version: "0.4.7",
+            version: "0.4.8",
           },
         },
-        instructions: "Use the authenticated profile first when account identity is unclear. Paid repository tools require an explicit billing_account_id and are always re-authorized server-side.",
+        instructions: "Use repository_profile first when account identity is unclear, then repository_list_billing_accounts to select a server-authorized billing_account_id. Paid repository tools remain re-authorized server-side.",
         ttlMs: 300_000,
         cacheScope: "private",
       }),
@@ -582,7 +693,7 @@ export async function handleMcpRpc(
       body: rpcResult(request.id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.7" },
+        serverInfo: { name: "anpos-repository-supervisor", version: "0.4.8" },
         instructions: "Repository Supervisor tools are authenticated and server-authorized.",
       }),
     };
