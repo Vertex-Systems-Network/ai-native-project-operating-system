@@ -92,14 +92,85 @@ jobs:
           payload = json.loads(source.read_text())
           envs = payload.get("envs", []) if isinstance(payload, dict) else []
           matches = [item for item in envs if item.get("key") in wanted and item.get("id")]
-          ids = [str(item["id"]) for item in matches]
-          output.write_text("\n".join(ids))
+          rows = []
+          for item in matches:
+              custom_ids = item.get("customEnvironmentIds") or []
+              if not isinstance(custom_ids, list):
+                  custom_ids = []
+              rows.append(str(item["id"]) + "\t" + ",".join(str(x) for x in custom_ids))
+              safe = {
+                  "id": item.get("id"),
+                  "key": item.get("key"),
+                  "type": item.get("type"),
+                  "target": item.get("target"),
+                  "gitBranch": item.get("gitBranch"),
+                  "customEnvironmentIds": custom_ids,
+              }
+              print("Temporary grant env metadata:", json.dumps(safe, sort_keys=True))
+          output.write_text("\n".join(rows))
           counts = {key: sum(1 for item in matches if item.get("key") == key) for key in sorted(wanted)}
           print("Temporary grant env record counts:", counts)
           PY
 
+          while IFS=
+
+          shared_response="$RUNNER_TEMP/vercel-shared-envs.json"
+          curl --silent --show-error --fail-with-body \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v1/env?teamId=$VERCEL_ORG_ID&projectId=$VERCEL_PROJECT_ID&search=ANPOS_INTERNAL_SUPERVISOR_READ_TEST" \
+            > "$shared_response"
+
+          python - "$shared_response" "$RUNNER_TEMP/vercel-shared-env-ids.txt" <<'PY'
+          import json, sys
+          from pathlib import Path
+          payload = json.loads(Path(sys.argv[1]).read_text())
+          wanted = {
+              "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN",
+              "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT",
+          }
+          candidates = []
+          if isinstance(payload, list):
+              candidates = payload
+          elif isinstance(payload, dict):
+              for key in ("envs", "data", "results"):
+                  value = payload.get(key)
+                  if isinstance(value, list):
+                      candidates = value
+                      break
+          matches = [item for item in candidates if isinstance(item, dict) and item.get("key") in wanted and item.get("id")]
+          Path(sys.argv[2]).write_text("\n".join(str(item["id"]) for item in matches))
+          counts = {key: sum(1 for item in matches if item.get("key") == key) for key in sorted(wanted)}
+          print("Shared temporary grant env record counts:", counts)
+          PY
+
           while IFS= read -r env_id; do
             [ -n "$env_id" ] || continue
+            curl --silent --show-error --fail-with-body \
+              --request PATCH \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v1/env/$env_id/unlink/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID" \
+              >/dev/null
+          done < "$RUNNER_TEMP/vercel-shared-env-ids.txt"
+
+      - name: Deploy exact verified service to Vercel production
+        working-directory: ${{ runner.temp }}/vendor-handoff/anpos-commercial-service
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@59.11.7 deploy --prod --yes --force --token "$VERCEL_TOKEN"
+\t' read -r env_id custom_ids; do
+            [ -n "$env_id" ] || continue
+            if [ -n "${custom_ids:-}" ]; then
+              IFS=',' read -ra ids <<< "$custom_ids"
+              for custom_id in "${ids[@]}"; do
+                [ -n "$custom_id" ] || continue
+                curl --silent --show-error --fail-with-body \
+                  --request DELETE \
+                  --header "Authorization: Bearer $VERCEL_TOKEN" \
+                  "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env/$env_id?teamId=$VERCEL_ORG_ID&customEnvironmentId=$custom_id" \
+                  >/dev/null
+              done
+            fi
             curl --silent --show-error --fail-with-body \
               --request DELETE \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
