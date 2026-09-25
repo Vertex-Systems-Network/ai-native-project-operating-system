@@ -140,6 +140,50 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
   return result;
 }
 
+export type BillingAccountDiscoveryRecord = {
+  github_account_id: number;
+  github_login: string;
+  github_account_type: "User" | "Organization";
+  plan_id: string | null;
+  state: string;
+  entitlements: string[];
+};
+
+export async function listBillingAccountsForPrincipal(githubUserId: number): Promise<BillingAccountDiscoveryRecord[]> {
+  if (!Number.isSafeInteger(githubUserId) || githubUserId <= 0) throw new Error("VALID_GITHUB_USER_ID_REQUIRED");
+  await ensureSchema();
+  const result = await db().query(
+    `SELECT DISTINCT
+       e.github_account_id,e.github_login,e.github_account_type,e.plan_id,e.state,e.features
+     FROM entitlements e
+     LEFT JOIN organization_seat_assignments s
+       ON s.github_account_id=e.github_account_id
+      AND s.github_user_id=$1
+      AND s.status='active'
+     WHERE
+       (e.github_account_type='User' AND e.github_account_id=$1)
+       OR
+       (e.github_account_type='Organization' AND s.github_user_id=$1)
+     ORDER BY e.github_account_type ASC, LOWER(e.github_login) ASC, e.github_account_id ASC`,
+    [githubUserId],
+  );
+  return result.rows
+    .filter((row) =>
+      Number.isSafeInteger(Number(row.github_account_id))
+      && Number(row.github_account_id) > 0
+      && (row.github_account_type === "User" || row.github_account_type === "Organization")
+      && typeof row.github_login === "string"
+      && Boolean(row.github_login.trim()))
+    .map((row) => ({
+      github_account_id: Number(row.github_account_id),
+      github_login: String(row.github_login),
+      github_account_type: row.github_account_type as "User" | "Organization",
+      plan_id: row.plan_id == null ? null : String(row.plan_id),
+      state: String(row.state),
+      entitlements: Array.isArray(row.features) ? row.features.map(String) : [],
+    }));
+}
+
 export async function getEntitlement(accountId: number) {
   await ensureSchema();
   const result = await db().query(
