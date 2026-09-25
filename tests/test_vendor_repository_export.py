@@ -75,6 +75,21 @@ class VendorRepositoryExportTests(unittest.TestCase):
         self.assertEqual(package["origin"], "commercial-service/package.json")
         self.assertEqual(package["git_mode"], "100644")
         self.assertEqual(len(package["git_object"]), 40)
+        self.assertTrue((service / "vendor-release" / "template" / "EXPORT-MANIFEST.json").is_file())
+        self.assertTrue((service / "vendor-release" / "anpos-commercial-template.zip").is_file())
+        embedded = json.loads((service / "vendor-release" / "template" / "EXPORT-MANIFEST.json").read_text(encoding="utf-8"))
+        self.assertEqual(embedded["export_mode"], "template")
+        embedded_origins = {str(item["origin"]) for item in embedded["files"]}
+        self.assertNotIn("scripts/vendor-operator.py", embedded_origins)
+        self.assertFalse(any(origin.startswith("commercial-service/") for origin in embedded_origins))
+
+    def test_embedded_template_archive_is_deterministic(self) -> None:
+        first = exporter.export_repositories(self.source, self.output / "a", modes=("service",))["service"]
+        second = exporter.export_repositories(self.source, self.output / "b", modes=("service",))["service"]
+        self.assertEqual(
+            (first / "vendor-release" / "anpos-commercial-template.zip").read_bytes(),
+            (second / "vendor-release" / "anpos-commercial-template.zip").read_bytes(),
+        )
 
     def test_template_export_excludes_all_vendor_only_paths(self) -> None:
         outputs = exporter.export_repositories(self.source, self.output, modes=("template",))
