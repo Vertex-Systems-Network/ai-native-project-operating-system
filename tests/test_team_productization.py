@@ -75,7 +75,7 @@ class TeamProductizationTests(unittest.TestCase):
 
         dashboard = (ROOT / "commercial-service/lib/team-dashboard.ts").read_text(encoding="utf-8")
         self.assertIn("SELECT github_account_id,github_login,github_account_type,plan_id,marketplace_plan_id,seats,state,features", dashboard)
-        self.assertIn('billing_authority: "github_marketplace"', dashboard)
+        self.assertIn('billing_authority: optionalString(entitlement.billing_provider)', dashboard)
         self.assertIn("contractual_support_activated_by_source: false", dashboard)
 
     def test_team_ui_reuses_server_side_seat_lifecycle_and_does_not_claim_billing_mutation(self) -> None:
@@ -83,7 +83,7 @@ class TeamProductizationTests(unittest.TestCase):
         self.assertIn('fetch("/api/v1/seats"', source)
         self.assertIn('method: "POST"', source)
         self.assertIn('method: "DELETE"', source)
-        self.assertIn("GitHub Marketplace remains the billing authority", source)
+        self.assertIn("configured payment provider remains the billing authority", source)
         self.assertIn("does not activate a staffed support channel", source)
         for forbidden in [
             "Change billing cycle",
