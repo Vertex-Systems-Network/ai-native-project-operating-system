@@ -1,0 +1,2 @@
+Production environment refresh trigger for anpos-commercial-service.
+No source changes are deployed from this branch; guarded workflow checks out canonical main.
