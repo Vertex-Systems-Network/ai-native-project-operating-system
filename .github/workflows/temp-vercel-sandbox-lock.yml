@@ -9,7 +9,7 @@ on:
       - .github/workflows/temp-vercel-sandbox-lock.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate-lock:
@@ -30,6 +30,17 @@ jobs:
         working-directory: commercial-service
         run: |
           node -e "const l=require('./package-lock.json'); if(l.packages['node_modules/@vercel/sandbox']?.version!=='3.5.0') process.exit(1)"
+      - name: Commit generated lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add commercial-service/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already current."
+          else
+            git commit -m "Lock Vercel Sandbox dependency"
+            git push origin HEAD:feat/vercel-sandbox-gateway
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: vercel-sandbox-package-lock
