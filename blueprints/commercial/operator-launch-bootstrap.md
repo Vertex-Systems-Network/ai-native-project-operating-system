@@ -171,9 +171,9 @@ With the Marketplace/Community values above and the required database migration 
 
 Repository Supervisor role:
 
-- `GITHUB_SUPERVISOR_APP_ID`
-- `GITHUB_SUPERVISOR_CLIENT_ID`
-- `GITHUB_SUPERVISOR_CLIENT_SECRET`
+- `ANPOS_GITHUB_SUPERVISOR_APP_ID`
+- `ANPOS_GITHUB_SUPERVISOR_CLIENT_ID`
+- `ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET`
 
 The Supervisor App is the only customer-facing write-capable GitHub App in this architecture. It must remain distinct from Marketplace and Vendor Distribution roles, and branch/ruleset policy remains authoritative.
 
