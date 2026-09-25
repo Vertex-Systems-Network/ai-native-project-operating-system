@@ -116,7 +116,7 @@ The operator must review GitHub's registration form before creating the App. Git
 
 ### Marketplace listing webhook
 
-`marketplace_purchase` is configured separately from the GitHub App registration. After a draft GitHub Marketplace listing exists, open the listing's **Webhook** settings and configure `<service-base-url>/api/webhooks/github/marketplace` with a strong secret stored as `GITHUB_WEBHOOK_SECRET`. Subscribe/process `marketplace_purchase` on that Marketplace listing webhook surface. Do **not** represent the purchase event as a normal GitHub App event subscription.
+`marketplace_purchase` is configured separately from the GitHub App registration. After a draft GitHub Marketplace listing exists, open the listing's **Webhook** settings and configure `<service-base-url>/api/webhooks/github/marketplace` with a strong secret stored as `ANPOS_GITHUB_WEBHOOK_SECRET`. Subscribe/process `marketplace_purchase` on that Marketplace listing webhook surface. Do **not** represent the purchase event as a normal GitHub App event subscription.
 
 ## Generated Repository Supervisor App registration
 
@@ -155,11 +155,11 @@ The Vendor Distribution App registration URL is prefilled as:
 
 Marketplace / Community role:
 
-- `GITHUB_MARKETPLACE_APP_ID`
-- `GITHUB_MARKETPLACE_APP_PRIVATE_KEY`
-- `GITHUB_MARKETPLACE_CLIENT_ID`
-- `GITHUB_MARKETPLACE_CLIENT_SECRET`
-- `GITHUB_WEBHOOK_SECRET`
+- `ANPOS_MARKETPLACE_APP_ID`
+- `ANPOS_MARKETPLACE_APP_PRIVATE_KEY`
+- `ANPOS_MARKETPLACE_CLIENT_ID`
+- `ANPOS_MARKETPLACE_CLIENT_SECRET`
+- `ANPOS_GITHUB_WEBHOOK_SECRET`
 - `ANPOS_PUBLIC_BASE_URL`
 - `ANPOS_SESSION_SECRET`
 - `DATABASE_URL`
@@ -188,9 +188,9 @@ Production sandbox role:
 
 Vendor Distribution role:
 
-- `GITHUB_VENDOR_APP_ID`
-- `GITHUB_VENDOR_APP_PRIVATE_KEY`
-- `GITHUB_VENDOR_INSTALLATION_ID`
+- `ANPOS_VENDOR_APP_ID`
+- `ANPOS_VENDOR_APP_PRIVATE_KEY`
+- `ANPOS_VENDOR_INSTALLATION_ID`
 - `ANPOS_PRIVATE_TEMPLATE_REPO`
 
 Additional paid/full commercial service configuration:
@@ -212,7 +212,7 @@ Legacy `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` must not be used to satisfy 
 1. Generate this handoff from the certified canonical revision that will supply the deployable service/vendor export.
 2. Verify `/api/version` for any candidate deployment against the exact `artifact_identity`; do not treat `/api/health` as artifact proof.
 3. Register the public Marketplace App from the generated prefilled URL and review every requested field/permission.
-4. Generate the Marketplace OAuth client secret; after the draft Marketplace listing exists, configure its separate Marketplace listing webhook and strong `GITHUB_WEBHOOK_SECRET`; store credentials only in the deployment secret store.
+4. Generate the Marketplace OAuth client secret; after the draft Marketplace listing exists, configure its separate Marketplace listing webhook and strong `ANPOS_GITHUB_WEBHOOK_SECRET`; store credentials only in the deployment secret store.
 5. After the genuine free Marketplace plan exists, configure its real ID as `ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID`; keep it outside `ANPOS_MARKETPLACE_PLAN_MAP`.
 6. Configure the Community database, run the required migration, and require `/api/ready/community` HTTP 200.
 7. Exercise the real Setup URL → PKCE OAuth callback → installation-bound repository discovery → bounded read-only Community audit flow before claiming Community launch readiness.
