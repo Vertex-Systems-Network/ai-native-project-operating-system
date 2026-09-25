@@ -59,6 +59,17 @@ export type InternalSupervisorReadTestGrant = {
   expiresAt: string;
 };
 
+export type PaidBillingProvider = "github_marketplace" | "paddle";
+
+export type PaddleConfig = {
+  environment: "sandbox" | "production";
+  apiKey: string;
+  webhookSecret: string;
+  clientToken: string;
+  checkoutUrl: string;
+  webhookToleranceSeconds: number;
+};
+
 const INTERNAL_SUPERVISOR_READ_TEST_MAX_TTL_MS = 48 * 60 * 60 * 1000;
 
 function rawValue(name: string): string | null {
@@ -93,7 +104,6 @@ const COMMUNITY_LAUNCH_REQUIRED = [
 
 const FULL_REQUIRED = [
   ...COMMUNITY_LAUNCH_REQUIRED,
-  "ANPOS_MARKETPLACE_PLAN_MAP",
   "ANPOS_VENDOR_APP_ID",
   "ANPOS_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
@@ -242,6 +252,88 @@ function commonProblems(required: readonly string[], includeVendorSeparation: bo
   return [...new Set(problems)];
 }
 
+export function paidBillingProvider(): PaidBillingProvider {
+  const raw = rawValue("ANPOS_PAID_BILLING_PROVIDER") ?? "github_marketplace";
+  if (raw === "github_marketplace" || raw === "paddle") return raw;
+  throw new Error("Invalid ANPOS_PAID_BILLING_PROVIDER");
+}
+
+function paddlePriceMapProblem(): string | null {
+  const raw = rawValue("ANPOS_PADDLE_PRICE_MAP");
+  if (!raw) return "missing:ANPOS_PADDLE_PRICE_MAP";
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { return "invalid:ANPOS_PADDLE_PRICE_MAP"; }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return "invalid:ANPOS_PADDLE_PRICE_MAP";
+  const entries = Object.entries(parsed as Record<string, unknown>);
+  if (!entries.length) return "invalid:ANPOS_PADDLE_PRICE_MAP";
+  for (const [key, priceId] of entries) {
+    if (!/^(developer|pro|team|enterprise):(month|year)$/.test(key)) return "invalid:ANPOS_PADDLE_PRICE_MAP";
+    if (typeof priceId !== "string" || !/^pri_[a-z\d]{26}$/.test(priceId)) return "invalid:ANPOS_PADDLE_PRICE_MAP";
+  }
+  return null;
+}
+
+export function paddleConfigurationProblems(): string[] {
+  const problems: string[] = [];
+  for (const name of ["ANPOS_PADDLE_API_KEY", "ANPOS_PADDLE_WEBHOOK_SECRET", "ANPOS_PADDLE_CLIENT_TOKEN", "ANPOS_PADDLE_CHECKOUT_URL"] as const) {
+    if (!rawValue(name)) problems.push(`missing:${name}`);
+  }
+  const environment = rawValue("ANPOS_PADDLE_ENVIRONMENT") ?? "production";
+  if (!["sandbox", "production"].includes(environment)) problems.push("invalid:ANPOS_PADDLE_ENVIRONMENT");
+  const apiKey = rawValue("ANPOS_PADDLE_API_KEY");
+  if (apiKey && apiKey.length < 20) problems.push("weak:ANPOS_PADDLE_API_KEY");
+  const webhookSecret = rawValue("ANPOS_PADDLE_WEBHOOK_SECRET");
+  if (webhookSecret && webhookSecret.length < 32) problems.push("weak:ANPOS_PADDLE_WEBHOOK_SECRET");
+  const clientToken = rawValue("ANPOS_PADDLE_CLIENT_TOKEN");
+  if (clientToken) {
+    if (environment === "sandbox" && !clientToken.startsWith("test_")) problems.push("invalid:ANPOS_PADDLE_CLIENT_TOKEN");
+    if (environment === "production" && !clientToken.startsWith("live_")) problems.push("invalid:ANPOS_PADDLE_CLIENT_TOKEN");
+  }
+  const priceMapProblem = paddlePriceMapProblem();
+  if (priceMapProblem) problems.push(priceMapProblem);
+  const checkoutUrl = rawValue("ANPOS_PADDLE_CHECKOUT_URL");
+  if (checkoutUrl) {
+    try {
+      const url = new URL(checkoutUrl);
+      const publicUrl = rawValue("ANPOS_PUBLIC_BASE_URL");
+      if (
+        url.protocol !== "https:"
+        || url.username
+        || url.password
+        || url.search
+        || url.hash
+        || url.pathname.replace(/\/$/, "") !== "/billing/checkout"
+        || (publicUrl && url.origin !== new URL(publicUrl).origin)
+      ) problems.push("invalid:ANPOS_PADDLE_CHECKOUT_URL");
+    } catch {
+      problems.push("invalid:ANPOS_PADDLE_CHECKOUT_URL");
+    }
+  }
+  const tolerance = rawValue("ANPOS_PADDLE_WEBHOOK_TOLERANCE_SECONDS");
+  if (tolerance) {
+    const parsed = Number(tolerance);
+    if (!Number.isSafeInteger(parsed) || parsed < 5 || parsed > 300) {
+      problems.push("invalid:ANPOS_PADDLE_WEBHOOK_TOLERANCE_SECONDS");
+    }
+  }
+  return [...new Set(problems)];
+}
+
+export function paddleConfig(): PaddleConfig {
+  const problems = paddleConfigurationProblems();
+  if (problems.length) throw new Error(`Paddle billing is not configured: ${problems.join(", ")}`);
+  const environment = (rawValue("ANPOS_PADDLE_ENVIRONMENT") ?? "production") as "sandbox" | "production";
+  return {
+    environment,
+    apiKey: rawValue("ANPOS_PADDLE_API_KEY")!,
+    webhookSecret: rawValue("ANPOS_PADDLE_WEBHOOK_SECRET")!,
+    clientToken: rawValue("ANPOS_PADDLE_CLIENT_TOKEN")!,
+    checkoutUrl: rawValue("ANPOS_PADDLE_CHECKOUT_URL")!,
+    webhookToleranceSeconds: Number(rawValue("ANPOS_PADDLE_WEBHOOK_TOLERANCE_SECONDS") ?? "30"),
+  };
+}
+
 export function internalSupervisorReadTestGrantConfigured(): boolean {
   return Boolean(
     rawValue("ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN")
@@ -286,11 +378,15 @@ export function internalSupervisorReadTestGrantActiveForLogin(login: string, now
 }
 
 function premiumPaidPlanConfigured(): boolean {
-  const raw = value("ANPOS_MARKETPLACE_PLAN_MAP");
+  const provider = paidBillingProvider();
+  const raw = value(provider === "paddle" ? "ANPOS_PADDLE_PRICE_MAP" : "ANPOS_MARKETPLACE_PLAN_MAP");
   if (!raw) return false;
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+    if (provider === "paddle") {
+      return Object.keys(parsed as Record<string, unknown>).some((key) => /^(pro|team|enterprise):(month|year)$/.test(key));
+    }
     return Object.values(parsed as Record<string, unknown>).some((planId) => ["pro", "team", "enterprise"].includes(String(planId)));
   } catch {
     return false;
@@ -322,6 +418,16 @@ export function communityLaunchConfigurationProblems(): string[] {
 
 export function configurationProblems(): string[] {
   const problems = commonProblems(FULL_REQUIRED, true);
+  try {
+    const provider = paidBillingProvider();
+    if (provider === "github_marketplace") {
+      problems.push(...commonProblems(["ANPOS_MARKETPLACE_PLAN_MAP"], false));
+    } else {
+      problems.push(...paddleConfigurationProblems());
+    }
+  } catch {
+    problems.push("invalid:ANPOS_PAID_BILLING_PROVIDER");
+  }
   if (premiumPaidPlanConfigured()) problems.push(...premiumDistributionConfigurationProblems());
   if (internalSupervisorReadTestGrantConfigured()) {
     problems.push(...internalSupervisorReadTestConfigurationProblems());
