@@ -16,15 +16,15 @@ const entitlementKeys = generateKeyPairSync("ed25519");
 const entitlementPrivateKey = entitlementKeys.privateKey.export({ format: "pem", type: "pkcs8" }).toString();
 
 const MANAGED_ENV = [
-  "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
-  "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
-  "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+  "DATABASE_URL", "ANPOS_GITHUB_WEBHOOK_SECRET",
+  "ANPOS_MARKETPLACE_APP_ID", "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
+  "ANPOS_MARKETPLACE_CLIENT_ID", "ANPOS_MARKETPLACE_CLIENT_SECRET",
   "ANPOS_GITHUB_SUPERVISOR_APP_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
-  "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
+  "ANPOS_VENDOR_APP_ID", "ANPOS_VENDOR_APP_PRIVATE_KEY",
   "GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_ENTITLEMENT_ISSUER",
   "ANPOS_OPERATOR_TOKEN", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS",
-  "GITHUB_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF",
+  "ANPOS_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF",
   "ANPOS_PRIVATE_PREMIUM_REPO", "ANPOS_PREMIUM_RELEASE_REF",
   "ANPOS_PREMIUM_MANIFEST_SHA256", "ANPOS_PREMIUM_CONTENT_SET_SHA256",
   "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
@@ -34,16 +34,16 @@ const MANAGED_ENV = [
 
 function configure() {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/anpos";
-  process.env.GITHUB_WEBHOOK_SECRET = "w".repeat(48);
-  process.env.GITHUB_MARKETPLACE_APP_ID = "123456";
-  process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nmarketplace-placeholder\n-----END RSA PRIVATE KEY-----";
-  process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.test-client-123456";
-  process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.ANPOS_GITHUB_WEBHOOK_SECRET = "w".repeat(48);
+  process.env.ANPOS_MARKETPLACE_APP_ID = "123456";
+  process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nmarketplace-placeholder\n-----END RSA PRIVATE KEY-----";
+  process.env.ANPOS_MARKETPLACE_CLIENT_ID = "Iv1.test-client-123456";
+  process.env.ANPOS_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
   process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
-  process.env.GITHUB_VENDOR_APP_ID = "654321";
-  process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nvendor-placeholder\n-----END RSA PRIVATE KEY-----";
+  process.env.ANPOS_VENDOR_APP_ID = "654321";
+  process.env.ANPOS_VENDOR_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nvendor-placeholder\n-----END RSA PRIVATE KEY-----";
   process.env.ANPOS_ENTITLEMENT_PRIVATE_KEY = entitlementPrivateKey;
   process.env.ANPOS_ENTITLEMENT_KEY_ID = "test-key-1";
   process.env.ANPOS_ENTITLEMENT_ISSUER = "https://license.example.test";
@@ -51,7 +51,7 @@ function configure() {
   process.env.ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID = "1000";
   process.env.ANPOS_MARKETPLACE_PLAN_MAP = JSON.stringify({ "1001": "developer", "1002": "pro", "1003": "team", "1004": "enterprise" });
   process.env.ANPOS_ORG_SEAT_LIMITS = JSON.stringify({ developer: 1, pro: 2, team: 10, enterprise: 100 });
-  process.env.GITHUB_VENDOR_INSTALLATION_ID = "12345678";
+  process.env.ANPOS_VENDOR_INSTALLATION_ID = "12345678";
   process.env.ANPOS_PRIVATE_TEMPLATE_REPO = "Vertex-Systems-Network/anpos-commercial-template";
   process.env.ANPOS_COMMERCIAL_RELEASE_REF = "a".repeat(40);
   process.env.ANPOS_PRIVATE_PREMIUM_REPO = "Vertex-Systems-Network/anpos-premium-pro";
@@ -118,16 +118,16 @@ test("configuration rejects weak missing or mutable production controls", () => 
   clearManagedEnv();
   configure();
   assert.deepEqual(configurationProblems(), []);
-  process.env.GITHUB_WEBHOOK_SECRET = "short";
+  process.env.ANPOS_GITHUB_WEBHOOK_SECRET = "short";
   process.env.ANPOS_OPERATOR_TOKEN = "tiny";
-  process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "tiny";
+  process.env.ANPOS_MARKETPLACE_CLIENT_SECRET = "tiny";
   process.env.ANPOS_SESSION_SECRET = "tiny";
   process.env.ANPOS_PUBLIC_BASE_URL = "http://license.example.test";
   process.env.ANPOS_COMMERCIAL_RELEASE_REF = "main";
   const problems = configurationProblems();
-  assert.ok(problems.includes("weak:GITHUB_WEBHOOK_SECRET"));
+  assert.ok(problems.includes("weak:ANPOS_GITHUB_WEBHOOK_SECRET"));
   assert.ok(problems.includes("weak:ANPOS_OPERATOR_TOKEN"));
-  assert.ok(problems.includes("weak:GITHUB_MARKETPLACE_CLIENT_SECRET"));
+  assert.ok(problems.includes("weak:ANPOS_MARKETPLACE_CLIENT_SECRET"));
   assert.ok(problems.includes("weak:ANPOS_SESSION_SECRET"));
   assert.ok(problems.includes("invalid:ANPOS_PUBLIC_BASE_URL"));
   assert.ok(problems.includes("invalid:ANPOS_COMMERCIAL_RELEASE_REF"));
@@ -160,11 +160,11 @@ test("internal Supervisor read-test grant is short-lived read-only configuration
 test("Marketplace and vendor GitHub App roles cannot collapse", () => {
   clearManagedEnv();
   configure();
-  process.env.GITHUB_VENDOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
+  process.env.ANPOS_VENDOR_APP_ID = process.env.ANPOS_MARKETPLACE_APP_ID;
   assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_ROLE_SEPARATION"));
 
-  process.env.GITHUB_VENDOR_APP_ID = "654321";
-  process.env.GITHUB_VENDOR_APP_PRIVATE_KEY = process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY;
+  process.env.ANPOS_VENDOR_APP_ID = "654321";
+  process.env.ANPOS_VENDOR_APP_PRIVATE_KEY = process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY;
   assert.ok(configurationProblems().includes("unsafe:GITHUB_APP_PRIVATE_KEY_REUSE"));
 });
 
@@ -188,33 +188,33 @@ test("Supervisor App role cannot collapse into Marketplace or Vendor roles", asy
   configure();
   const { supervisorAppConfigurationProblems } = await import("../lib/env");
 
-  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_MARKETPLACE_APP_ID;
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.ANPOS_MARKETPLACE_APP_ID;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION"));
 
-  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.GITHUB_VENDOR_APP_ID;
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = process.env.ANPOS_VENDOR_APP_ID;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION"));
 
   process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
-  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = process.env.GITHUB_MARKETPLACE_CLIENT_ID;
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = process.env.ANPOS_MARKETPLACE_CLIENT_ID;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION"));
 
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
-  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = process.env.GITHUB_MARKETPLACE_CLIENT_SECRET;
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = process.env.ANPOS_MARKETPLACE_CLIENT_SECRET;
   assert.ok(supervisorAppConfigurationProblems().includes("unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE"));
 });
 
 test("legacy single-app credentials do not satisfy split configuration", () => {
   clearManagedEnv();
   configure();
-  delete process.env.GITHUB_MARKETPLACE_APP_ID;
-  delete process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY;
-  delete process.env.GITHUB_VENDOR_APP_ID;
-  delete process.env.GITHUB_VENDOR_APP_PRIVATE_KEY;
+  delete process.env.ANPOS_MARKETPLACE_APP_ID;
+  delete process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY;
+  delete process.env.ANPOS_VENDOR_APP_ID;
+  delete process.env.ANPOS_VENDOR_APP_PRIVATE_KEY;
   process.env.GITHUB_APP_ID = "123456";
   process.env.GITHUB_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\nlegacy-placeholder\n-----END RSA PRIVATE KEY-----";
   const problems = configurationProblems();
-  assert.ok(problems.includes("missing:GITHUB_MARKETPLACE_APP_ID"));
-  assert.ok(problems.includes("missing:GITHUB_VENDOR_APP_ID"));
+  assert.ok(problems.includes("missing:ANPOS_MARKETPLACE_APP_ID"));
+  assert.ok(problems.includes("missing:ANPOS_VENDOR_APP_ID"));
 });
 
 test("Community OAuth state uses PKCE and encrypted short-lived state", () => {
