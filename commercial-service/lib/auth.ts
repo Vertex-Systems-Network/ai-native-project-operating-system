@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { serviceConfig } from "./env";
+import { billingSessionTokenFromRequest } from "./billing-session";
 import { githubSessionTokenFromRequest } from "./session";
 
 function equalSecret(a: string, b: string): boolean {
@@ -11,7 +12,7 @@ function equalSecret(a: string, b: string): boolean {
 function githubToken(request: Request): string {
   const auth = request.headers.get("authorization") ?? "";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  const token = bearer || githubSessionTokenFromRequest(request) || "";
+  const token = bearer || githubSessionTokenFromRequest(request) || billingSessionTokenFromRequest(request) || "";
   if (!token || token.length > 4096) throw new Error("UNAUTHORIZED_GITHUB");
   return token;
 }
