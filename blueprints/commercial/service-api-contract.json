@@ -1,5 +1,5 @@
 {
-  "schema_version": 17,
+  "schema_version": 18,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -395,6 +395,29 @@
       "exposes_secret_values": false,
       "live_gateway_probe": false,
       "cache_control": "no-store"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ready/sandbox/live",
+      "authentication": "vercel_deployment_protection_trusted_oidc_plus_explicit_probe_trigger",
+      "purpose": "Run one bounded secret-safe production sandbox live E2E through the configured signed gateway and return only non-secret evidence.",
+      "production_only": true,
+      "requires_header": "x-anpos-sandbox-live-probe: 1",
+      "uses_configured_signing_secret_server_side": true,
+      "signing_secret_exposed": false,
+      "same_origin_vercel_oidc_forwarding_only": true,
+      "verifies": [
+        "python_runtime_minimum_3_12",
+        "network_deny",
+        "request_hmac_acceptance",
+        "response_hmac",
+        "workspace_destroyed",
+        "input_sha256_integrity",
+        "exact_output_allowlist",
+        "output_sha256_integrity",
+        "durable_replay_rejection"
+      ],
+      "cache_control": "no-store"
     }
   ],
   "cross_cutting_rules": {
@@ -524,6 +547,11 @@
     "sandbox_vercel_gateway_live_empty_workspace_only": true,
     "sandbox_vercel_gateway_environment_forwarding_forbidden": true,
     "sandbox_vercel_gateway_live_execution_timeout_seconds": 240,
-    "sandbox_live_evidence_required_before_write_e2e": true
+    "sandbox_live_evidence_required_before_write_e2e": true,
+    "sandbox_live_probe_must_be_production_only": true,
+    "sandbox_live_probe_must_use_trusted_oidc_protected_deployment": true,
+    "sandbox_live_probe_signing_secret_never_leaves_service": true,
+    "sandbox_same_origin_vercel_oidc_must_not_be_forwarded_cross_origin": true,
+    "sandbox_live_probe_must_verify_response_hmac_and_replay_rejection": true
   }
 }

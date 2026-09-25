@@ -1,0 +1,145 @@
+name: ANPOS Commercial Sandbox Live E2E
+
+on:
+  push:
+    branches:
+      - 'ops/verify-sandbox-live-*'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: anpos-commercial-sandbox-live-e2e
+  cancel-in-progress: false
+
+jobs:
+  verify-live-sandbox:
+    if: github.repository == 'Vertex-Systems-Network/ai-native-project-operating-system'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PRODUCTION_DEPLOYMENT: https://anpos-commercial-service.vercel.app
+
+    steps:
+      - name: Checkout exact canonical main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify canonical identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "main"
+          test -z "$(git status --porcelain)"
+          echo "CANONICAL_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "EXPECTED_SERVICE_VERSION=$(python -c "import json; print(json.load(open('commercial-service/package.json'))['version'])")" >> "$GITHUB_ENV"
+          echo "EXPECTED_PROTOCOL_VERSION=$(python -c "import json; print(json.load(open('config/protocol/version.json'))['version'])")" >> "$GITHUB_ENV"
+
+      - name: Request short-lived GitHub Actions OIDC token
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
+          token_json="$(curl --silent --show-error --fail-with-body             --max-time 15             --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "$ACTIONS_ID_TOKEN_REQUEST_URL")"
+          oidc_token="$(python -c 'import json,sys; token=json.load(sys.stdin).get("value"); assert isinstance(token,str) and token.count(".")==2; print(token)' <<<"$token_json")"
+          echo "::add-mask::$oidc_token"
+          echo "ANPOS_GITHUB_OIDC_TOKEN=$oidc_token" >> "$GITHUB_ENV"
+
+      - name: Verify deployed source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/sandbox-version.json"
+          status="$(curl --silent --show-error --fail-with-body             --max-time 20             --output "$body"             --write-out '%{http_code}'             --header "x-vercel-trusted-oidc-idp-token: $ANPOS_GITHUB_OIDC_TOKEN"             "$PRODUCTION_DEPLOYMENT/api/version")"
+          test "$status" = "200"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          payload=json.loads((Path(os.environ["RUNNER_TEMP"])/"sandbox-version.json").read_text())
+          assert payload.get("ok") is True
+          assert payload.get("service") == "anpos-commercial-service"
+          assert payload.get("service_version") == os.environ["EXPECTED_SERVICE_VERSION"]
+          assert payload.get("source_protocol_version") == os.environ["EXPECTED_PROTOCOL_VERSION"]
+          assert payload.get("runtime_contract") == "split-github-app-v1"
+          PY
+
+      - name: Run signed live sandbox probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/sandbox-live.json"
+          headers="$RUNNER_TEMP/sandbox-live.headers"
+          status="$(curl --silent --show-error             --max-time 285             --output "$body"             --dump-header "$headers"             --write-out '%{http_code}'             --request POST             --header "Content-Type: application/json"             --header "x-anpos-sandbox-live-probe: 1"             --header "x-vercel-trusted-oidc-idp-token: $ANPOS_GITHUB_OIDC_TOKEN"             --data '{}'             "$PRODUCTION_DEPLOYMENT/api/ready/sandbox/live")"
+          printf '%s\n' "$status" > "$RUNNER_TEMP/sandbox-live.status"
+          test "$status" = "200"
+
+      - name: Validate and record secret-free live evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+
+          root=Path(os.environ["RUNNER_TEMP"])
+          status=int((root/"sandbox-live.status").read_text().strip())
+          payload=json.loads((root/"sandbox-live.json").read_text())
+          if status != 200 or payload.get("ok") is not True:
+              raise SystemExit(f"live sandbox probe failed: HTTP {status} {payload}")
+          if payload.get("mode") != "repository_supervisor_sandbox_live":
+              raise SystemExit("unexpected sandbox live probe mode")
+          evidence=payload.get("evidence")
+          if not isinstance(evidence, dict):
+              raise SystemExit("missing sandbox live evidence")
+          expected_true=[
+              "network_denied",
+              "workspace_destroyed",
+              "request_hmac_accepted",
+              "response_hmac_verified",
+              "replay_rejected",
+              "input_integrity_verified",
+              "output_allowlist_verified",
+              "output_integrity_verified",
+          ]
+          for key in expected_true:
+              if evidence.get(key) is not True:
+                  raise SystemExit(f"sandbox evidence missing {key}")
+          if evidence.get("driver_id") != "remote_ephemeral_signed_gateway_v1":
+              raise SystemExit("unexpected sandbox driver")
+          if evidence.get("isolation") != "remote_ephemeral":
+              raise SystemExit("unexpected sandbox isolation")
+          if evidence.get("gateway_endpoint_host") != "anpos-commercial-service.vercel.app":
+              raise SystemExit("unexpected sandbox endpoint host")
+          runtime=str(evidence.get("python_runtime",""))
+          match=re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", runtime)
+          if not match or (int(match.group(1)),int(match.group(2))) < (3,12):
+              raise SystemExit("sandbox Python runtime is below 3.12")
+          for key in ("input_sha256","output_sha256"):
+              if not re.fullmatch(r"[0-9a-f]{64}", str(evidence.get(key,""))):
+                  raise SystemExit(f"invalid {key}")
+          if not re.fullmatch(r"[0-9a-f-]{36}", str(evidence.get("request_id","")), re.I):
+              raise SystemExit("invalid sandbox request id")
+          summary={
+              "canonical_source_sha": os.environ["CANONICAL_SOURCE_SHA"],
+              "service_version": os.environ["EXPECTED_SERVICE_VERSION"],
+              "protocol_version": os.environ["EXPECTED_PROTOCOL_VERSION"],
+              "mode": payload["mode"],
+              "evidence": evidence,
+          }
+          out=root/"sandbox-live-evidence.json"
+          out.write_text(json.dumps(summary,indent=2,sort_keys=True)+"\n")
+          print("SANDBOX_LIVE_E2E="+json.dumps(summary,sort_keys=True,separators=(",",":")))
+          PY
+
+      - name: Upload secret-free live sandbox evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: anpos-sandbox-live-${{ env.CANONICAL_SOURCE_SHA }}
+          path: ${{ runner.temp }}/sandbox-live-evidence.json
+          if-no-files-found: error
+          retention-days: 30

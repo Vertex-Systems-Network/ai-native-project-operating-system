@@ -13,10 +13,10 @@ ERRORS: list[str] = []
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
     "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
-    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts",
+    "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/sandbox-live-probe.ts", "lib/releases.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts", "tests/sandbox-live-probe.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
-    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts",
+    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts", "app/api/ready/sandbox/live/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
     "app/.well-known/oauth-protected-resource/route.ts", "app/.well-known/oauth-authorization-server/route.ts",
     "app/oauth/authorize/route.ts", "app/oauth/token/route.ts", "app/api/auth/mcp/github/callback/route.ts",
@@ -400,7 +400,8 @@ def main() -> int:
         "lib/remote-sandbox-driver.ts",
         (
             "RemoteEphemeralSandboxDriver", "productionSandboxDriver", "buildRemoteSandboxSignature",
-            "buildRemoteSandboxResponseSignature", "remoteSandboxConfig", "remote_ephemeral",
+            "buildRemoteSandboxResponseSignature", "remoteSandboxTrustedSourceHeaders", "verifyRemoteSandboxResponseSignature",
+            "remoteSandboxConfig", "remote_ephemeral",
             "workspace_destroyed", "network", "deny", "redirect: \"error\"",
             "X-Anpos-Sandbox-Protocol", "protocol_version: 2", "artifacts", "output_files",
             "X-Anpos-Sandbox-Timestamp", "X-Anpos-Sandbox-Nonce", "X-Anpos-Sandbox-Signature",
@@ -415,6 +416,7 @@ def main() -> int:
             "signatures bind exact body timestamp nonce and response request id",
             "names-only environment and validates signed destruction evidence",
             "fails closed on unsigned or non-destroyed response",
+            "trusted-source token is forwarded only to the exact public service origin",
         ),
         "Remote sandbox driver unit tests",
     )
@@ -427,6 +429,33 @@ def main() -> int:
             "python3>=3.12", "secret_values_in_model_request: false",
         ),
         "Sandbox readiness gate",
+    )
+    require_markers(
+        "lib/sandbox-live-probe.ts",
+        (
+            "runProductionSandboxLiveProbe", "remoteSandboxTrustedSourceHeaders",
+            "verifyRemoteSandboxResponseSignature", "validateRemoteSandboxWireResponse",
+            "sandbox_request_replayed", "workspace_destroyed", "network_denied",
+            "input_integrity_verified", "output_allowlist_verified", "output_integrity_verified",
+        ),
+        "Production sandbox live probe",
+    )
+    require_markers(
+        "app/api/ready/sandbox/live/route.ts",
+        (
+            "VERCEL_ENV", "x-anpos-sandbox-live-probe", "repository_supervisor_sandbox_live",
+            "runProductionSandboxLiveProbe", "Cache-Control", "no-store",
+        ),
+        "Protected sandbox live probe route",
+    )
+    require_markers(
+        "tests/sandbox-live-probe.test.ts",
+        (
+            "verifies signed execution and replay rejection",
+            "x-vercel-trusted-oidc-idp-token",
+            "sandbox_request_replayed",
+        ),
+        "Sandbox live probe unit tests",
     )
     require_markers(
         "scripts/verify-repository-supervisor-e2e.ts",
@@ -747,8 +776,8 @@ def main() -> int:
             fail(f"license entitlement schema missing seat-bound envelope marker: {marker}")
 
     api_contract = json.loads((ROOT / "blueprints/commercial/service-api-contract.json").read_text(encoding="utf-8"))
-    if api_contract.get("schema_version") != 17:
-        fail("commercial service API contract must be schema_version 17")
+    if api_contract.get("schema_version") != 18:
+        fail("commercial service API contract must be schema_version 18")
     contract_text = json.dumps(api_contract, sort_keys=True)
     for marker in (
         "/v1/releases/current", "/v1/template/archive", "/v1/seats", "/v1/access/reconcile", "/v1/audit/repository", "/v1/plugin/entitlements/current",
@@ -769,6 +798,11 @@ def main() -> int:
         "supervisor_merge_must_verify_resulting_default_branch_head",
         "sandbox_production_driver_source", "sandbox_request_signature", "sandbox_response_signature",
         "sandbox_source_binding", "sandbox_network_default_deny", "sandbox_workspace_destroy_after_execution_required",
+        "sandbox_live_probe_must_be_production_only",
+        "sandbox_live_probe_must_use_trusted_oidc_protected_deployment",
+        "sandbox_live_probe_signing_secret_never_leaves_service",
+        "sandbox_same_origin_vercel_oidc_must_not_be_forwarded_cross_origin",
+        "sandbox_live_probe_must_verify_response_hmac_and_replay_rejection",
         "sandbox_source_ready_is_not_live_gateway_evidence",
         "sandbox_vercel_gateway_source",
         "sandbox_vercel_gateway_route",
