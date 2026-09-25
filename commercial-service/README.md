@@ -58,6 +58,12 @@ Commercial service 0.4.8 adds the read-only MCP tool `repository_list_billing_ac
 
 The server candidate set is deliberately narrow: the authenticated GitHub user's own entitlement account plus organization entitlement accounts for which that user has an active server-side seat assignment. Organization candidates are then re-verified against current GitHub membership before they are returned. The response includes the current server-side `repository_supervisor_read` and `repository_supervisor_write` capability decisions and reasons. It never enumerates the global entitlement ledger, and a returned billing account ID remains only a selector; every paid repository tool re-authorizes the principal, entitlement, organization seat and provider access.
 
+## Protected sandbox live verification
+
+The configured sandbox readiness endpoint proves configuration only. A separate production-only `POST /api/ready/sandbox/live` route runs one bounded explicit-empty workspace probe through the real signed gateway. It is intended to remain behind Vercel Deployment Protection and requires the explicit `x-anpos-sandbox-live-probe: 1` trigger.
+
+The probe keeps `ANPOS_SANDBOX_SIGNING_SECRET` inside the Vercel service. When the configured gateway shares the exact `ANPOS_PUBLIC_BASE_URL` origin, the driver forwards the Vercel project OIDC token only to that same origin so Deployment Protection is preserved without leaking the token to arbitrary remote gateways. The probe verifies Python >=3.12, deny-all networking, request HMAC acceptance, signed response validation, exact input/output SHA-256, exact output allowlisting, workspace destruction, and durable replay rejection. The dedicated `commercial-sandbox-live-e2e.yml` workflow records only secret-free evidence.
+
 ## Internal Repository Supervisor read E2E grant
 
 Commercial service 0.4.9 can temporarily enable one internal read-only Repository Supervisor E2E grant before real paid Marketplace plans are live. Configure both `ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN` and `ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT`; the expiry must be no more than 48 hours ahead.
