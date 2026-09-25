@@ -5,7 +5,7 @@ import {
   templateReleasePlanSnapshot,
   type MaterializedTemplateReleaseFile,
   type TemplateReleaseMaterializationRequest,
-} from "./github";
+} from "./embedded-release";
 import {
   executeWithSandboxDriver,
   type SandboxExecutionRequest,

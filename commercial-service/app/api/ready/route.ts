@@ -1,7 +1,7 @@
 import { createPrivateKey } from "node:crypto";
 import { db, ensureSchema } from "@/lib/db";
 import { configurationProblems, serviceConfig } from "@/lib/env";
-import { marketplacePlanMap, organizationSeatCapacity, PLAN_FEATURES } from "@/lib/plans";
+import { marketplacePlanMap, organizationSeatCapacity } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -14,13 +14,11 @@ export async function GET() {
     const cfg = serviceConfig();
     const marketplaceKey = createPrivateKey(cfg.githubMarketplaceAppPrivateKeyPem);
     if (marketplaceKey.asymmetricKeyType !== "rsa") throw new Error("github_marketplace_app_key_must_be_rsa");
-    const vendorKey = createPrivateKey(cfg.githubVendorAppPrivateKeyPem);
-    if (vendorKey.asymmetricKeyType !== "rsa") throw new Error("github_vendor_app_key_must_be_rsa");
     const entitlementKey = createPrivateKey(cfg.entitlementPrivateKeyPem);
     if (entitlementKey.asymmetricKeyType !== "ed25519") throw new Error("entitlement_key_must_be_ed25519");
 
-    marketplacePlanMap();
-    for (const planId of Object.keys(PLAN_FEATURES)) organizationSeatCapacity(planId, null);
+    const planMap = marketplacePlanMap();
+    for (const planId of new Set(Object.values(planMap))) organizationSeatCapacity(planId, null);
 
     await ensureSchema();
     await db().query("SELECT 1");

@@ -10,14 +10,17 @@ export type MarketplaceAppConfig = {
 export type ServiceConfig = MarketplaceAppConfig & {
   databaseUrl: string;
   githubWebhookSecret: string;
-  githubVendorAppId: string;
-  githubVendorAppPrivateKeyPem: string;
-  githubVendorInstallationId: string;
-  privateTemplateRepo: string;
   entitlementPrivateKeyPem: string;
   entitlementKeyId: string;
   entitlementIssuer: string;
   operatorToken: string;
+};
+
+export type VendorDistributionConfig = {
+  githubVendorAppId: string;
+  githubVendorAppPrivateKeyPem: string;
+  githubVendorInstallationId: string;
+  privateTemplateRepo: string;
   commercialReleaseRef: string;
 };
 
@@ -94,12 +97,15 @@ const COMMUNITY_LAUNCH_REQUIRED = [
 const FULL_REQUIRED = [
   ...COMMUNITY_LAUNCH_REQUIRED,
   "ANPOS_MARKETPLACE_PLAN_MAP",
-  "ANPOS_VENDOR_APP_ID",
-  "ANPOS_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_KEY_ID",
   "ANPOS_OPERATOR_TOKEN",
   "ANPOS_ORG_SEAT_LIMITS",
+] as const;
+
+const VENDOR_DISTRIBUTION_REQUIRED = [
+  "ANPOS_VENDOR_APP_ID",
+  "ANPOS_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_VENDOR_INSTALLATION_ID",
   "ANPOS_PRIVATE_TEMPLATE_REPO",
   "ANPOS_COMMERCIAL_RELEASE_REF",
@@ -320,9 +326,22 @@ export function communityLaunchConfigurationProblems(): string[] {
   return commonProblems(COMMUNITY_LAUNCH_REQUIRED, false);
 }
 
+function collaboratorProvisioningEnabled(): boolean {
+  return String(rawValue("ANPOS_COLLABORATOR_PROVISIONING_ENABLED") ?? "false").toLowerCase() === "true";
+}
+
+export function vendorDistributionConfigurationProblems(): string[] {
+  return commonProblems(VENDOR_DISTRIBUTION_REQUIRED, true);
+}
+
 export function configurationProblems(): string[] {
   const problems = commonProblems(FULL_REQUIRED, true);
-  if (premiumPaidPlanConfigured()) problems.push(...premiumDistributionConfigurationProblems());
+  if (premiumPaidPlanConfigured()) {
+    problems.push(...premiumDistributionConfigurationProblems());
+    problems.push(...vendorDistributionConfigurationProblems());
+  } else if (collaboratorProvisioningEnabled()) {
+    problems.push(...vendorDistributionConfigurationProblems());
+  }
   if (internalSupervisorReadTestGrantConfigured()) {
     problems.push(...internalSupervisorReadTestConfigurationProblems());
     problems.push("unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_ACTIVE");
@@ -470,14 +489,23 @@ export function serviceConfig(): ServiceConfig {
     ...marketplaceAppConfig(),
     databaseUrl: value("DATABASE_URL")!,
     githubWebhookSecret: value("ANPOS_GITHUB_WEBHOOK_SECRET")!,
-    githubVendorAppId: value("ANPOS_VENDOR_APP_ID")!,
-    githubVendorAppPrivateKeyPem: pem("ANPOS_VENDOR_APP_PRIVATE_KEY")!,
-    githubVendorInstallationId: value("ANPOS_VENDOR_INSTALLATION_ID")!,
-    privateTemplateRepo: value("ANPOS_PRIVATE_TEMPLATE_REPO")!,
     entitlementPrivateKeyPem: pem("ANPOS_ENTITLEMENT_PRIVATE_KEY")!,
     entitlementKeyId: value("ANPOS_ENTITLEMENT_KEY_ID")!,
     entitlementIssuer: value("ANPOS_ENTITLEMENT_ISSUER") ?? "https://license.anpos.dev",
     operatorToken: value("ANPOS_OPERATOR_TOKEN")!,
+  };
+}
+
+export function vendorDistributionConfig(): VendorDistributionConfig {
+  const problems = vendorDistributionConfigurationProblems();
+  if (problems.length) {
+    throw new Error(`Vendor distribution is not configured: ${problems.join(", ")}`);
+  }
+  return {
+    githubVendorAppId: value("ANPOS_VENDOR_APP_ID")!,
+    githubVendorAppPrivateKeyPem: pem("ANPOS_VENDOR_APP_PRIVATE_KEY")!,
+    githubVendorInstallationId: value("ANPOS_VENDOR_INSTALLATION_ID")!,
+    privateTemplateRepo: value("ANPOS_PRIVATE_TEMPLATE_REPO")!,
     commercialReleaseRef: value("ANPOS_COMMERCIAL_RELEASE_REF")!,
   };
 }

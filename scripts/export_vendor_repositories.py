@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -24,6 +25,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVICE_PREFIX = PurePosixPath("commercial-service")
 SERVICE_REPOSITORY_NAME = "anpos-commercial-service"
 TEMPLATE_REPOSITORY_NAME = "anpos-commercial-template"
+EMBEDDED_TEMPLATE_DIR = PurePosixPath("vendor-release/template")
+EMBEDDED_TEMPLATE_ARCHIVE = PurePosixPath("vendor-release/anpos-commercial-template.zip")
 VENDOR_BOUNDARY_REPOSITORY_PATH = "config/licensing/vendor-source-boundary.json"
 MANIFEST_NAME = "EXPORT-MANIFEST.json"
 FORBIDDEN_PARTS = {".git", ".bundle", ".next", ".vercel", "node_modules", "__pycache__", ".pytest_cache"}
@@ -265,6 +268,91 @@ def write_manifest(
     )
 
 
+def append_generated_record(
+    records: list[dict[str, object]],
+    *,
+    path: PurePosixPath,
+    origin: str,
+    target: Path,
+    git_mode: str = "100644",
+) -> None:
+    records.append(
+        {
+            "path": path.as_posix(),
+            "origin": origin,
+            "git_mode": git_mode,
+            "git_object": None,
+            "size": target.stat().st_size,
+            "sha256": sha256(target),
+        }
+    )
+
+
+def write_deterministic_zip(source_directory: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        for path in sorted(source_directory.rglob("*")):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(source_directory).as_posix()
+            info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = (path.stat().st_mode & 0o777) << 16
+            info.flag_bits = 0
+            archive.writestr(info, path.read_bytes())
+
+
+def embed_certified_template_release(
+    source_root: Path,
+    destination: Path,
+    entries: list[TrackedEntry],
+    vendor_only_paths: tuple[str, ...],
+    revision: str,
+    source_tree: str,
+    service_records: list[dict[str, object]],
+) -> None:
+    template_selected = select_entries(entries, "template", vendor_only_paths)
+    embedded_selected = [
+        (entry, EMBEDDED_TEMPLATE_DIR / target_relative)
+        for entry, target_relative in template_selected
+    ]
+    embedded_records = copy_selected(source_root, destination, embedded_selected)
+    prefix = EMBEDDED_TEMPLATE_DIR.as_posix() + "/"
+    template_records: list[dict[str, object]] = []
+    for record in embedded_records:
+        path = str(record["path"])
+        if not path.startswith(prefix):
+            raise ExportError("embedded template path escaped expected prefix")
+        template_records.append({**record, "path": path[len(prefix):]})
+    service_records.extend(embedded_records)
+
+    embedded_root = destination.joinpath(*EMBEDDED_TEMPLATE_DIR.parts)
+    write_manifest(
+        embedded_root,
+        mode="template",
+        revision=revision,
+        source_tree=source_tree,
+        records=template_records,
+    )
+    embedded_manifest = embedded_root / MANIFEST_NAME
+    append_generated_record(
+        service_records,
+        path=EMBEDDED_TEMPLATE_DIR / MANIFEST_NAME,
+        origin="generated:embedded-certified-template-manifest",
+        target=embedded_manifest,
+    )
+
+    archive_target = destination.joinpath(*EMBEDDED_TEMPLATE_ARCHIVE.parts)
+    write_deterministic_zip(embedded_root, archive_target)
+    append_generated_record(
+        service_records,
+        path=EMBEDDED_TEMPLATE_ARCHIVE,
+        origin="generated:embedded-certified-template-archive",
+        target=archive_target,
+    )
+
+
 def export_repositories(
     source_root: Path,
     output_root: Path,
@@ -309,6 +397,15 @@ def export_repositories(
             )
             if mode == "service":
                 write_generated_service_gitignore(destination, records)
+                embed_certified_template_release(
+                    source_root,
+                    destination,
+                    entries,
+                    vendor_only_paths,
+                    revision,
+                    tree,
+                    records,
+                )
             write_manifest(destination, mode=mode, revision=revision, source_tree=tree, records=records)
             staged[mode] = destination
 

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { requireGithubAccountAccess } from "@/lib/auth";
 import { getEntitlement, reconcileEntitlement } from "@/lib/entitlements";
-import { templateReleaseManifest } from "@/lib/github";
+import { templateReleaseManifest } from "@/lib/embedded-release";
 import { requestIdFrom } from "@/lib/http";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { requireActiveSeat } from "@/lib/seats";
