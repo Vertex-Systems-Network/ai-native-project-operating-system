@@ -1,6 +1,6 @@
 {
-  "schema_version": 3,
-  "status": "artifact_channel_source_implemented_live_gateway_evidence_pending",
+  "schema_version": 4,
+  "status": "vercel_gateway_source_implemented_live_gateway_evidence_pending",
   "implementation_scope": "repository_supervisor_execution",
   "driver_required": true,
   "allowed_isolation": [
@@ -62,7 +62,11 @@
     "Artifact inputs and outputs are exact-path allowlisted, canonical-base64 encoded and SHA-256 verified before trust.",
     "The sandbox may start from an immutable GitHub commit or an explicit empty workspace; no mutable repository ref is accepted.",
     "Production full-plan apply requires Python 3.12 or newer inside the isolated sandbox and never executes bootstrap transformations on the commercial-service host.",
-    "Only explicitly requested output paths may leave the sandbox; arbitrary workspace files cannot be returned."
+    "Only explicitly requested output paths may leave the sandbox; arbitrary workspace files cannot be returned.",
+    "The first Vercel-native live gateway accepts explicit-empty workspaces only; github_commit source mode remains protocol-defined but fail-closed until private-source credential handling is separately certified.",
+    "The Vercel-native live gateway rejects environment-variable forwarding; the current full-plan apply path supplies no environment-variable names.",
+    "The current Hobby-safe full-plan execution budget is 240 seconds inside a 300-second gateway function budget; the protocol-wide 900-second maximum is not claimed as live Vercel gateway evidence.",
+    "Gateway replay defense is durable in PostgreSQL and must not rely on in-memory serverless state."
   ],
   "production_driver": {
     "id": "remote_ephemeral_signed_gateway_v1",
@@ -81,7 +85,22 @@
     "artifact_channel": "signed_bounded_input_files_plus_exact_output_allowlist",
     "runtime_requirements": [
       "python3>=3.12"
-    ]
+    ],
+    "gateway_source": "commercial-service/lib/vercel-sandbox-gateway.ts",
+    "gateway_route": "/v1/execute",
+    "gateway_runtime": "vercel_sandbox_python3.13",
+    "gateway_isolation": "firecracker_microvm",
+    "gateway_network_policy": "deny-all",
+    "gateway_replay_ledger": "sandbox_gateway_request_nonces",
+    "gateway_live_execution_timeout_seconds": 240,
+    "gateway_function_max_duration_seconds": 300,
+    "gateway_workspace_base_modes_live": [
+      "empty"
+    ],
+    "gateway_workspace_base_modes_protocol_pending": [
+      "github_commit"
+    ],
+    "environment_variable_forwarding_live": false
   },
   "workspace_base_modes": [
     "github_commit",
