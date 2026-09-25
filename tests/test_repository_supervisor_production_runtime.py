@@ -86,6 +86,7 @@ class RepositorySupervisorProductionRuntimeTests(unittest.TestCase):
             "commercial-service/migrations/005_repository_supervisor_full_apply.sql",
             "commercial-service/migrations/006_guarded_empty_repository_initialization.sql",
             "commercial-service/migrations/007_vercel_sandbox_gateway_replay.sql",
+            "commercial-service/migrations/008_marketplace_billing_lifecycle.sql",
             "commercial-service/lib/vercel-sandbox-gateway.ts",
             "commercial-service/app/v1/execute/route.ts",
             "commercial-service/tests/vercel-sandbox-gateway.test.ts",
