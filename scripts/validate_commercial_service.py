@@ -159,7 +159,9 @@ def main() -> int:
     require_markers(
         "lib/github.ts",
         (
-            "marketplace_listing/accounts", "marketplace_listing/plans?per_page=100&page=1", "listMarketplacePlans", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
+            "marketplace_listing/accounts", "marketplace_listing/plans?per_page=100&page=1", "listMarketplacePlans",
+            "marketplaceAppEligibilitySnapshot", "api.github.com/app", "app/installations?per_page=",
+            "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
             'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "marketplaceAppConfig", "serviceConfig",
             "githubMarketplaceAppId", "githubVendorAppId",
             'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
@@ -747,7 +749,9 @@ def main() -> int:
             "listMarketplacePlans", "communityMarketplacePlanId",
             "github_marketplace_live_listing", "published_plans",
             "unpublished_plan_count", "monthly_billing_configured",
-            "annual_billing_configured", "Cache-Control",
+            "annual_billing_configured", "active_installations_observed",
+            "installation_threshold_reference", "installation_threshold_met",
+            "external_operator_evidence_required", "Cache-Control",
         ),
         "Marketplace plan discovery readiness",
     )

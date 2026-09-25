@@ -145,6 +145,66 @@ export async function listMarketplacePlans(): Promise<MarketplaceListingPlan[]> 
   });
 }
 
+export type MarketplaceAppEligibilitySnapshot = {
+  owner_login: string | null;
+  owner_type: string | null;
+  active_installations_observed: number;
+  installation_threshold_reference: number;
+  installation_threshold_met: boolean;
+  installation_count_is_lower_bound: boolean;
+};
+
+export async function marketplaceAppEligibilitySnapshot(
+  installationThresholdReference = 100,
+): Promise<MarketplaceAppEligibilitySnapshot> {
+  if (
+    !Number.isSafeInteger(installationThresholdReference)
+    || installationThresholdReference < 1
+    || installationThresholdReference > 100
+  ) throw new Error("INVALID_MARKETPLACE_INSTALLATION_THRESHOLD_REFERENCE");
+
+  const headers = githubHeaders(githubAppJwt("marketplace"));
+  const [appResponse, installationsResponse] = await Promise.all([
+    fetch("https://api.github.com/app", {
+      headers,
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    }),
+    fetch(
+      `https://api.github.com/app/installations?per_page=${installationThresholdReference}&page=1`,
+      {
+        headers,
+        cache: "no-store",
+        signal: AbortSignal.timeout(10_000),
+      },
+    ),
+  ]);
+  if (!appResponse.ok) throw new Error(`MARKETPLACE_APP_IDENTITY_LOOKUP_FAILED_${appResponse.status}`);
+  if (!installationsResponse.ok) {
+    throw new Error(`MARKETPLACE_APP_INSTALLATIONS_LOOKUP_FAILED_${installationsResponse.status}`);
+  }
+
+  const app = await appResponse.json() as {
+    owner?: { login?: unknown; type?: unknown } | null;
+  };
+  const installations = await installationsResponse.json() as unknown;
+  if (!Array.isArray(installations)) throw new Error("MARKETPLACE_APP_INSTALLATIONS_RESPONSE_INVALID");
+
+  const active = installations.filter((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+    return (row as Record<string, unknown>).suspended_at == null;
+  }).length;
+  const thresholdMet = active >= installationThresholdReference;
+  return {
+    owner_login: typeof app.owner?.login === "string" ? app.owner.login : null,
+    owner_type: typeof app.owner?.type === "string" ? app.owner.type : null,
+    active_installations_observed: active,
+    installation_threshold_reference: installationThresholdReference,
+    installation_threshold_met: thresholdMet,
+    installation_count_is_lower_bound: thresholdMet,
+  };
+}
+
 export async function getMarketplaceSubscription(accountId: number): Promise<MarketplaceSubscription | null> {
   const response = await fetch(`https://api.github.com/marketplace_listing/accounts/${accountId}`, {
     headers: githubHeaders(githubAppJwt("marketplace")),
