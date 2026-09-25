@@ -1,0 +1,3 @@
+ALTER TABLE entitlements
+  ADD COLUMN IF NOT EXISTS next_billing_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS free_trial_ends_on TIMESTAMPTZ;

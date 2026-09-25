@@ -14,6 +14,8 @@ type EntitlementRecord = {
   state?: unknown;
   features?: unknown;
   billing_cycle?: unknown;
+  next_billing_date?: unknown;
+  free_trial_ends_on?: unknown;
   billing_updated_at?: unknown;
   updated_at?: unknown;
 };
@@ -52,7 +54,7 @@ export async function loadTeamEntitlementRecord(accountId: number): Promise<Enti
   await ensureSchema();
   const result = await db().query(
     `SELECT github_account_id,github_login,github_account_type,plan_id,marketplace_plan_id,seats,state,features,
-            billing_cycle,billing_updated_at,updated_at
+            billing_cycle,next_billing_date,free_trial_ends_on,billing_updated_at,updated_at
        FROM entitlements WHERE github_account_id=$1`,
     [accountId],
   );
@@ -101,6 +103,8 @@ export function buildTeamDashboardSummary(entitlement: EntitlementRecord, seatRo
       id: planId,
       state,
       billing_cycle: optionalString(entitlement.billing_cycle),
+      next_billing_date: optionalIso(entitlement.next_billing_date),
+      free_trial_ends_on: optionalIso(entitlement.free_trial_ends_on),
       marketplace_plan_id: positiveInteger(entitlement.marketplace_plan_id),
       billing_updated_at: optionalIso(entitlement.billing_updated_at),
       record_updated_at: optionalIso(entitlement.updated_at),

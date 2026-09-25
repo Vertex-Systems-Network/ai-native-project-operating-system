@@ -100,18 +100,21 @@ export async function reconcileEntitlement(accountId: number, requestId: string)
     await client.query(`
       INSERT INTO entitlements(
         github_account_id,github_login,github_account_type,license_id,plan_id,marketplace_plan_id,seats,state,features,billing_cycle,
-        issued_at,not_before,expires_at,billing_updated_at,signed_envelope,updated_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$11,$12,$13,$14::jsonb,NOW())
+        next_billing_date,free_trial_ends_on,issued_at,not_before,expires_at,billing_updated_at,signed_envelope,updated_at
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$13,$14,$15,$16::jsonb,NOW())
       ON CONFLICT (github_account_id) DO UPDATE SET
         github_login=EXCLUDED.github_login,github_account_type=EXCLUDED.github_account_type,plan_id=EXCLUDED.plan_id,
         marketplace_plan_id=EXCLUDED.marketplace_plan_id,seats=EXCLUDED.seats,state=EXCLUDED.state,features=EXCLUDED.features,
-        billing_cycle=EXCLUDED.billing_cycle,issued_at=EXCLUDED.issued_at,not_before=EXCLUDED.not_before,
+        billing_cycle=EXCLUDED.billing_cycle,next_billing_date=EXCLUDED.next_billing_date,
+        free_trial_ends_on=EXCLUDED.free_trial_ends_on,issued_at=EXCLUDED.issued_at,not_before=EXCLUDED.not_before,
         expires_at=EXCLUDED.expires_at,billing_updated_at=EXCLUDED.billing_updated_at,
         signed_envelope=EXCLUDED.signed_envelope,updated_at=NOW()
     `, [
       subscription.id, subscription.login, accountType, licenseId, planId, marketplacePlanId, seats, state,
-      JSON.stringify(features), subscription.marketplace_purchase.billing_cycle ?? null, issuedAt, envelopeExpiresAt,
-      subscription.marketplace_purchase.updated_at ?? null, JSON.stringify(envelope),
+      JSON.stringify(features), subscription.marketplace_purchase.billing_cycle ?? null,
+      subscription.marketplace_purchase.next_billing_date ?? null,
+      subscription.marketplace_purchase.free_trial_ends_on ?? null,
+      issuedAt, envelopeExpiresAt, subscription.marketplace_purchase.updated_at ?? null, JSON.stringify(envelope),
     ]);
     await audit(client, requestId, "entitlement_reconciled", accountId, {
       plan_id: planId,

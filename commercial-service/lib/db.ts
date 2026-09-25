@@ -1,7 +1,10 @@
 import { Pool, type PoolClient } from "pg";
 import { databaseConfig } from "./env";
 
-const REQUIRED_MIGRATION = "007_vercel_sandbox_gateway_replay.sql";
+const REQUIRED_MIGRATIONS = [
+  "007_vercel_sandbox_gateway_replay.sql",
+  "008_marketplace_billing_lifecycle.sql",
+] as const;
 let pool: Pool | null = null;
 let schemaReady = false;
 
@@ -22,11 +25,14 @@ export function db(): Pool {
 export async function ensureSchema(): Promise<void> {
   if (schemaReady) return;
   try {
-    const migration = await db().query(
-      "SELECT checksum_sha256 FROM commercial_schema_migrations WHERE name=$1",
-      [REQUIRED_MIGRATION],
+    const migrations = await db().query(
+      "SELECT name,checksum_sha256 FROM commercial_schema_migrations WHERE name = ANY($1::text[])",
+      [REQUIRED_MIGRATIONS],
     );
-    if (!migration.rowCount) throw new Error("COMMERCIAL_DATABASE_MIGRATION_REQUIRED");
+    const applied = new Set(migrations.rows.map((row) => String(row.name)));
+    if (REQUIRED_MIGRATIONS.some((name) => !applied.has(name))) {
+      throw new Error("COMMERCIAL_DATABASE_MIGRATION_REQUIRED");
+    }
     const tables = await db().query(`
       SELECT
         to_regclass('public.marketplace_deliveries') AS marketplace_deliveries,

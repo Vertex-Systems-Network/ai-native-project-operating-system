@@ -19,6 +19,8 @@ type TeamSummary = {
     id: string;
     state: string;
     billing_cycle: string | null;
+    next_billing_date: string | null;
+    free_trial_ends_on: string | null;
     marketplace_plan_id: number | null;
     billing_updated_at: string | null;
     record_updated_at: string | null;
@@ -141,6 +143,8 @@ export default function TeamClient() {
           <dt>Plan</dt><dd>{summary.plan.id}</dd>
           <dt>Entitlement state</dt><dd>{summary.plan.state}</dd>
           <dt>Billing cycle</dt><dd>{summary.plan.billing_cycle ?? "not reported"}</dd>
+          <dt>Next billing date</dt><dd>{summary.plan.next_billing_date ? new Date(summary.plan.next_billing_date).toLocaleString() : "not reported"}</dd>
+          <dt>Free trial ends</dt><dd>{summary.plan.free_trial_ends_on ? new Date(summary.plan.free_trial_ends_on).toLocaleString() : "not on trial"}</dd>
           <dt>Billing authority</dt><dd>GitHub Marketplace</dd>
           <dt>Signed-in admin</dt><dd>@{summary.viewer.github_login}</dd>
         </dl>
