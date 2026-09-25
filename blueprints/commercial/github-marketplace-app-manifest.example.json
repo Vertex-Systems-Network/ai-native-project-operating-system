@@ -58,7 +58,7 @@
     "required": true,
     "event": "marketplace_purchase",
     "url_path": "/api/webhooks/github/marketplace",
-    "secret_environment_key": "GITHUB_WEBHOOK_SECRET",
+    "secret_environment_key": "ANPOS_GITHUB_WEBHOOK_SECRET",
     "rule": "Configure this webhook from the GitHub Marketplace listing Webhook page after the draft listing exists. Do not model marketplace_purchase as a normal GitHub App event subscription."
   }
 }

@@ -15,10 +15,10 @@ const marketplaceKeys = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const marketplacePrivateKey = marketplaceKeys.privateKey.export({ format: "pem", type: "pkcs8" }).toString();
 
 const MANAGED_ENV = [
-  "GITHUB_MARKETPLACE_APP_ID",
-  "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
-  "GITHUB_MARKETPLACE_CLIENT_ID",
-  "GITHUB_MARKETPLACE_CLIENT_SECRET",
+  "ANPOS_MARKETPLACE_APP_ID",
+  "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
+  "ANPOS_MARKETPLACE_CLIENT_ID",
+  "ANPOS_MARKETPLACE_CLIENT_SECRET",
   "ANPOS_PUBLIC_BASE_URL",
   "ANPOS_SESSION_SECRET",
 ] as const;
@@ -26,10 +26,10 @@ const MANAGED_ENV = [
 const originalFetch = globalThis.fetch;
 
 function configureMarketplaceApp(): void {
-  process.env.GITHUB_MARKETPLACE_APP_ID = "123456";
-  process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY = marketplacePrivateKey;
-  process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.community-negative-123";
-  process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.ANPOS_MARKETPLACE_APP_ID = "123456";
+  process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY = marketplacePrivateKey;
+  process.env.ANPOS_MARKETPLACE_CLIENT_ID = "Iv1.community-negative-123";
+  process.env.ANPOS_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
   process.env.ANPOS_PUBLIC_BASE_URL = "https://license.example.test";
   process.env.ANPOS_SESSION_SECRET = "s".repeat(48);
 }

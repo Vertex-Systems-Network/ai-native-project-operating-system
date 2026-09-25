@@ -21,6 +21,12 @@ The source must remain inert:
 
 Blueprint presence is never proof that a capability is enabled, purchased, connected, deployed, or verified.
 
+### Commercial subscription finalization
+
+The commercial runtime uses the `ANPOS_*` environment namespace for Marketplace, Vendor Distribution, entitlement, seat, and operator configuration. New production deployments must not require environment variables whose names begin with `GITHUB_`; historical legacy names are not launch configuration.
+
+Current paid-launch sequence remains fail-closed: configure real Marketplace plan IDs, distinct Marketplace/Supervisor/Vendor App identities, verified private template distribution, signing/seat/operator controls, then prove purchase/change/cancel reconciliation and Repository Supervisor entitlement E2E before paid launch is called ready.
+
 ## Persistent source continuous certification in 1.3.13
 
 The canonical source now retains exactly one active GitHub Actions workflow: `.github/workflows/source-continuous-certification.yml`.

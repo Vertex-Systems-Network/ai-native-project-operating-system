@@ -57,7 +57,7 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
                 "required": True,
                 "event": "marketplace_purchase",
                 "url": "https://license.example.test/api/webhooks/github/marketplace",
-                "secret_environment_key": "GITHUB_WEBHOOK_SECRET",
+                "secret_environment_key": "ANPOS_GITHUB_WEBHOOK_SECRET",
             },
         )
         self.assertEqual(query["request_oauth_on_install"], ["false"])
@@ -139,15 +139,15 @@ class OperatorLaunchBootstrapTests(unittest.TestCase):
         vendor_keys = set(data["github_apps"]["vendor_distribution"]["environment_keys"])
         service_keys = set(data["service_environment_keys"])
         sandbox_keys = set(data["sandbox_environment_keys"])
-        self.assertIn("GITHUB_MARKETPLACE_APP_ID", marketplace_keys)
-        self.assertIn("GITHUB_MARKETPLACE_APP_PRIVATE_KEY", marketplace_keys)
-        self.assertIn("GITHUB_MARKETPLACE_CLIENT_ID", marketplace_keys)
-        self.assertIn("GITHUB_MARKETPLACE_CLIENT_SECRET", marketplace_keys)
+        self.assertIn("ANPOS_MARKETPLACE_APP_ID", marketplace_keys)
+        self.assertIn("ANPOS_MARKETPLACE_APP_PRIVATE_KEY", marketplace_keys)
+        self.assertIn("ANPOS_MARKETPLACE_CLIENT_ID", marketplace_keys)
+        self.assertIn("ANPOS_MARKETPLACE_CLIENT_SECRET", marketplace_keys)
         self.assertIn("ANPOS_GITHUB_SUPERVISOR_APP_ID", supervisor_keys)
         self.assertIn("ANPOS_GITHUB_SUPERVISOR_CLIENT_ID", supervisor_keys)
         self.assertIn("ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET", supervisor_keys)
-        self.assertIn("GITHUB_VENDOR_APP_ID", vendor_keys)
-        self.assertIn("GITHUB_VENDOR_APP_PRIVATE_KEY", vendor_keys)
+        self.assertIn("ANPOS_VENDOR_APP_ID", vendor_keys)
+        self.assertIn("ANPOS_VENDOR_APP_PRIVATE_KEY", vendor_keys)
         self.assertIn("ANPOS_PUBLIC_BASE_URL", service_keys)
         self.assertIn("ANPOS_SESSION_SECRET", service_keys)
         self.assertIn("ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", service_keys)

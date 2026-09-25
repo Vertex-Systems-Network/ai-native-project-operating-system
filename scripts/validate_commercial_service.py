@@ -65,14 +65,14 @@ def main() -> int:
 
     env_example = text(".env.example")
     for name in (
-        "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
-        "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
-        "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+        "DATABASE_URL", "ANPOS_GITHUB_WEBHOOK_SECRET",
+        "ANPOS_MARKETPLACE_APP_ID", "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
+        "ANPOS_MARKETPLACE_CLIENT_ID", "ANPOS_MARKETPLACE_CLIENT_SECRET",
         "ANPOS_GITHUB_SUPERVISOR_APP_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
         "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
-        "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
+        "ANPOS_VENDOR_APP_ID", "ANPOS_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
-        "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "GITHUB_VENDOR_INSTALLATION_ID",
+        "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "ANPOS_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
         "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
         "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS", "ANPOS_MCP_ACCESS_TOKEN_TTL_SECONDS",
@@ -98,8 +98,8 @@ def main() -> int:
     require_markers(
         "lib/env.ts",
         (
-            "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
-            "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+            "ANPOS_MARKETPLACE_APP_ID", "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
+            "ANPOS_MARKETPLACE_CLIENT_ID", "ANPOS_MARKETPLACE_CLIENT_SECRET",
             "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
             "communityLaunchConfigurationProblems", "marketplaceAppConfig", "databaseConfig", "webhookConfig",
             "mcpOAuthConfigurationProblems", "mcpOAuthConfig", "ANPOS_MCP_ALLOWED_CLIENT_IDS", "ANPOS_MCP_ALLOWED_REDIRECT_URIS",
@@ -110,11 +110,11 @@ def main() -> int:
             "remoteSandboxConfigurationProblems", "remoteSandboxConfig",
             "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET",
             "ANPOS_GITHUB_SUPERVISOR_APP_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_ID", "ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET",
-            "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_APP_COLLISION", "unsafe:GITHUB_SUPERVISOR_VENDOR_APP_COLLISION",
-            "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION", "unsafe:GITHUB_SUPERVISOR_MARKETPLACE_SECRET_REUSE",
-            "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
-            "unsafe:GITHUB_APP_ROLE_SEPARATION", "unsafe:GITHUB_APP_PRIVATE_KEY_REUSE",
-            "weak:GITHUB_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
+            "unsafe:ANPOS_SUPERVISOR_MARKETPLACE_APP_COLLISION", "unsafe:ANPOS_SUPERVISOR_VENDOR_APP_COLLISION",
+            "unsafe:ANPOS_SUPERVISOR_MARKETPLACE_CLIENT_COLLISION", "unsafe:ANPOS_SUPERVISOR_MARKETPLACE_SECRET_REUSE",
+            "ANPOS_VENDOR_APP_ID", "ANPOS_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
+            "unsafe:ANPOS_APP_ROLE_SEPARATION", "unsafe:ANPOS_APP_PRIVATE_KEY_REUSE",
+            "weak:ANPOS_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
         ),
         "commercial configuration",
     )
@@ -745,7 +745,7 @@ def main() -> int:
         "tests/security.test.ts",
         (
             "plan mapping and organization capacities fail closed", "principal-bound v2", "request_body_too_large",
-            "weak:GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
+            "weak:ANPOS_GITHUB_WEBHOOK_SECRET", "Marketplace and vendor GitHub App roles cannot collapse",
             "remote sandbox configuration fails closed on weak or unsafe gateway settings",
             "Supervisor App role cannot collapse into Marketplace or Vendor roles",
             "legacy single-app credentials do not satisfy split configuration", "Community OAuth state uses PKCE",
@@ -759,7 +759,7 @@ def main() -> int:
             "Community launch config is independent from paid and vendor secrets",
             "Community Marketplace identity stays outside paid plan mapping",
             "Community Marketplace plan identity fails closed when malformed",
-            "missing:GITHUB_VENDOR_APP_ID", "paid: false",
+            "missing:ANPOS_VENDOR_APP_ID", "paid: false",
         ),
         "Community launch unit tests",
     )

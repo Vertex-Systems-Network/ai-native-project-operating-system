@@ -12,14 +12,14 @@ import {
 } from "../lib/plans";
 
 const MANAGED_ENV = [
-  "DATABASE_URL", "GITHUB_WEBHOOK_SECRET",
-  "GITHUB_MARKETPLACE_APP_ID", "GITHUB_MARKETPLACE_APP_PRIVATE_KEY",
-  "GITHUB_MARKETPLACE_CLIENT_ID", "GITHUB_MARKETPLACE_CLIENT_SECRET",
+  "DATABASE_URL", "ANPOS_GITHUB_WEBHOOK_SECRET",
+  "ANPOS_MARKETPLACE_APP_ID", "ANPOS_MARKETPLACE_APP_PRIVATE_KEY",
+  "ANPOS_MARKETPLACE_CLIENT_ID", "ANPOS_MARKETPLACE_CLIENT_SECRET",
   "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET", "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
   "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS",
-  "GITHUB_VENDOR_APP_ID", "GITHUB_VENDOR_APP_PRIVATE_KEY",
+  "ANPOS_VENDOR_APP_ID", "ANPOS_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY", "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN",
-  "GITHUB_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO",
+  "ANPOS_VENDOR_INSTALLATION_ID", "ANPOS_PRIVATE_TEMPLATE_REPO",
 ] as const;
 
 function clearManagedEnv() {
@@ -28,11 +28,11 @@ function clearManagedEnv() {
 
 function configureCommunityOnly() {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/anpos";
-  process.env.GITHUB_WEBHOOK_SECRET = "w".repeat(48);
-  process.env.GITHUB_MARKETPLACE_APP_ID = "123456";
-  process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\ncommunity-placeholder\n-----END RSA PRIVATE KEY-----";
-  process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
-  process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.ANPOS_GITHUB_WEBHOOK_SECRET = "w".repeat(48);
+  process.env.ANPOS_MARKETPLACE_APP_ID = "123456";
+  process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----\ncommunity-placeholder\n-----END RSA PRIVATE KEY-----";
+  process.env.ANPOS_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
+  process.env.ANPOS_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
   process.env.ANPOS_PUBLIC_BASE_URL = "https://community.example.test";
   process.env.ANPOS_SESSION_SECRET = "s".repeat(48);
   process.env.ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID = "9000";
@@ -47,7 +47,7 @@ test("Community launch config is independent from paid and vendor secrets", () =
 
   const fullProblems = configurationProblems();
   assert.ok(fullProblems.includes("missing:ANPOS_MARKETPLACE_PLAN_MAP"));
-  assert.ok(fullProblems.includes("missing:GITHUB_VENDOR_APP_ID"));
+  assert.ok(fullProblems.includes("missing:ANPOS_VENDOR_APP_ID"));
   assert.ok(fullProblems.includes("missing:ANPOS_ENTITLEMENT_PRIVATE_KEY"));
   assert.ok(fullProblems.includes("missing:ANPOS_ORG_SEAT_LIMITS"));
 });
