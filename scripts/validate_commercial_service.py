@@ -12,15 +12,15 @@ ERRORS: list[str] = []
 
 REQUIRED = [
     "package.json", "tsconfig.json", "next.config.ts", ".env.example", "README.md",
-    "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/entitlements.ts",
+    "lib/env.ts", "lib/db.ts", "lib/crypto.ts", "lib/github.ts", "lib/auth.ts", "lib/session.ts", "lib/billing-session.ts", "lib/paddle.ts", "lib/entitlements.ts",
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/sandbox-live-probe.ts", "lib/releases.ts",
-    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "migrations/007_vercel_sandbox_gateway_replay.sql", "migrations/008_marketplace_billing_lifecycle.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts", "tests/sandbox-live-probe.test.ts",
-    "tests/community-launch.test.ts", "tests/release-channel.test.ts",
+    "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "migrations/007_vercel_sandbox_gateway_replay.sql", "migrations/008_marketplace_billing_lifecycle.sql", "migrations/009_external_billing_provider.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts", "tests/sandbox-live-probe.test.ts",
+    "tests/community-launch.test.ts", "tests/release-channel.test.ts", "tests/paddle-billing.test.ts",
     "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts", "app/api/ready/sandbox/live/route.ts",
-    "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
+    "app/api/webhooks/github/marketplace/route.ts", "app/api/webhooks/paddle/route.ts", "app/api/v1/billing/checkout/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
     "app/.well-known/oauth-protected-resource/route.ts", "app/.well-known/oauth-authorization-server/route.ts",
     "app/oauth/authorize/route.ts", "app/oauth/token/route.ts", "app/api/auth/mcp/github/callback/route.ts",
-    "app/api/auth/github/callback/route.ts", "app/setup/github/route.ts", "app/community/page.tsx", "app/community/CommunityClient.tsx",
+    "app/api/auth/github/callback/route.ts", "app/api/auth/billing/github/callback/route.ts", "app/setup/github/route.ts", "app/billing/login/route.ts", "app/billing/page.tsx", "app/billing/BillingClient.tsx", "app/billing/checkout/page.tsx", "app/billing/checkout/CheckoutClient.tsx", "app/community/page.tsx", "app/community/CommunityClient.tsx",
     "app/api/v1/keys/route.ts", "app/api/v1/entitlements/current/route.ts", "app/api/v1/reconcile/route.ts",
     "app/api/v1/provision/route.ts", "app/api/v1/seats/route.ts", "app/api/v1/template/archive/route.ts", "app/api/v1/releases/current/route.ts",
     "app/api/v1/access/reconcile/route.ts", "app/api/v1/audit/repository/route.ts", "app/api/v1/audit/repositories/route.ts",
@@ -72,6 +72,9 @@ def main() -> int:
         "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID",
         "ANPOS_VENDOR_APP_ID", "ANPOS_VENDOR_APP_PRIVATE_KEY",
         "ANPOS_MARKETPLACE_PLAN_MAP", "ANPOS_ORG_SEAT_LIMITS", "ANPOS_ENTITLEMENT_PRIVATE_KEY",
+        "ANPOS_PAID_BILLING_PROVIDER", "ANPOS_PADDLE_ENVIRONMENT", "ANPOS_PADDLE_API_KEY",
+        "ANPOS_PADDLE_WEBHOOK_SECRET", "ANPOS_PADDLE_CLIENT_TOKEN", "ANPOS_PADDLE_CHECKOUT_URL",
+        "ANPOS_PADDLE_WEBHOOK_TOLERANCE_SECONDS", "ANPOS_PADDLE_PRICE_MAP",
         "ANPOS_ENTITLEMENT_KEY_ID", "ANPOS_OPERATOR_TOKEN", "ANPOS_VENDOR_INSTALLATION_ID",
         "ANPOS_PRIVATE_TEMPLATE_REPO", "ANPOS_COMMERCIAL_RELEASE_REF", "ANPOS_COLLABORATOR_PROVISIONING_ENABLED", "ANPOS_MAX_WEBHOOK_BYTES",
         "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
@@ -115,6 +118,9 @@ def main() -> int:
             "ANPOS_VENDOR_APP_ID", "ANPOS_VENDOR_APP_PRIVATE_KEY", "ANPOS_COMMERCIAL_RELEASE_REF", "commercialReleaseRef",
             "unsafe:ANPOS_APP_ROLE_SEPARATION", "unsafe:ANPOS_APP_PRIVATE_KEY_REUSE",
             "weak:ANPOS_MARKETPLACE_CLIENT_SECRET", "weak:ANPOS_SESSION_SECRET",
+            "paidBillingProvider", "paddleConfigurationProblems", "paddleConfig",
+            "ANPOS_PAID_BILLING_PROVIDER", "ANPOS_PADDLE_API_KEY", "ANPOS_PADDLE_WEBHOOK_SECRET",
+            "ANPOS_PADDLE_CLIENT_TOKEN", "ANPOS_PADDLE_CHECKOUT_URL", "ANPOS_PADDLE_PRICE_MAP",
         ),
         "commercial configuration",
     )
@@ -124,8 +130,39 @@ def main() -> int:
             "communityMarketplacePlanId", "resolveMarketplacePlan", 'planId: "community"', "paid: false",
             "ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "marketplacePlanMap", "marketplaceId === communityId",
             'developer: ["private_template_access", "protocol_update_channel"]',
+            "paddlePriceMap", "paddlePriceForPlan", "resolvePaddlePrice",
         ),
         "Marketplace plan resolution",
+    )
+    require_markers(
+        "lib/paddle.ts",
+        ("verifyPaddleWebhook", "createPaddleCheckoutTransaction", "paddleSubscriptionSnapshot", "PADDLE_CHECKOUT_URL_UNTRUSTED", "timingSafeEqual"),
+        "Paddle billing client",
+    )
+    require_markers(
+        "app/api/webhooks/paddle/route.ts",
+        ("paddle-signature", "billing_provider_deliveries", "event_id_payload_mismatch", "reconcilePaddleSubscription", "readRawBody"),
+        "Paddle webhook",
+    )
+    require_markers(
+        "app/api/v1/billing/checkout/route.ts",
+        ("authenticatedGithubContext", "active_subscription_exists", "createPaddleCheckoutTransaction", "organization_checkout_required"),
+        "Paddle checkout API",
+    )
+    require_markers(
+        "lib/billing-session.ts",
+        ("__Host-anpos_billing_session", "createBillingOAuthFlowState", "consumeBillingOAuthFlowState", "billingSessionTokenFromRequest", "aes-256-gcm"),
+        "billing GitHub OAuth session",
+    )
+    require_markers(
+        "app/billing/login/route.ts",
+        ("createBillingOAuthFlowState", "code_challenge", "S256", "/api/auth/billing/github/callback"),
+        "billing GitHub login",
+    )
+    require_markers(
+        "app/api/auth/billing/github/callback/route.ts",
+        ("consumeBillingOAuthFlowState", "createBillingSessionCookie", "githubUserFromToken", "code_verifier"),
+        "billing GitHub OAuth callback",
     )
     require_markers(
         "app/api/webhooks/github/marketplace/route.ts",
@@ -353,6 +390,11 @@ def main() -> int:
         "MCP readiness gate",
     )
     require_markers(
+        "tests/paddle-billing.test.ts",
+        ("Paddle price map binds plan and billing cycle", "Paddle webhook signature binds timestamp and exact raw body", "Paddle checkout transaction uses server-selected price and GitHub identity custom data"),
+        "Paddle billing tests",
+    )
+    require_markers(
         "tests/mcp-auth.test.ts",
         (
             "exact allowlist, CIMD metadata, resource and PKCE S256",
@@ -524,19 +566,25 @@ def main() -> int:
     require_markers(
         "lib/entitlements.ts",
         (
-            "resolveMarketplacePlan", "resolvedPlan.paid", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:",
+            "resolveMarketplacePlan", "resolvedPlan.paid", "reconcileMarketplaceEntitlement", "reconcilePaddleSubscription",
+            "billing_provider", "requireActiveSeat", "issueEntitlementForPrincipal", "principal:",
             'accountType === "Organization"', "signed_entitlement: envelope", "revokeAllTemplateGrantsForSource", "revoked > 0",
         ),
         "entitlement engine",
     )
 
     database_runtime = text("lib/db.ts")
-    for marker in ("databaseConfig", "commercial_schema_migrations", "007_vercel_sandbox_gateway_replay.sql", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "sandbox_gateway_request_nonces", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
+    for marker in ("databaseConfig", "commercial_schema_migrations", "007_vercel_sandbox_gateway_replay.sql", "008_marketplace_billing_lifecycle.sql", "009_external_billing_provider.sql", "billing_provider_deliveries", "mcp_oauth_authorization_codes", "mcp_oauth_access_tokens", "repository_supervisor_write_plans", "repository_supervisor_write_idempotency", "sandbox_gateway_request_nonces", "to_regclass", "query_timeout", "COMMERCIAL_DATABASE_MIGRATION_REQUIRED"):
         if marker not in database_runtime:
             fail(f"commercial database runtime gate missing marker: {marker}")
     if "CREATE TABLE" in database_runtime.upper():
         fail("normal commercial request runtime must not execute CREATE TABLE migrations")
 
+    require_markers(
+        "migrations/009_external_billing_provider.sql",
+        ("billing_provider", "billing_provider_subscription_id", "billing_provider_deliveries", "PRIMARY KEY (provider, event_id)"),
+        "external billing provider migration",
+    )
     require_markers(
         "migrations/001_baseline.sql",
         ("marketplace_deliveries", "rate_limit_windows", "organization_seat_assignments", "template_access_grants", "access_reconciliation_jobs", "commercial_audit_log"),
