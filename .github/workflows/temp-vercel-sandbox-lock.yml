@@ -1,0 +1,38 @@
+name: ANPOS Temporary Vercel Sandbox Lock
+
+on:
+  push:
+    branches:
+      - feat/vercel-sandbox-gateway
+    paths:
+      - commercial-service/package.json
+      - .github/workflows/temp-vercel-sandbox-lock.yml
+
+permissions:
+  contents: read
+
+jobs:
+  generate-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: commercial-service/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.19.1
+      - name: Generate exact package lock
+        working-directory: commercial-service
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Verify sandbox dependency is locked
+        working-directory: commercial-service
+        run: |
+          node -e "const l=require('./package-lock.json'); if(l.packages['node_modules/@vercel/sandbox']?.version!=='3.5.0') process.exit(1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vercel-sandbox-package-lock
+          path: commercial-service/package-lock.json
+          if-no-files-found: error
+          retention-days: 1
