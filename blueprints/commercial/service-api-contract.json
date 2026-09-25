@@ -1,5 +1,5 @@
 {
-  "schema_version": 15,
+  "schema_version": 16,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -339,6 +339,16 @@
         "returns_capability_decisions": true,
         "global_account_enumeration": false,
         "billing_account_id_is_selector_only": true
+      },
+      "internal_read_e2e_grant": {
+        "source": "operator_configured_exact_github_login_plus_expiry",
+        "maximum_ttl_hours": 48,
+        "billing_evidence": false,
+        "marketplace_purchase_created": false,
+        "repository_supervisor_read_only": true,
+        "planning_or_write_authorized": false,
+        "selector": "authenticated_principal_own_github_account_id",
+        "remove_after_e2e": true
       }
     },
     {
@@ -471,6 +481,11 @@
     "mcp_billing_account_discovery_global_ledger_enumeration_forbidden": true,
     "mcp_organization_billing_account_discovery_requires_active_seat": true,
     "mcp_discovered_organization_account_requires_current_github_membership": true,
-    "mcp_discovered_billing_account_id_remains_selector_not_authority": true
+    "mcp_discovered_billing_account_id_remains_selector_not_authority": true,
+    "mcp_internal_read_test_grant_exact_login_binding_required": true,
+    "mcp_internal_read_test_grant_max_ttl_hours": 48,
+    "mcp_internal_read_test_grant_is_not_billing_or_marketplace_evidence": true,
+    "mcp_internal_read_test_grant_write_and_planning_forbidden": true,
+    "full_commercial_readiness_forbidden_while_internal_read_test_grant_configured": true
   }
 }
