@@ -22,9 +22,13 @@
     {
       "id": "external_checkout_private_repo",
       "recommended": false,
-      "billing_authority": "operator_configured_payment_provider",
-      "identity_authority": "verified_github_account_binding",
-      "requires_separate_commercial_service": true
+      "billing_authority": "configured_external_payment_provider",
+      "identity_authority": "server_verified_github_user_binding",
+      "requires_separate_commercial_service": true,
+      "source_adapter": "paddle",
+      "implementation_status": "source_implemented_external_seller_configuration_and_e2e_pending",
+      "recommended_when_paid_marketplace_eligibility_pending": true,
+      "raw_payment_card_storage_by_anpos": false
     }
   ],
   "authority": {
@@ -32,7 +36,9 @@
     "server_side_entitlement_ledger_required": true,
     "billing_provider_reconciliation_required_on_ambiguity": true,
     "github_numeric_account_id_is_canonical_when_github_is_identity_provider": true,
-    "display_login_is_not_stable_identity": true
+    "display_login_is_not_stable_identity": true,
+    "multiple_billing_provider_rows_must_not_self_grant": true,
+    "active_entitlement_provider_must_be_reconciled_server_side": true
   },
   "entitlement_security": {
     "asymmetric_signed_entitlements_required_for_portable_claims": true,
