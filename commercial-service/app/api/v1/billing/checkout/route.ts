@@ -1,5 +1,6 @@
 import { authenticatedGithubContext } from "@/lib/auth";
 import { paidBillingProvider } from "@/lib/env";
+import { getEntitlement } from "@/lib/entitlements";
 import { inputErrorResponse, readJsonBody } from "@/lib/http";
 import { createPaddleCheckoutTransaction } from "@/lib/paddle";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -44,6 +45,16 @@ export async function POST(request: Request) {
 
   const rate = await consumeRateLimit("paddle_checkout", String(context.user.id), 10, 60);
   if (!rate.allowed) return rateLimitResponse(rate);
+
+  const existing = await getEntitlement(context.user.id);
+  if (existing && ["active", "trial", "grace"].includes(String(existing.state))) {
+    return Response.json({
+      ok: false,
+      error: "active_subscription_exists",
+      billing_provider: existing.billing_provider ?? null,
+      plan_id: existing.plan_id ?? null,
+    }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
+  }
 
   try {
     const transaction = await createPaddleCheckoutTransaction({
