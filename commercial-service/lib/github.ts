@@ -96,6 +96,55 @@ export type MarketplaceUserRepository = {
   default_branch: string;
 };
 
+export type MarketplaceListingPlan = {
+  id: number;
+  number: number;
+  name: string;
+  state: string;
+  price_model: string | null;
+  monthly_price_in_cents: number | null;
+  yearly_price_in_cents: number | null;
+  has_free_trial: boolean;
+};
+
+export async function listMarketplacePlans(): Promise<MarketplaceListingPlan[]> {
+  const response = await fetch("https://api.github.com/marketplace_listing/plans?per_page=100&page=1", {
+    headers: githubHeaders(githubAppJwt("marketplace")),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error(`MARKETPLACE_PLANS_LOOKUP_FAILED_${response.status}`);
+  const body = await response.json() as unknown;
+  if (!Array.isArray(body)) throw new Error("MARKETPLACE_PLANS_RESPONSE_INVALID");
+  return body.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const row = item as Record<string, unknown>;
+    const id = Number(row.id);
+    const number = Number(row.number);
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    const state = typeof row.state === "string" ? row.state.trim() : "";
+    if (
+      !Number.isSafeInteger(id) || id <= 0
+      || !Number.isSafeInteger(number) || number <= 0
+      || !name || name.length > 120
+      || !state || state.length > 40
+    ) return [];
+    const monthly = row.monthly_price_in_cents == null ? null : Number(row.monthly_price_in_cents);
+    const yearly = row.yearly_price_in_cents == null ? null : Number(row.yearly_price_in_cents);
+    return [{
+      id,
+      number,
+      name,
+      state,
+      price_model: typeof row.price_model === "string" ? row.price_model : null,
+      monthly_price_in_cents: Number.isSafeInteger(monthly) && Number(monthly) >= 0 ? Number(monthly) : null,
+      yearly_price_in_cents: Number.isSafeInteger(yearly) && Number(yearly) >= 0 ? Number(yearly) : null,
+      has_free_trial: row.has_free_trial === true,
+    }];
+  });
+}
+
 export async function getMarketplaceSubscription(accountId: number): Promise<MarketplaceSubscription | null> {
   const response = await fetch(`https://api.github.com/marketplace_listing/accounts/${accountId}`, {
     headers: githubHeaders(githubAppJwt("marketplace")),
