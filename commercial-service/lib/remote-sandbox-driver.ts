@@ -1,3 +1,4 @@
+import { getVercelOidcToken } from "@vercel/oidc";
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { remoteSandboxConfig } from "./env";
 import {
@@ -88,10 +89,12 @@ export function verifyRemoteSandboxResponseSignature(input: {
   );
 }
 
-export function remoteSandboxTrustedSourceHeaders(endpoint: string): Record<string, string> {
-  const token = process.env.VERCEL_OIDC_TOKEN?.trim() ?? "";
+export async function remoteSandboxTrustedSourceHeaders(
+  endpoint: string,
+  explicitToken?: string,
+): Promise<Record<string, string>> {
   const publicBase = process.env.ANPOS_PUBLIC_BASE_URL?.trim() ?? "";
-  if (!token || !publicBase || /[\r\n]/.test(token) || token.split(".").length !== 3) return {};
+  if (!publicBase) return {};
   try {
     const endpointUrl = new URL(endpoint);
     const publicUrl = new URL(publicBase);
@@ -99,6 +102,16 @@ export function remoteSandboxTrustedSourceHeaders(endpoint: string): Record<stri
   } catch {
     return {};
   }
+
+  let token = explicitToken?.trim() ?? process.env.VERCEL_OIDC_TOKEN?.trim() ?? "";
+  if (!token) {
+    try {
+      token = (await getVercelOidcToken())?.trim() ?? "";
+    } catch {
+      return {};
+    }
+  }
+  if (!token || /[\r\n]/.test(token) || token.split(".").length !== 3) return {};
   return { "x-vercel-trusted-oidc-idp-token": token };
 }
 
@@ -233,7 +246,7 @@ export class RemoteEphemeralSandboxDriver implements SandboxDriver {
       response = await this.fetchImpl(this.endpoint, {
         method: "POST",
         headers: {
-          ...remoteSandboxTrustedSourceHeaders(this.endpoint),
+          ...(await remoteSandboxTrustedSourceHeaders(this.endpoint)),
           Accept: "application/json",
           "Content-Type": "application/json",
           "X-Anpos-Sandbox-Protocol": "2",
