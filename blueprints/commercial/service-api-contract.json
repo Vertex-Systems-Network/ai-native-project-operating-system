@@ -189,6 +189,60 @@
       "must_not_modify_existing_generated_project_on_expiry": true
     },
     {
+      "method": "GET",
+      "path": "/billing/login",
+      "authentication": "public_start_then_github_app_oauth_pkce",
+      "purpose": "Start installation-independent GitHub user authorization for direct billing identity binding.",
+      "billing_provider_scope": "paddle_when_configured",
+      "github_account_id_from_browser_forbidden": true,
+      "cache_control": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/billing/github/callback",
+      "authentication": "github_app_oauth_code_plus_pkce_plus_encrypted_billing_state",
+      "purpose": "Verify the GitHub user and create a short-lived encrypted billing browser session without requiring a Marketplace installation.",
+      "github_refresh_token_persisted": false,
+      "cache_control": "no-store"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/billing/checkout",
+      "authentication": "verified_github_user_access_token_or_encrypted_billing_session",
+      "purpose": "Create a Paddle transaction using server-selected plan/price mapping and server-derived GitHub identity.",
+      "supported_personal_plans": [
+        "developer",
+        "pro"
+      ],
+      "billing_cycles": [
+        "month",
+        "year"
+      ],
+      "browser_supplied_github_account_id_forbidden": true,
+      "duplicate_active_subscription_blocked": true,
+      "returns_payment_card_data": false,
+      "cache_control": "private, no-store"
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/paddle",
+      "authentication": "paddle_signature_hmac_sha256_exact_raw_body_timestamp",
+      "purpose": "Process Paddle subscription lifecycle notifications through replay-safe provider reconciliation.",
+      "idempotency": "provider_plus_event_id_with_payload_hash_binding",
+      "supported_events": [
+        "subscription.created",
+        "subscription.activated",
+        "subscription.trialing",
+        "subscription.updated",
+        "subscription.past_due",
+        "subscription.paused",
+        "subscription.resumed",
+        "subscription.canceled"
+      ],
+      "raw_body_signature_required": true,
+      "must_not_return_secrets": true
+    },
+    {
       "method": "POST",
       "path": "/v1/reconcile",
       "authentication": "operator_or_trusted_runtime_only",
@@ -552,6 +606,11 @@
     "sandbox_live_probe_must_use_trusted_oidc_protected_deployment": true,
     "sandbox_live_probe_signing_secret_never_leaves_service": true,
     "sandbox_same_origin_vercel_oidc_must_not_be_forwarded_cross_origin": true,
-    "sandbox_live_probe_must_verify_response_hmac_and_replay_rejection": true
+    "sandbox_live_probe_must_verify_response_hmac_and_replay_rejection": true,
+    "paid_billing_provider_dispatch_required": true,
+    "direct_checkout_github_identity_must_be_server_verified": true,
+    "browser_supplied_billing_identity_is_not_authority": true,
+    "paddle_webhook_raw_body_hmac_and_event_dedup_required": true,
+    "payment_card_data_must_remain_with_payment_processor": true
   }
 }
