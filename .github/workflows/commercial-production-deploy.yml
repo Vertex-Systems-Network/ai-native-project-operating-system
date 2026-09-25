@@ -75,8 +75,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .vercel
-          printf '%s\n' "{\"orgId\":\"$VERCEL_ORG_ID\",\"projectId\":\"$VERCEL_PROJECT_ID\"}" > .vercel/project.json
+          rm -rf .vercel
+          npx --yes vercel@59.11.7 pull --yes --environment=production --token "$VERCEL_TOKEN" >/dev/null
           npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN production --yes --token "$VERCEL_TOKEN"
           npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT production --yes --token "$VERCEL_TOKEN"
 
