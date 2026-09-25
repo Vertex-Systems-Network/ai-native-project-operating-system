@@ -76,7 +76,7 @@ export async function runProductionSandboxLiveProbe(
   fetchImpl: FetchLike = fetch,
 ): Promise<SandboxLiveProbeEvidence> {
   const config = remoteSandboxConfig();
-  const trustedSourceHeaders = remoteSandboxTrustedSourceHeaders(config.endpoint);
+  const trustedSourceHeaders = await remoteSandboxTrustedSourceHeaders(config.endpoint);
   if (sameOriginWithPublicBase(config.endpoint) && !trustedSourceHeaders["x-vercel-trusted-oidc-idp-token"]) {
     throw new SandboxRequestError("sandbox_live_probe_same_origin_oidc_unavailable");
   }
