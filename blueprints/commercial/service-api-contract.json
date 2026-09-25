@@ -1,5 +1,5 @@
 {
-  "schema_version": 14,
+  "schema_version": 15,
   "status": "inactive_blueprint",
   "purpose": "Language-agnostic API boundary for the separately deployed ANPOS commercial entitlement/distribution service, Community repository-readiness surface, and source-implemented Repository Supervisor OAuth/MCP read-plus-guarded-write runtime.",
   "endpoints": [
@@ -289,6 +289,7 @@
       ],
       "implemented_tools": [
         "repository_profile",
+        "repository_list_billing_accounts",
         "repository_resolve",
         "repository_audit",
         "repository_get_assurance",
@@ -330,7 +331,15 @@
         "migration_review_conflicts"
       ],
       "full_planner_conflict_resolution_available": true,
-      "full_planner_conflict_resolution_status": "explicit_resolved_plan_v1"
+      "full_planner_conflict_resolution_status": "explicit_resolved_plan_v1",
+      "billing_account_discovery": {
+        "tool": "repository_list_billing_accounts",
+        "candidate_source": "authenticated_user_account_plus_active_organization_seat_assignments",
+        "github_membership_reverification_required": true,
+        "returns_capability_decisions": true,
+        "global_account_enumeration": false,
+        "billing_account_id_is_selector_only": true
+      }
     },
     {
       "method": "GET",
@@ -457,6 +466,11 @@
     "mcp_cimd_metadata_validation_required": true,
     "mcp_cimd_exact_allowlist_before_fetch_required": true,
     "mcp_cimd_redirect_follow_forbidden": true,
-    "mcp_cimd_selected_redirect_must_be_metadata_bound": true
+    "mcp_cimd_selected_redirect_must_be_metadata_bound": true,
+    "mcp_billing_account_discovery_must_be_principal_scoped": true,
+    "mcp_billing_account_discovery_global_ledger_enumeration_forbidden": true,
+    "mcp_organization_billing_account_discovery_requires_active_seat": true,
+    "mcp_discovered_organization_account_requires_current_github_membership": true,
+    "mcp_discovered_billing_account_id_remains_selector_not_authority": true
   }
 }
