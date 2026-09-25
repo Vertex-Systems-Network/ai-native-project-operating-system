@@ -11,11 +11,11 @@ import {
 function configure() {
   process.env.ANPOS_PUBLIC_BASE_URL = "https://license.example.test";
   process.env.ANPOS_SESSION_SECRET = "s".repeat(48);
-  process.env.GITHUB_MARKETPLACE_APP_ID = "123456";
-  process.env.GITHUB_MARKETPLACE_APP_PRIVATE_KEY =
+  process.env.ANPOS_MARKETPLACE_APP_ID = "123456";
+  process.env.ANPOS_MARKETPLACE_APP_PRIVATE_KEY =
     "-----BEGIN RSA PRIVATE KEY-----\nplaceholder\n-----END RSA PRIVATE KEY-----";
-  process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
-  process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
+  process.env.ANPOS_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
+  process.env.ANPOS_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
   process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
   process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
