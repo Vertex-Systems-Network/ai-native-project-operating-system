@@ -354,15 +354,15 @@ export function remoteSandboxConfig(): RemoteSandboxConfig {
 
 export function supervisorAppConfigurationProblems(): string[] {
   const problems = commonProblems(["ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET"], false);
-  const appId = value("GITHUB_SUPERVISOR_APP_ID");
-  const clientId = value("GITHUB_SUPERVISOR_CLIENT_ID");
-  const clientSecret = value("GITHUB_SUPERVISOR_CLIENT_SECRET");
-  if (!appId) problems.push("missing:GITHUB_SUPERVISOR_APP_ID");
-  else if (!/^\d+$/.test(appId)) problems.push("invalid:GITHUB_SUPERVISOR_APP_ID");
-  if (!clientId) problems.push("missing:GITHUB_SUPERVISOR_CLIENT_ID");
-  else if (!/^[A-Za-z0-9._-]{10,100}$/.test(clientId)) problems.push("invalid:GITHUB_SUPERVISOR_CLIENT_ID");
-  if (!clientSecret) problems.push("missing:GITHUB_SUPERVISOR_CLIENT_SECRET");
-  else if (clientSecret.length < 32) problems.push("weak:GITHUB_SUPERVISOR_CLIENT_SECRET");
+  const appId = value("ANPOS_GITHUB_SUPERVISOR_APP_ID");
+  const clientId = value("ANPOS_GITHUB_SUPERVISOR_CLIENT_ID");
+  const clientSecret = value("ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET");
+  if (!appId) problems.push("missing:ANPOS_GITHUB_SUPERVISOR_APP_ID");
+  else if (!/^\d+$/.test(appId)) problems.push("invalid:ANPOS_GITHUB_SUPERVISOR_APP_ID");
+  if (!clientId) problems.push("missing:ANPOS_GITHUB_SUPERVISOR_CLIENT_ID");
+  else if (!/^[A-Za-z0-9._-]{10,100}$/.test(clientId)) problems.push("invalid:ANPOS_GITHUB_SUPERVISOR_CLIENT_ID");
+  if (!clientSecret) problems.push("missing:ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET");
+  else if (clientSecret.length < 32) problems.push("weak:ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET");
 
   const marketplaceAppId = value("GITHUB_MARKETPLACE_APP_ID");
   const vendorAppId = value("GITHUB_VENDOR_APP_ID");
@@ -381,9 +381,9 @@ export function supervisorAppConfig(): SupervisorAppConfig {
   const problems = supervisorAppConfigurationProblems();
   if (problems.length) throw new Error(`Supervisor App is not configured: ${problems.join(", ")}`);
   return {
-    githubSupervisorAppId: value("GITHUB_SUPERVISOR_APP_ID")!,
-    githubSupervisorClientId: value("GITHUB_SUPERVISOR_CLIENT_ID")!,
-    githubSupervisorClientSecret: value("GITHUB_SUPERVISOR_CLIENT_SECRET")!,
+    githubSupervisorAppId: value("ANPOS_GITHUB_SUPERVISOR_APP_ID")!,
+    githubSupervisorClientId: value("ANPOS_GITHUB_SUPERVISOR_CLIENT_ID")!,
+    githubSupervisorClientSecret: value("ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET")!,
     publicBaseUrl: value("ANPOS_PUBLIC_BASE_URL")!.replace(/\/$/, ""),
     sessionSecret: value("ANPOS_SESSION_SECRET")!,
   };

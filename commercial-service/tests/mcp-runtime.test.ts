@@ -105,9 +105,9 @@ test("profile tool returns OAuth challenge metadata on insufficient scope", asyn
     "-----BEGIN RSA PRIVATE KEY-----\nplaceholder\n-----END RSA PRIVATE KEY-----";
   process.env.GITHUB_MARKETPLACE_CLIENT_ID = "Iv1.community-client-123456";
   process.env.GITHUB_MARKETPLACE_CLIENT_SECRET = "c".repeat(48);
-  process.env.GITHUB_SUPERVISOR_APP_ID = "777777";
-  process.env.GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
-  process.env.GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
+  process.env.ANPOS_GITHUB_SUPERVISOR_APP_ID = "777777";
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_ID = "Iv1.supervisor-client-123456";
+  process.env.ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET = "s".repeat(48);
 
   const result = await handleMcpRpc({
     jsonrpc: "2.0",
