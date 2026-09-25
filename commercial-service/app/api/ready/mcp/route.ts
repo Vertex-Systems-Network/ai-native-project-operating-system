@@ -1,10 +1,10 @@
 import { db, ensureSchema } from "@/lib/db";
-import { mcpOAuthConfig, mcpOAuthConfigurationProblems, supervisorAppConfigurationProblems } from "@/lib/env";
+import { internalSupervisorReadTestConfigurationProblems, internalSupervisorReadTestGrant, mcpOAuthConfig, mcpOAuthConfigurationProblems, supervisorAppConfigurationProblems } from "@/lib/env";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const problems = [...mcpOAuthConfigurationProblems(), ...supervisorAppConfigurationProblems()];
+  const problems = [...mcpOAuthConfigurationProblems(), ...supervisorAppConfigurationProblems(), ...internalSupervisorReadTestConfigurationProblems()];
   if (problems.length) {
     return Response.json({ ok: false, mode: "repository_supervisor_mcp", problems }, {
       status: 503,
@@ -28,6 +28,7 @@ export async function GET() {
         scopes: ["anpos:profile", "anpos:repo:read", "anpos:repo:write"],
       },
       write_scope_available: true,
+      internal_read_test_active: Boolean(internalSupervisorReadTestGrant()),
     }, {
       status: 200,
       headers: { "Cache-Control": "no-store" },
