@@ -128,9 +128,9 @@ The Repository Supervisor App is a separate customer-installable GitHub App used
 
 Runtime configuration:
 
-- `GITHUB_SUPERVISOR_APP_ID`
-- `GITHUB_SUPERVISOR_CLIENT_ID`
-- `GITHUB_SUPERVISOR_CLIENT_SECRET`
+- `ANPOS_GITHUB_SUPERVISOR_APP_ID`
+- `ANPOS_GITHUB_SUPERVISOR_CLIENT_ID`
+- `ANPOS_GITHUB_SUPERVISOR_CLIENT_SECRET`
 
 Minimum repository permissions for the guarded GitHub write runtime:
 
