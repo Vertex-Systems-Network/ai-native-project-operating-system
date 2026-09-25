@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildRemoteSandboxResponseSignature,
   buildRemoteSandboxSignature,
+  remoteSandboxTrustedSourceHeaders,
   RemoteEphemeralSandboxDriver,
 } from "../lib/remote-sandbox-driver";
 import {
@@ -32,6 +33,28 @@ test("sandbox source identity is immutable and normalized", () => {
     }),
     (error: unknown) => error instanceof SandboxRequestError && error.code === "invalid_source_identity",
   );
+});
+
+test("Vercel trusted-source token is forwarded only to the exact public service origin", () => {
+  const priorBase = process.env.ANPOS_PUBLIC_BASE_URL;
+  const priorToken = process.env.VERCEL_OIDC_TOKEN;
+  process.env.ANPOS_PUBLIC_BASE_URL = "https://anpos.example.test";
+  process.env.VERCEL_OIDC_TOKEN = "header.payload.signature";
+  try {
+    assert.deepEqual(
+      remoteSandboxTrustedSourceHeaders("https://anpos.example.test/v1/execute"),
+      { "x-vercel-trusted-oidc-idp-token": "header.payload.signature" },
+    );
+    assert.deepEqual(
+      remoteSandboxTrustedSourceHeaders("https://other.example.test/v1/execute"),
+      {},
+    );
+  } finally {
+    if (priorBase === undefined) delete process.env.ANPOS_PUBLIC_BASE_URL;
+    else process.env.ANPOS_PUBLIC_BASE_URL = priorBase;
+    if (priorToken === undefined) delete process.env.VERCEL_OIDC_TOKEN;
+    else process.env.VERCEL_OIDC_TOKEN = priorToken;
+  }
 });
 
 test("remote sandbox signatures bind exact body timestamp nonce and response request id", () => {
