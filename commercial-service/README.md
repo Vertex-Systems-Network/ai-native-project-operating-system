@@ -1,6 +1,6 @@
 # ANPOS Commercial Service
 
-Vendor-only deployable reference backend for ANPOS GitHub Marketplace billing, licensing, seat control, private distribution, and the source-implemented ANPOS Community repository-readiness surface.
+Vendor-only deployable reference backend for ANPOS GitHub Marketplace or direct Paddle billing, licensing, seat control, private distribution, and the source-implemented ANPOS Community repository-readiness surface.
 
 ## Product-state boundary
 
@@ -11,6 +11,9 @@ Developer now has evidence-backed source value through verified private-template
 ## Responsibilities
 
 - receive and HMAC-verify bounded `marketplace_purchase` webhook bodies;
+- create direct Paddle checkout transactions only after verified GitHub user OAuth, with GitHub numeric account identity and selected plan bound server-side rather than accepted from browser input;
+- HMAC-verify exact raw Paddle webhook bodies with timestamp tolerance and replay-safe provider/event IDs, then reconcile subscription lifecycle state against the Paddle API;
+- keep Paddle API keys/webhook secrets server-side while exposing only the provider-issued client-side token on the approved checkout page;
 - bind `X-GitHub-Delivery` to a payload hash, deduplicate concurrent delivery, and safely retry failed/stale processing;
 - reconcile account subscription state against GitHub Marketplace REST using the customer-facing Marketplace GitHub App JWT;
 - persist a PostgreSQL entitlement, audit, rate-limit, seat, provisioning, and access-reconciliation ledger;

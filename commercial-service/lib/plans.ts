@@ -40,6 +40,44 @@ export function resolveMarketplacePlan(marketplacePlanId: number): { planId: str
   return { planId, features: PLAN_FEATURES[planId], paid: true };
 }
 
+
+export type PaddleBillingCycle = "month" | "year";
+
+export function paddlePriceMap(): Record<string, string> {
+  const raw = process.env.ANPOS_PADDLE_PRICE_MAP;
+  if (!raw) throw new Error("ANPOS_PADDLE_PRICE_MAP is not configured");
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { throw new Error("Invalid ANPOS_PADDLE_PRICE_MAP"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid ANPOS_PADDLE_PRICE_MAP");
+  const result = parsed as Record<string, string>;
+  if (!Object.keys(result).length) throw new Error("Invalid ANPOS_PADDLE_PRICE_MAP");
+  for (const [key, priceId] of Object.entries(result)) {
+    const match = /^(developer|pro|team|enterprise):(month|year)$/.exec(key);
+    if (!match || !PLAN_FEATURES[match[1]] || !/^pri_[a-z\d]{26}$/.test(priceId)) {
+      throw new Error("Invalid ANPOS_PADDLE_PRICE_MAP");
+    }
+  }
+  return result;
+}
+
+export function paddlePriceForPlan(planId: string, billingCycle: PaddleBillingCycle): string {
+  if (!PLAN_FEATURES[planId]) throw new Error("INVALID_PLAN_ID");
+  const priceId = paddlePriceMap()[`${planId}:${billingCycle}`];
+  if (!priceId) throw new Error("PADDLE_PRICE_NOT_CONFIGURED");
+  return priceId;
+}
+
+export function resolvePaddlePrice(priceId: string): { planId: string; billingCycle: PaddleBillingCycle; features: string[] } {
+  if (!/^pri_[a-z\d]{26}$/.test(priceId)) throw new Error("INVALID_PADDLE_PRICE_ID");
+  for (const [key, configuredPrice] of Object.entries(paddlePriceMap())) {
+    if (configuredPrice !== priceId) continue;
+    const [planId, billingCycle] = key.split(":") as [string, PaddleBillingCycle];
+    return { planId, billingCycle, features: PLAN_FEATURES[planId] };
+  }
+  throw new Error("PADDLE_PRICE_NOT_MAPPED");
+}
+
 export function organizationSeatCapacity(planId: string, marketplaceUnitCount: number | null): number {
   if (Number.isInteger(marketplaceUnitCount) && Number(marketplaceUnitCount) > 0) return Number(marketplaceUnitCount);
   const raw = process.env.ANPOS_ORG_SEAT_LIMITS;

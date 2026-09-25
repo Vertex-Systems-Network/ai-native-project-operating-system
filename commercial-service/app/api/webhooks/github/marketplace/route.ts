@@ -1,6 +1,6 @@
 import { db, ensureSchema } from "@/lib/db";
 import { sha256, verifyGithubWebhook } from "@/lib/crypto";
-import { reconcileEntitlement } from "@/lib/entitlements";
+import { reconcileMarketplaceEntitlement } from "@/lib/entitlements";
 import { inputErrorResponse, readRawBody, requestIdFrom } from "@/lib/http";
 
 export const runtime = "nodejs";
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await reconcileEntitlement(accountId, requestId);
+    const result = await reconcileMarketplaceEntitlement(accountId, requestId);
     await db().query(
       "UPDATE marketplace_deliveries SET status='completed',processed_at=NOW(),result=$2,error=NULL WHERE delivery_id=$1",
       [deliveryId, JSON.stringify(result.state)],

@@ -24,7 +24,7 @@ type TeamSummary = {
     marketplace_plan_id: number | null;
     billing_updated_at: string | null;
     record_updated_at: string | null;
-    billing_authority: "github_marketplace";
+    billing_authority: "github_marketplace" | "paddle";
   };
   seats: {
     capacity: number;
@@ -45,8 +45,8 @@ function messageFor(error: string): string {
     unauthorized_github: "A valid GitHub session is required. Open ANPOS from the GitHub Marketplace setup flow and authenticate again.",
     organization_account_required: "Team administration is available only for an organization installation.",
     organization_admin_required: "GitHub organization owner/admin access is required to manage ANPOS seats.",
-    organization_team_features_required: "The reconciled Marketplace plan does not currently include ANPOS organization team features.",
-    entitlement_not_active: "The Marketplace entitlement is not active. Billing changes must be resolved in GitHub Marketplace.",
+    organization_team_features_required: "The reconciled subscription does not currently include ANPOS organization team features.",
+    entitlement_not_active: "The subscription entitlement is not active. Resolve the subscription with the billing provider.",
     marketplace_installation_user_access_required: "The authenticated GitHub user can no longer access this App installation.",
   };
   return map[error] ?? error.replaceAll("_", " ");
@@ -130,7 +130,7 @@ export default function TeamClient() {
   return <main style={{ maxWidth: 980, margin: "48px auto", padding: "0 24px", fontFamily: "system-ui, sans-serif" }}>
     <p style={{ fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>ANPOS Team</p>
     <h1>Organization Administration</h1>
-    <p>Manage entitlement-bound GitHub organization seats. GitHub Marketplace remains the billing authority; this page reflects reconciled state and does not change purchases, billing cycles, prices, or subscriptions.</p>
+    <p>Manage entitlement-bound GitHub organization seats. The configured payment provider remains the billing authority; this page reflects reconciled state and does not change purchases, billing cycles, prices, or subscriptions.</p>
 
     {loading ? <p>Reconciling organization entitlement and seat state…</p> : null}
     {error ? <p role="alert"><strong>Error:</strong> {error}</p> : null}
@@ -145,10 +145,10 @@ export default function TeamClient() {
           <dt>Billing cycle</dt><dd>{summary.plan.billing_cycle ?? "not reported"}</dd>
           <dt>Next billing date</dt><dd>{summary.plan.next_billing_date ? new Date(summary.plan.next_billing_date).toLocaleString() : "not reported"}</dd>
           <dt>Free trial ends</dt><dd>{summary.plan.free_trial_ends_on ? new Date(summary.plan.free_trial_ends_on).toLocaleString() : "not on trial"}</dd>
-          <dt>Billing authority</dt><dd>GitHub Marketplace</dd>
+          <dt>Billing authority</dt><dd>{summary.plan.billing_authority === "paddle" ? "Paddle" : "GitHub Marketplace"}</dd>
           <dt>Signed-in admin</dt><dd>@{summary.viewer.github_login}</dd>
         </dl>
-        <p>Plan upgrades, downgrades, cancellation, trial state, renewal and payment details must be managed through GitHub Marketplace. ANPOS reconciles that state before exposing Team administration.</p>
+        <p>Plan upgrades, downgrades, cancellation, trial state, renewal and payment details remain controlled by the configured billing provider. ANPOS reconciles that state before exposing Team administration.</p>
       </section>
 
       <section style={{ marginTop: 28 }}>

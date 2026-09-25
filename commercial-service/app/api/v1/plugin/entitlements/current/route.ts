@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
     return Response.json({
       ok: true,
-      billing_authority: "github_marketplace",
+      billing_authority: refreshed.billing_provider,
       account_binding: "authenticated_github_principal_plus_x_anpos_account_id",
       account: {
         github_account_id: accountId,

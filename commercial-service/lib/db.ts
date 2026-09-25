@@ -4,6 +4,7 @@ import { databaseConfig } from "./env";
 const REQUIRED_MIGRATIONS = [
   "007_vercel_sandbox_gateway_replay.sql",
   "008_marketplace_billing_lifecycle.sql",
+  "009_external_billing_provider.sql",
 ] as const;
 let pool: Pool | null = null;
 let schemaReady = false;
@@ -45,7 +46,8 @@ export async function ensureSchema(): Promise<void> {
         to_regclass('public.mcp_oauth_access_tokens') AS mcp_oauth_access_tokens,
         to_regclass('public.repository_supervisor_write_plans') AS repository_supervisor_write_plans,
         to_regclass('public.repository_supervisor_write_idempotency') AS repository_supervisor_write_idempotency,
-        to_regclass('public.sandbox_gateway_request_nonces') AS sandbox_gateway_request_nonces
+        to_regclass('public.sandbox_gateway_request_nonces') AS sandbox_gateway_request_nonces,
+        to_regclass('public.billing_provider_deliveries') AS billing_provider_deliveries
     `);
     if (Object.values(tables.rows[0] ?? {}).some((value) => value == null)) {
       throw new Error("COMMERCIAL_DATABASE_SCHEMA_INCOMPLETE");
