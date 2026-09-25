@@ -16,7 +16,7 @@ REQUIRED = [
     "lib/http.ts", "lib/rate-limit.ts", "lib/plans.ts", "lib/seats.ts", "lib/template-access.ts", "lib/embedded-release.ts", "lib/repository-audit.ts", "lib/repository-supervisor-runtime.ts", "lib/repository-supervisor-write.ts", "lib/repository-supervisor-planner.ts", "lib/repository-supervisor-full-apply.ts", "lib/full-plan-sandbox-runner.ts", "lib/plugin-entitlements.ts", "lib/mcp-auth.ts", "lib/mcp-runtime.ts", "lib/execution-sandbox.ts", "lib/remote-sandbox-driver.ts", "lib/sandbox-live-probe.ts", "lib/releases.ts",
     "migrations/001_baseline.sql", "migrations/002_mcp_oauth.sql", "migrations/003_repository_supervisor_write.sql", "migrations/004_repository_supervisor_planner.sql", "migrations/005_repository_supervisor_full_apply.sql", "migrations/006_guarded_empty_repository_initialization.sql", "migrations/007_vercel_sandbox_gateway_replay.sql", "migrations/008_marketplace_billing_lifecycle.sql", "scripts/migrate.ts", "scripts/guarded-build-migrate.ts", "scripts/verify-repository-supervisor-e2e.ts", "tests/security.test.ts", "tests/repository-audit.test.ts", "tests/repository-supervisor-runtime.test.ts", "tests/repository-supervisor-write.test.ts", "tests/repository-supervisor-planner.test.ts", "tests/repository-supervisor-full-apply.test.ts", "tests/plugin-entitlements.test.ts", "tests/mcp-auth.test.ts", "tests/mcp-runtime.test.ts", "tests/execution-sandbox.test.ts", "tests/remote-sandbox-driver.test.ts", "tests/sandbox-live-probe.test.ts",
     "tests/community-launch.test.ts", "tests/release-channel.test.ts",
-    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts", "app/api/ready/sandbox/live/route.ts",
+    "app/api/health/route.ts", "app/api/ready/route.ts", "app/api/ready/community/route.ts", "app/api/ready/marketplace-plans/route.ts", "app/api/ready/mcp/route.ts", "app/api/ready/sandbox/route.ts", "app/api/ready/sandbox/live/route.ts",
     "app/api/webhooks/github/marketplace/route.ts", "app/api/v1/plugin/entitlements/current/route.ts", "app/mcp/route.ts",
     "app/.well-known/oauth-protected-resource/route.ts", "app/.well-known/oauth-authorization-server/route.ts",
     "app/oauth/authorize/route.ts", "app/oauth/token/route.ts", "app/api/auth/mcp/github/callback/route.ts",
@@ -159,7 +159,7 @@ def main() -> int:
     require_markers(
         "lib/github.ts",
         (
-            "marketplace_listing/accounts", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
+            "marketplace_listing/accounts", "marketplace_listing/plans?per_page=100&page=1", "listMarketplacePlans", "2026-03-10", "RSA-SHA256", "access_tokens", "permissions",
             'githubAppJwt("marketplace")', 'githubAppJwt("vendor")', "marketplaceAppConfig", "serviceConfig",
             "githubMarketplaceAppId", "githubVendorAppId",
             'contents: "read"', 'administration: "write"', "zipball", "redirect: \"manual\"",
@@ -740,6 +740,16 @@ def main() -> int:
         "lib/template-access.ts",
         ("retained_due_to_other_active_grant", "removeTemplateCollaborator", "access_reconciliation_jobs", "retry_queued"),
         "template access revocation",
+    )
+    require_markers(
+        "app/api/ready/marketplace-plans/route.ts",
+        (
+            "listMarketplacePlans", "communityMarketplacePlanId",
+            "github_marketplace_live_listing", "published_plans",
+            "unpublished_plan_count", "monthly_billing_configured",
+            "annual_billing_configured", "Cache-Control",
+        ),
+        "Marketplace plan discovery readiness",
     )
     require_markers(
         "app/api/ready/community/route.ts",
