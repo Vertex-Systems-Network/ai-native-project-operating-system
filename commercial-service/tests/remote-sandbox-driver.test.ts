@@ -35,18 +35,18 @@ test("sandbox source identity is immutable and normalized", () => {
   );
 });
 
-test("Vercel trusted-source token is forwarded only to the exact public service origin", () => {
+test("Vercel trusted-source token is forwarded only to the exact public service origin", async () => {
   const priorBase = process.env.ANPOS_PUBLIC_BASE_URL;
   const priorToken = process.env.VERCEL_OIDC_TOKEN;
   process.env.ANPOS_PUBLIC_BASE_URL = "https://anpos.example.test";
   process.env.VERCEL_OIDC_TOKEN = "header.payload.signature";
   try {
     assert.deepEqual(
-      remoteSandboxTrustedSourceHeaders("https://anpos.example.test/v1/execute"),
+      await remoteSandboxTrustedSourceHeaders("https://anpos.example.test/v1/execute"),
       { "x-vercel-trusted-oidc-idp-token": "header.payload.signature" },
     );
     assert.deepEqual(
-      remoteSandboxTrustedSourceHeaders("https://other.example.test/v1/execute"),
+      await remoteSandboxTrustedSourceHeaders("https://other.example.test/v1/execute"),
       {},
     );
   } finally {
