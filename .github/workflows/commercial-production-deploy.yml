@@ -71,14 +71,39 @@ jobs:
           PY
 
       - name: Remove temporary Repository Supervisor read grant
-        working-directory: ${{ runner.temp }}/vendor-handoff/anpos-commercial-service
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf .vercel
-          npx --yes vercel@59.11.7 pull --yes --environment=production --token "$VERCEL_TOKEN" >/dev/null
-          npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN production --yes --token "$VERCEL_TOKEN"
-          npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT production --yes --token "$VERCEL_TOKEN"
+          response="$RUNNER_TEMP/vercel-envs.json"
+          curl --silent --show-error --fail-with-body \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env?teamId=$VERCEL_ORG_ID" \
+            > "$response"
+
+          python - "$response" "$RUNNER_TEMP/vercel-env-ids.txt" <<'PY'
+          import json, sys
+          from pathlib import Path
+          source = Path(sys.argv[1])
+          output = Path(sys.argv[2])
+          wanted = {
+              "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN",
+              "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT",
+          }
+          payload = json.loads(source.read_text())
+          envs = payload.get("envs", []) if isinstance(payload, dict) else []
+          ids = [str(item["id"]) for item in envs if item.get("key") in wanted and item.get("id")]
+          output.write_text("\n".join(ids))
+          print(f"Temporary grant env records found: {len(ids)}")
+          PY
+
+          while IFS= read -r env_id; do
+            [ -n "$env_id" ] || continue
+            curl --silent --show-error --fail-with-body \
+              --request DELETE \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env/$env_id?teamId=$VERCEL_ORG_ID" \
+              >/dev/null
+          done < "$RUNNER_TEMP/vercel-env-ids.txt"
 
       - name: Deploy exact verified service to Vercel production
         working-directory: ${{ runner.temp }}/vendor-handoff/anpos-commercial-service
