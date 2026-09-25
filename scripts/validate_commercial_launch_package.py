@@ -101,7 +101,7 @@ def main() -> int:
         fail("Marketplace listing webhook must require marketplace_purchase")
     if listing_webhook.get("url_path") != "/api/webhooks/github/marketplace":
         fail("Marketplace listing webhook must target the canonical commercial webhook route")
-    if listing_webhook.get("secret_environment_key") != "GITHUB_WEBHOOK_SECRET":
+    if listing_webhook.get("secret_environment_key") != "ANPOS_GITHUB_WEBHOOK_SECRET":
         fail("Marketplace listing webhook must bind the canonical webhook secret environment key")
     marketplace_text = json.dumps(marketplace_app, sort_keys=True)
     if "administration:write_for_private_template_distribution" not in marketplace_text:
