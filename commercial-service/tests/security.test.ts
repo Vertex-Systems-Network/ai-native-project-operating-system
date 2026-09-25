@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import test from "node:test";
 import { signEntitlement } from "../lib/crypto";
-import { configurationProblems } from "../lib/env";
+import { configurationProblems, internalSupervisorReadTestConfigurationProblems, internalSupervisorReadTestGrantActiveForLogin } from "../lib/env";
 import { idempotencyKeyFrom, readJsonBody, requestIdFrom, RequestInputError } from "../lib/http";
 import { marketplacePlanMap, organizationSeatCapacity } from "../lib/plans";
 import {
@@ -29,6 +29,7 @@ const MANAGED_ENV = [
   "ANPOS_PREMIUM_MANIFEST_SHA256", "ANPOS_PREMIUM_CONTENT_SET_SHA256",
   "ANPOS_PUBLIC_BASE_URL", "ANPOS_SESSION_SECRET",
   "ANPOS_SANDBOX_ENDPOINT", "ANPOS_SANDBOX_DRIVER_ID", "ANPOS_SANDBOX_SIGNING_SECRET", "ANPOS_SANDBOX_REQUEST_SKEW_SECONDS",
+  "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN", "ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT",
 ] as const;
 
 function configure() {
@@ -132,6 +133,28 @@ test("configuration rejects weak missing or mutable production controls", () => 
   assert.ok(problems.includes("invalid:ANPOS_COMMERCIAL_RELEASE_REF"));
   delete process.env.ANPOS_ORG_SEAT_LIMITS;
   assert.ok(configurationProblems().includes("missing:ANPOS_ORG_SEAT_LIMITS"));
+});
+
+test("internal Supervisor read-test grant is short-lived read-only configuration and blocks full launch readiness", () => {
+  clearManagedEnv();
+  configure();
+  const now = new Date("2026-09-25T12:00:00.000Z");
+
+  process.env.ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN = "octo";
+  process.env.ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT = "2026-09-26T12:00:00.000Z";
+  assert.deepEqual(internalSupervisorReadTestConfigurationProblems(now), []);
+  assert.equal(internalSupervisorReadTestGrantActiveForLogin("OCTO", now), true);
+  assert.ok(configurationProblems().includes("unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_ACTIVE"));
+
+  process.env.ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT = "2026-09-24T12:00:00.000Z";
+  assert.ok(internalSupervisorReadTestConfigurationProblems(now).includes("expired:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT"));
+
+  process.env.ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT = "2026-09-28T12:00:00.000Z";
+  assert.ok(internalSupervisorReadTestConfigurationProblems(now).includes("unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_TTL_TOO_LONG"));
+
+  process.env.ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN = "bad login";
+  process.env.ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT = "2026-09-26T12:00:00.000Z";
+  assert.ok(internalSupervisorReadTestConfigurationProblems(now).includes("invalid:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN"));
 });
 
 test("Marketplace and vendor GitHub App roles cannot collapse", () => {
