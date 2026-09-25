@@ -103,7 +103,9 @@ const COMMUNITY_LAUNCH_REQUIRED = [
 ] as const;
 
 const FULL_REQUIRED = [
-  ...COMMUNITY_LAUNCH_REQUIRED,
+  "DATABASE_URL",
+  "ANPOS_GITHUB_WEBHOOK_SECRET",
+  ...MARKETPLACE_APP_REQUIRED,
   "ANPOS_VENDOR_APP_ID",
   "ANPOS_VENDOR_APP_PRIVATE_KEY",
   "ANPOS_ENTITLEMENT_PRIVATE_KEY",
@@ -421,14 +423,18 @@ export function configurationProblems(): string[] {
   try {
     const provider = paidBillingProvider();
     if (provider === "github_marketplace") {
-      problems.push(...commonProblems(["ANPOS_MARKETPLACE_PLAN_MAP"], false));
+      problems.push(...commonProblems(["ANPOS_COMMUNITY_MARKETPLACE_PLAN_ID", "ANPOS_MARKETPLACE_PLAN_MAP"], false));
     } else {
       problems.push(...paddleConfigurationProblems());
     }
   } catch {
     problems.push("invalid:ANPOS_PAID_BILLING_PROVIDER");
   }
-  if (premiumPaidPlanConfigured()) problems.push(...premiumDistributionConfigurationProblems());
+  try {
+    if (premiumPaidPlanConfigured()) problems.push(...premiumDistributionConfigurationProblems());
+  } catch {
+    // The provider-specific validation above already reports the invalid provider/configuration.
+  }
   if (internalSupervisorReadTestGrantConfigured()) {
     problems.push(...internalSupervisorReadTestConfigurationProblems());
     problems.push("unsafe:ANPOS_INTERNAL_SUPERVISOR_READ_TEST_ACTIVE");
