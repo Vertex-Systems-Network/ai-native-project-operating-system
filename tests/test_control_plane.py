@@ -273,6 +273,7 @@ class TemplatePolicyTests(unittest.TestCase):
             "commercial-production-deploy.yml",
             "commercial-production-migrate.yml",
             "commercial-production-readiness.yml",
+        "commercial-sandbox-live-e2e.yml",
         }
         self.assertTrue(set(active).issubset(allowed))
         for name in active:
