@@ -75,8 +75,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN production --yes --project "$VERCEL_PROJECT_ID" --scope vsnteam --token "$VERCEL_TOKEN"
-          npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT production --yes --project "$VERCEL_PROJECT_ID" --scope vsnteam --token "$VERCEL_TOKEN"
+          mkdir -p .vercel
+          printf '%s\n' "{\"orgId\":\"$VERCEL_ORG_ID\",\"projectId\":\"$VERCEL_PROJECT_ID\"}" > .vercel/project.json
+          npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_LOGIN production --yes --token "$VERCEL_TOKEN"
+          npx --yes vercel@59.11.7 env rm ANPOS_INTERNAL_SUPERVISOR_READ_TEST_EXPIRES_AT production --yes --token "$VERCEL_TOKEN"
 
       - name: Deploy exact verified service to Vercel production
         working-directory: ${{ runner.temp }}/vendor-handoff/anpos-commercial-service
