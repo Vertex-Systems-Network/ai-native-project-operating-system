@@ -293,7 +293,7 @@ def main() -> int:
         (
             "x-anpos-account-id", "requireGithubAccountAccess", "reconcileEntitlement",
             "buildPluginCapabilityMatrix", "plugin_entitlement_bridge",
-            "authenticated_github_principal_plus_x_anpos_account_id", "github_marketplace",
+            "authenticated_github_principal_plus_x_anpos_account_id", "billing_provider",
             "private, no-store",
         ),
         "Plugin entitlement bridge API",
