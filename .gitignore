@@ -21,7 +21,12 @@ commercial-service/*.tsbuildinfo
 .env
 .env.*
 !.env.example
-!.env.sample
+
+# Private keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
 
 # OS / editor residue
 .DS_Store

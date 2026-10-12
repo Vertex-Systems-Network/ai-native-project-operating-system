@@ -157,6 +157,13 @@ def recover_ref(args) -> None:
     current = load(SUPERVISOR).get("supervisor", {}).get("election_ref")
     if args.ref == current:
         raise SystemExit("Refusing to delete the active Supervisor election ref through orphan recovery.")
+    live_lease_states = {"active", "expired", "orphaned"}
+    for slot in load(QUEUE).get("slots", []):
+        if isinstance(slot, dict) and slot.get("claim_ref") == args.ref and slot.get("lease_status") in live_lease_states:
+            raise SystemExit(
+                f"Refusing to delete {args.ref}: slot {slot.get('id')} still holds it (lease {slot.get('lease_status')}); "
+                "use worker-release to recover the slot first."
+            )
     delete_ref(args.repository or repo_name(), args.ref)
     print("Orphan/stale coordination ref removed after Supervisor authorization.")
 
