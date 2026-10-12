@@ -391,6 +391,10 @@ def validate_template_boundary() -> None:
     }
     if not set(active_workflows).issubset(allowed_source_workflows):
         fail("template source: active source workflows must remain in the guarded source-only allowlist")
+    vendor_only = set(load_json("config/licensing/vendor-source-boundary.json").get("vendor_only_paths", []))
+    for workflow_name in active_workflows:
+        if f".github/workflows/{workflow_name}" not in vendor_only:
+            fail(f"template source: active source workflow {workflow_name} must be listed in vendor-source-boundary vendor_only_paths so children never inherit it")
     for workflow_name in active_workflows:
         workflow_path = active / workflow_name
         source_text = workflow_path.read_text(encoding="utf-8")
@@ -543,6 +547,11 @@ def validate_coordination() -> None:
     queue_lease_states = set(queue.get("lease_status_values", []))
     if queue_lease_states != LEASE_STATES:
         fail("queue lease_status_values must match the hardened lease state set")
+    supervisor_schema = load_json("schemas/supervisor-state.schema.json")
+    status_enum = set(supervisor_schema.get("properties", {}).get("status", {}).get("enum", []))
+    status_graph = machine.get("supervisor_state_status_transitions")
+    if not isinstance(status_graph, dict) or set(status_graph) != status_enum:
+        fail("state-machine supervisor_state_status_transitions must define exactly the supervisor-state schema status values")
     for graph_name in ["worker_lease_transitions", "supervisor_lease_transitions"]:
         graph = machine.get(graph_name, {})
         if set(graph) != LEASE_STATES:
@@ -897,7 +906,7 @@ def validate_workflows() -> None:
     for marker in [
         "requirements-anpos.txt", "python -m compileall -q scripts tests",
         "python -m unittest discover -s tests -p 'test_*.py'", "python scripts/validate_ai_native_repo.py",
-        "git show \"${BASE_SHA}:scripts/validate_ai_native_repo.py\"", "python scripts/.trusted-base-validator.py",
+        "git show \"${BASE_SHA}:scripts/validate_ai_native_repo.py\"", "python -I scripts/.trusted-base-validator.py",
     ]:
         if marker not in text:
             fail(f"repository-quality blueprint missing trusted/conformance gate marker: {marker}")

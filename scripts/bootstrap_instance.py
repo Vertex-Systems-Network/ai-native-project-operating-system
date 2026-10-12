@@ -112,6 +112,7 @@ def reset_runtime(repository: str, project_name: str, owner: str, security_capab
         "initialized_by": owner,
         "source_protocol_version": protocol.get("version"),
         "bootstrap_completed": True,
+        "notes": f"Child project bootstrapped from {protocol.get('version')} canonical ANPOS source.",
     })
     changed["config/protocol/instance.json"] = json.dumps(instance, indent=2) + "\n"
 

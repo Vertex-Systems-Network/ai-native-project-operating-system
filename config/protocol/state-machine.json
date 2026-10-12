@@ -27,6 +27,13 @@
     "expired": ["active"],
     "relinquished": ["active"]
   },
+  "supervisor_state_status_transitions": {
+    "template_unassigned": ["unassigned"],
+    "unassigned": ["active"],
+    "active": ["expired", "relinquished"],
+    "expired": ["active"],
+    "relinquished": ["active"]
+  },
   "supervisor_lease_transitions": {
     "not_acquired": ["active"],
     "active": ["expired", "released", "revoked", "orphaned"],

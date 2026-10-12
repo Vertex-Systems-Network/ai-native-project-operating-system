@@ -9,7 +9,7 @@
     "coordination_epoch": {"type": "integer", "minimum": 0},
     "merge_generation": {"type": "integer", "minimum": 0},
     "last_pm_sync_at": {"type": ["string", "null"]},
-    "status": {"enum": ["template_unassigned", "unassigned", "active", "expired", "relinquished", "idle_synced"]},
+    "status": {"enum": ["template_unassigned", "unassigned", "active", "expired", "relinquished"]},
     "supervisor": {
       "type": "object",
       "required": ["status", "agent_id", "identity_ref", "heartbeat_at", "lease_id", "lease_status", "lease_expires_at", "fencing_token", "election_ref"],
