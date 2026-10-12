@@ -135,6 +135,20 @@ def require_true(doc: dict[str, Any], path: list[str], label: str) -> None:
         fail(f"{label}: {'.'.join(path)} must be true")
 
 
+def stripped_from_child(relative: str) -> bool:
+    """True when this is an initialized child and relative is a vendor-only path bootstrap_child.py removed."""
+    if load_json("config/protocol/instance.json").get("instance_status") == "template_source":
+        return False
+    boundary_path = ROOT / "config/licensing/vendor-source-boundary.json"
+    if not boundary_path.is_file():
+        return False
+    for vendor_path in json.loads(boundary_path.read_text(encoding="utf-8")).get("vendor_only_paths", []):
+        prefix = str(vendor_path).rstrip("/")
+        if relative == prefix or relative.startswith(prefix + "/"):
+            return True
+    return False
+
+
 def validate_required_files() -> None:
     required = [
         ".gitignore", "AGENTS.md", ".ai/manifest.json", "PROJECT-INITIALIZATION.md", "PROJECT-MANAGEMENT.md", "START-HERE.md",
@@ -184,7 +198,7 @@ def validate_required_files() -> None:
         "tests/test_repository_supervisor_plugin_blueprint.py", "tests/test_repository_supervisor_production_runtime.py",
     ]
     for relative in required:
-        if not (ROOT / relative).is_file():
+        if not (ROOT / relative).is_file() and not stripped_from_child(relative):
             fail(f"missing required protocol/blueprint file: {relative}")
 
 
@@ -240,6 +254,8 @@ def validate_json_schemas() -> None:
         "config/runtime/repository-supervisor-planner.json": "schemas/repository-supervisor-planner.schema.json",
     }
     for instance_path, schema_path in mapping.items():
+        if stripped_from_child(instance_path) or stripped_from_child(schema_path):
+            continue
         schema = load_json(schema_path)
         instance = load_json(instance_path)
         try:
@@ -266,6 +282,8 @@ def validate_manifest() -> None:
         paths.extend(files)
     for relative in paths:
         if not isinstance(relative, str) or not (ROOT / relative).exists():
+            if isinstance(relative, str) and stripped_from_child(relative):
+                continue
             fail(f"manifest references missing path: {relative}")
 
     common = set(doc.get("common", []))
