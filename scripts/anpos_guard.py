@@ -10,6 +10,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def load_json(relative: str) -> dict[str, Any]:
     return json.loads((ROOT / relative).read_text(encoding="utf-8"))
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    """Replace path with text so readers never observe a truncated file."""
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def parse_time(value: str | None) -> datetime | None:

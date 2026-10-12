@@ -20,5 +20,5 @@
     "require_owner_approval_to_raise_material_cost_limits": true,
     "never_recursively_delegate_without_bounded_depth": true
   },
-  "notes": "Null monetary/token values mean the child project must set a limit when cost-sensitive autonomous execution is enabled; they do not mean unlimited budget."
+  "notes": "Null monetary/token values mean the child project must set a limit when cost-sensitive autonomous execution is enabled; they do not mean unlimited budget. scripts/claim_slot.py refuses Worker claims while token_budget or model_cost_budget is null."
 }

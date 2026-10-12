@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 QUEUE = ROOT / "config/coordination/agent-work-queue.json"
 sys.path.insert(0, str(ROOT / "scripts"))
 from anpos_guard import (  # noqa: E402
+    atomic_write_text,
     authorize_runtime_scope,
     authorize_slot_claim,
     authorize_slot_paths,
@@ -81,6 +82,13 @@ def enforce_budgets(queue: dict[str, Any], slot: dict[str, Any]) -> None:
     limits = budget.get("limits") or {}
     max_parallel = int(limits.get("max_parallel_agents") or 1)
     max_depth = int(limits.get("max_delegation_depth") or 0)
+    unset = [key for key in ("token_budget", "model_cost_budget") if limits.get(key) is None]
+    if unset:
+        raise PermissionError(
+            "Autonomous Worker claims require explicit cost limits; set "
+            + ", ".join(f"limits.{key}" for key in unset)
+            + " in config/runtime/budgets.json (null means unconfigured, not unlimited)."
+        )
     active_states = {"claimed", "in_progress", "blocked", "submitted_for_review", "changes_requested", "approved"}
     active = sum(1 for item in queue.get("slots", []) if isinstance(item, dict) and item.get("status") in active_states)
     if active >= max_parallel:
@@ -184,7 +192,7 @@ def main() -> int:
             "fencing_token": worker_fencing,
         })
         queue["updated_at"] = iso(claimed)
-        QUEUE.write_text(json.dumps(queue, indent=2) + "\n", encoding="utf-8")
+        atomic_write_text(QUEUE, json.dumps(queue, indent=2) + "\n")
     except Exception as exc:
         rolled_back = delete_gh_ref(repo, claim_ref)
         status = "rolled back remote claim ref" if rolled_back else "ORPHAN REF REQUIRES SUPERVISOR RECOVERY"
