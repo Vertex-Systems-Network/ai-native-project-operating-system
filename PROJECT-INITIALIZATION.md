@@ -13,12 +13,12 @@ Canonical upstream source:
 `Vertex-Systems-Network/ai-native-project-operating-system`
 
 - If current repository is the canonical source and `instance_status` is `template_source`, keep it inert. Do not connect PM, attach live development agents, acquire leases, apply child GitHub Rules, enable child workflows, configure environments/secrets, or create project runtime state.
-- If repository identity differs from upstream but inherited `instance_status: template_source`, it is an **uninitialized child**. Run `scripts/bootstrap_instance.py` against that child.
+- If repository identity differs from upstream but inherited `instance_status: template_source`, it is an **uninitialized child**. Run `scripts/bootstrap_child.py` against that child.
 - If `instance_status: active_project`, reconcile and resume the first incomplete setup step rather than resetting the project.
 
 ## 1. Bootstrap child identity and safe baseline
 
-Run `scripts/bootstrap_instance.py` or an equivalent reviewed implementation.
+Run `scripts/bootstrap_child.py` (it wraps `scripts/bootstrap_instance.py` and then removes the vendor-only paths listed in `config/licensing/vendor-source-boundary.json`; never run `bootstrap_instance.py` directly for a child).
 
 Bootstrap must:
 

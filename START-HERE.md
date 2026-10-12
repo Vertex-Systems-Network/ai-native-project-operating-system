@@ -42,7 +42,7 @@ Fallback:
 
 ### B1. Bootstrap the child repository
 
-Run the safe child-instance bootstrap from `scripts/bootstrap_instance.py` or equivalent repository writes.
+Run the safe child-instance bootstrap with `scripts/bootstrap_child.py` (it wraps `scripts/bootstrap_instance.py` and then removes the vendor-only paths listed in `config/licensing/vendor-source-boundary.json`; never run `bootstrap_instance.py` directly for a child).
 
 The bootstrap must:
 

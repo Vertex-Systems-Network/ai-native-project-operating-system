@@ -36,6 +36,8 @@
     ".github/workflows/commercial-production-deploy.yml",
     ".github/workflows/commercial-production-migrate.yml",
     ".github/workflows/commercial-production-readiness.yml",
+    ".github/workflows/commercial-sandbox-live-e2e.yml",
+    ".github/workflows/immutable-vendor-handoff.yml",
     "scripts/validate_source_continuous_certification.py",
     "tests/test_source_continuous_certification.py",
     "config/protocol/next-release.json",
