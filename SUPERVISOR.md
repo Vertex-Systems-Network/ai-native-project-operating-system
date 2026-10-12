@@ -124,7 +124,7 @@ For each submission verify:
 - deployment/release/rollback effects;
 - merge conflicts and PM mirror consistency.
 
-Request/fix bounded issues, rerun impacted checks, and merge only when applicable acceptance gates pass. A Supervisor cannot self-approve high-risk/security-critical self-authored work; use independent human/separate authorized review as configured.
+Request/fix bounded issues, rerun impacted checks, and merge only when applicable acceptance gates pass. A Supervisor cannot self-approve high-risk/security-critical self-authored work; use independent human/separate authorized review as configured. When the Supervisor and the only Worker are the same agent (single-agent mode), it cannot approve any of its own work: every merge waits for explicit human approval.
 
 After every successful main merge:
 

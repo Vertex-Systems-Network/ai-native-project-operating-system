@@ -57,6 +57,8 @@ When resuming or starting work, reconcile evidence in this order:
 
 If a memory-bank entry disagrees with verified repository reality, repository reality wins and the memory bank must be repaired.
 
+This hierarchy ranks **factual evidence**. Permission to act is ranked separately by the authority order in `AGENTS.md`: code that diverges from an approved architecture decision is the current fact, but changing the decision itself still needs the authority that approved it.
+
 Never continue blindly from stale state.
 
 ## Mandatory resume/reconciliation pass
