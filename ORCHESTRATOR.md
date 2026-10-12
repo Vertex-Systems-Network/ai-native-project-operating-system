@@ -18,7 +18,7 @@ A durable Supervisor/orchestrator implementation must:
 2. authenticate the Supervisor principal and acquire an epoch-fenced lease through `scripts/supervisor_lease.py --remote-lock --apply-state --runtime-principal ...` or an equivalent atomic Git provider operation;
 3. heartbeat/release/recover Supervisor authority through `scripts/lease_control.py` or equivalent and stop all privileged writes immediately when identity, lease, epoch, or fencing authority is stale;
 4. reconcile `main`, open PRs/MRs, coordination refs, queue state, alerts, consent, quality/governance, PM state, memory provenance, design/data/release/operations state before dispatch;
-5. generate typed eligible work slots from the approved execution graph;
+5. generate typed eligible work slots only from an approved execution plan (`plan_status: approved` + `plan_approval` consent), using `scripts/plan_to_slots.py` to render the candidate queue and `scripts/coordination_mutation.py` to commit it;
 6. invoke/hand off only to selected, identity-verified agents whose role/capabilities/path/tool/network/secret/deployment/privacy scopes satisfy the exact handoff;
 7. require authorized atomic claim ownership before a Worker starts substantive changes;
 8. monitor Worker heartbeats/lease expiry and recover orphan/stale claims from Git/PR evidence rather than assumptions;

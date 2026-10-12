@@ -126,7 +126,9 @@ def reset_runtime(repository: str, project_name: str, owner: str, security_capab
             "Choose a Project Management System or explicitly skip PM integration.",
             "Choose and identity-verify the Development AI agent pool available in the current host.",
             "Ask the user whether to apply the recommended GitHub Rules policy.",
-            "Resolve capability-dependent GitHub security checks before making them required."
+            "Resolve capability-dependent GitHub security checks before making them required.",
+            "Collect project intake (Idea / Thoughts / Plan / Research / Search / Assumptions) into PROJECT-IDEA.md.",
+            "Obtain explicit user approval of the project plan (Approve Project Plan) before generating work-queue slots."
         ],
         "critical_defects": [], "last_reconciled_repository_ref": None, "last_reconciled_at": None,
     })

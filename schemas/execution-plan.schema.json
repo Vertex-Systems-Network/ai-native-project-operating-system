@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/execution-plan.schema.json",
+  "title": "ANPOS Execution Plan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plan_status",
+    "plan_status_values",
+    "plan_approval_ref",
+    "phases",
+    "work_units",
+    "status_values",
+    "phase_template",
+    "work_unit_template"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "plan_status": {
+      "enum": [
+        "draft",
+        "proposed",
+        "approved",
+        "superseded"
+      ]
+    },
+    "plan_status_values": {
+      "const": [
+        "draft",
+        "proposed",
+        "approved",
+        "superseded"
+      ]
+    },
+    "plan_approval_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plan_approval_rule": {
+      "type": "string"
+    },
+    "slot_mapping_rule": {
+      "type": "string"
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "objective",
+          "module_ids",
+          "dependencies",
+          "status",
+          "exit_criteria"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^PHASE-[A-Z0-9][A-Z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "module_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^MOD-[A-Z0-9][A-Z0-9-]*$"
+            },
+            "uniqueItems": true
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^PHASE-[A-Z0-9][A-Z0-9-]*$"
+            },
+            "uniqueItems": true
+          },
+          "status": {
+            "enum": [
+              "not_started",
+              "ready",
+              "in_progress",
+              "blocked",
+              "needs_update",
+              "needs_removal",
+              "verification_required",
+              "complete",
+              "deferred",
+              "deprecated"
+            ]
+          },
+          "exit_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "work_units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "phase_id",
+          "module_id",
+          "requirement_ids",
+          "title",
+          "objective",
+          "dependencies",
+          "priority",
+          "status",
+          "acceptance_criteria",
+          "required_checks",
+          "risk_classification",
+          "allowed_paths"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^WU-[A-Z0-9][A-Z0-9-]*$"
+          },
+          "phase_id": {
+            "type": "string",
+            "pattern": "^PHASE-[A-Z0-9][A-Z0-9-]*$"
+          },
+          "module_id": {
+            "type": "string",
+            "pattern": "^MOD-[A-Z0-9][A-Z0-9-]*$"
+          },
+          "requirement_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^REQ-[A-Z0-9][A-Z0-9-]*$"
+            },
+            "uniqueItems": true
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^WU-[A-Z0-9][A-Z0-9-]*$"
+            },
+            "uniqueItems": true
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "not_started",
+              "ready",
+              "in_progress",
+              "blocked",
+              "needs_update",
+              "needs_removal",
+              "verification_required",
+              "complete",
+              "deferred",
+              "deprecated"
+            ]
+          },
+          "blockers": {
+            "type": "array"
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "required_checks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "completion_evidence": {
+            "type": "array"
+          },
+          "risk_classification": {
+            "type": "string",
+            "minLength": 1
+          },
+          "eligibility": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "required_roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "allowed_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "denied_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "ready",
+                    "in_progress",
+                    "verification_required",
+                    "complete"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "acceptance_criteria": {
+                  "minItems": 1
+                },
+                "required_checks": {
+                  "minItems": 1
+                },
+                "allowed_paths": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "status_values": {
+      "const": [
+        "not_started",
+        "ready",
+        "in_progress",
+        "blocked",
+        "needs_update",
+        "needs_removal",
+        "verification_required",
+        "complete",
+        "deferred",
+        "deprecated"
+      ]
+    },
+    "phase_template": {
+      "type": "object"
+    },
+    "work_unit_template": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "plan_status": {
+            "const": "approved"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "plan_approval_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

@@ -172,6 +172,7 @@ def validate_required_files() -> None:
         "config/consent/consent-requests.json", "config/coordination/agent-work-queue.json",
         "config/coordination/supervisor-state.json", ".github/CODEOWNERS",
         "schemas/config-base.schema.json", "schemas/project-state.schema.json", "schemas/agent-work-queue.schema.json",
+        "schemas/execution-plan.schema.json", "schemas/modules-bank.schema.json", "schemas/options-bank.schema.json",
         "schemas/supervisor-state.schema.json", "schemas/agent-catalog.schema.json", "schemas/consent-requests.schema.json",
         "schemas/design-intake.schema.json", "schemas/requirements-traceability.schema.json",
         "schemas/assurance-state.schema.json", "schemas/research-evidence.schema.json", "schemas/runtime-executors.schema.json",
@@ -181,7 +182,7 @@ def validate_required_files() -> None:
         "schemas/ai-asset-registry.schema.json", "schemas/deprecation-policy.schema.json", "schemas/runbooks-and-drills.schema.json",
         "schemas/audit-journal.schema.json", "schemas/risk-register.schema.json",
         "schemas/blueprint-completion.schema.json", "schemas/reference-e2e-matrix.schema.json", "schemas/extension-contract.schema.json", "schemas/execution-sandbox.schema.json", "schemas/repository-supervisor-e2e.schema.json", "schemas/repository-supervisor-planner.schema.json",
-        "scripts/bootstrap_instance.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
+        "scripts/bootstrap_instance.py", "scripts/plan_to_slots.py", "scripts/anpos_guard.py", "scripts/claim_slot.py", "scripts/supervisor_lease.py",
         "scripts/lease_control.py", "scripts/coordination_mutation.py", "scripts/consent_guard.py",
         "scripts/install_quality_capabilities.py", "scripts/configure_dependabot.py", "scripts/validate_ai_native_repo.py",
         "tests/test_control_plane.py", "tests/test_product_assurance.py", "tests/test_governance_assurance.py", "tests/test_blueprint_closure.py", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
@@ -224,6 +225,9 @@ def validate_json_schemas() -> None:
     mapping = {
         "config/ai/project-state.json": "schemas/project-state.schema.json",
         "config/coordination/agent-work-queue.json": "schemas/agent-work-queue.schema.json",
+        "config/ai/execution-plan.json": "schemas/execution-plan.schema.json",
+        "config/ai/modules-bank.json": "schemas/modules-bank.schema.json",
+        "config/ai/options-bank.json": "schemas/options-bank.schema.json",
         "config/coordination/supervisor-state.json": "schemas/supervisor-state.schema.json",
         "config/ai/agent-catalog.json": "schemas/agent-catalog.schema.json",
         "config/consent/consent-requests.json": "schemas/consent-requests.schema.json",
@@ -291,7 +295,8 @@ def validate_manifest() -> None:
         fail("manifest common context must include trust policy and runtime budgets")
     for role, required in {
         "worker": {"CONTROL-PLANE-SECURITY.md", "config/ai/agent-catalog.json"},
-        "supervisor": {"CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md"},
+        "planner": {"docs/ai/PRE-PLAN.md", "config/ai/execution-plan.json", "config/ai/modules-bank.json", "config/ai/options-bank.json", "config/traceability/requirements-traceability.json"},
+        "supervisor": {"CONTROL-PLANE-SECURITY.md", "PRODUCTION-ASSURANCE.md", "DESIGN-DATA-OPERATIONS.md", "config/ai/execution-plan.json", "config/coordination/agent-work-queue.json"},
         "security": {"CONTROL-PLANE-SECURITY.md", "config/security/threat-model.json"},
         "release_ops": {"PRODUCTION-ASSURANCE.md", "config/release/release-policy.json", "config/operations/operations-policy.json"},
     }.items():
@@ -536,6 +541,43 @@ def validate_ai_graph() -> None:
             if unit.get("module_id") and unit.get("module_id") not in module_ids:
                 fail(f"work unit {unit.get('id')}: unknown module_id {unit.get('module_id')}")
             check_refs(unit.get("dependencies", []), work_unit_ids, f"work unit {unit.get('id')} dependencies")
+    requirement_ids = {
+        str(link.get("requirement_id")) for link in trace_doc.get("links", []) if isinstance(link, dict) and link.get("requirement_id")
+    }
+    for unit in execution_doc.get("work_units", []):
+        if isinstance(unit, dict):
+            check_refs(unit.get("requirement_ids", []), requirement_ids, f"work unit {unit.get('id')} requirement_ids")
+
+    slots = [slot for slot in queue_doc.get("slots", []) if isinstance(slot, dict)]
+    if slots:
+        approval_ref = execution_doc.get("plan_approval_ref")
+        approved = {
+            str(req.get("id")) for req in consents_doc.get("requests", [])
+            if isinstance(req, dict) and req.get("type") == "plan_approval"
+            and req.get("status") in {"approved", "implemented", "verified"}
+        }
+        if execution_doc.get("plan_status") != "approved" or approval_ref not in approved:
+            fail("work-queue slots require an approved execution plan whose plan_approval_ref names an approved plan_approval consent request")
+    for slot in slots:
+        sid = slot.get("id")
+        if slot.get("work_unit_id") not in work_unit_ids:
+            fail(f"slot {sid}: work_unit_id {slot.get('work_unit_id')} is not in the execution plan")
+        if slot.get("phase_id") and slot.get("phase_id") not in phase_ids:
+            fail(f"slot {sid}: unknown phase_id {slot.get('phase_id')}")
+        if slot.get("module_id") and slot.get("module_id") not in module_ids:
+            fail(f"slot {sid}: unknown module_id {slot.get('module_id')}")
+        check_refs(slot.get("dependencies", []), work_unit_ids, f"slot {sid} dependencies (work-unit IDs)")
+        check_refs(slot.get("requirement_ids", []), requirement_ids, f"slot {sid} requirement_ids")
+
+    state_doc = load_json("config/ai/project-state.json")
+    for key in ("current_work_unit", "next_valid_work_unit"):
+        if state_doc.get(key) and state_doc.get(key) not in work_unit_ids:
+            fail(f"project-state {key} {state_doc.get(key)} is not in the execution plan")
+    if state_doc.get("current_module") and state_doc.get("current_module") not in module_ids:
+        fail(f"project-state current_module {state_doc.get('current_module')} is not in the modules bank")
+    if state_doc.get("current_phase") and state_doc.get("current_phase") not in phase_ids:
+        fail(f"project-state current_phase {state_doc.get('current_phase')} is not in the execution plan")
+
     for link in trace_doc.get("links", []):
         if isinstance(link, dict):
             rid = str(link.get("requirement_id", "<unknown>"))

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anpos.local/schemas/modules-bank.schema.json",
+  "title": "ANPOS Modules Bank",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "modules",
+    "status_values",
+    "module_template"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "objective",
+          "scope",
+          "boundaries",
+          "dependencies",
+          "option_ids",
+          "acceptance_criteria",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^MOD-[A-Z0-9][A-Z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "array"
+          },
+          "boundaries": {
+            "type": "array"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^MOD-[A-Z0-9][A-Z0-9-]*$"
+            },
+            "uniqueItems": true
+          },
+          "option_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^OPT-[A-Z0-9][A-Z0-9-]*$"
+            },
+            "uniqueItems": true
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "quality_gates": {
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "not_started",
+              "ready",
+              "in_progress",
+              "blocked",
+              "needs_update",
+              "needs_removal",
+              "verification_required",
+              "complete",
+              "deferred",
+              "deprecated"
+            ]
+          }
+        }
+      }
+    },
+    "status_values": {
+      "const": [
+        "not_started",
+        "ready",
+        "in_progress",
+        "blocked",
+        "needs_update",
+        "needs_removal",
+        "verification_required",
+        "complete",
+        "deferred",
+        "deprecated"
+      ]
+    },
+    "module_template": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

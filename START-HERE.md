@@ -156,9 +156,9 @@ Do not force the user through multiple required project-description fields.
 
 ## State C — Intake received
 
-Persist/update normalized project intake in `PROJECT-IDEA.md` when child repository write access is available.
+Persist/update normalized project intake in `PROJECT-IDEA.md` when child repository write access is available, and set `config/ai/project-state.json` `lifecycle_stage` to `intake`.
 
-Then execute the following sequence before implementation.
+Then execute the following sequence before implementation. Steps 2–6 run with `lifecycle_stage: research`; Step 7 runs with `lifecycle_stage: planning`.
 
 ### 1. Understand
 
@@ -195,6 +195,8 @@ The purpose is discovery, not confirmation of the user's assumptions.
 ### 3. Research the strongest possibilities
 
 Deepen the most relevant findings. Prefer current, primary, authoritative, or technically credible sources. Compare alternatives and trade-offs; do not base important decisions on one snippet/source.
+
+Record each material finding as an `EVID-*` entry in `config/research/evidence-registry.json` (source, retrieval date, claim, confidence). The plan in Step 7 cites these IDs instead of restating unsourced claims.
 
 ### 4. Reason independently
 
@@ -245,7 +247,7 @@ For the most relevant systems, analyze what can responsibly be established about
 - weaknesses worth avoiding
 - reusable product/architecture decisions
 
-Clearly distinguish verified evidence, reasonable inference, and unknown/private implementation details.
+Clearly distinguish verified evidence, reasonable inference, and unknown/private implementation details. Persist audit conclusions as `EVID-*` entries in `config/research/evidence-registry.json`.
 
 ### 7. Synthesize findings and plan
 
@@ -277,6 +279,36 @@ At minimum distinguish:
 - unresolved decisions
 - phased implementation priorities
 
+Also define, before design commitments:
+
+- user/problem hypotheses and how each will be validated (REQ-84, `config/product/product-validation.json`);
+- outcome KPIs where outcomes are measurable (REQ-85, `config/product/product-analytics.json`);
+- any experiment candidates (REQ-86, `config/product/experimentation-policy.json`).
+
+Validation of these hypotheses happens later; defining them is part of planning.
+
+#### Stage 7 artifacts
+
+| Artifact | Content |
+|---|---|
+| `docs/ai/PRE-PLAN.md` | Human-readable plan, filled from its template sections |
+| `config/ai/options-bank.json` | Candidate/selected/rejected capabilities (`OPT-*`) with rationale |
+| `config/ai/modules-bank.json` | Modules (`MOD-*`) referencing option IDs |
+| `config/ai/execution-plan.json` | Phases (`PHASE-*`) and work units (`WU-*`) with dependencies, priority, acceptance criteria, checks and allowed paths |
+| `config/traceability/requirements-traceability.json` | Requirements (`REQ-*`) linked to options, modules and work units |
+| `config/risk/risk-register.json` | Material risks |
+
+#### Stage 7 exit gate — plan approval
+
+Planning ends only with explicit user approval:
+
+1. Set `execution-plan.json` `plan_status` to `proposed` and `lifecycle_stage` to `plan_proposed`.
+2. Present **Approve Project Plan** (with **Review Plan** for changes). Create a `plan_approval` consent request in `config/consent/consent-requests.json` whose hash covers the proposed plan files.
+3. On approval, set `plan_status: approved`, `plan_approval_ref` to the consent ID and `lifecycle_stage: plan_approved`.
+4. Only then may the Supervisor generate work-queue slots (`scripts/plan_to_slots.py`). The validator rejects slots without an approved plan.
+
+A material plan revision (new/removed modules, changed scope, reordered critical path) returns `plan_status` to `proposed` and needs a new approval. Small within-scope refinements (splitting a work unit, clarifying acceptance criteria) do not.
+
 After the plan is created or materially revised, sync it to the selected PM provider when one is connected.
 
 ## State D — Post-planning engineering lifecycle
@@ -294,13 +326,18 @@ Required sequence:
 14. **SQA**
 15. **Security Engineering + Authorized Adversarial Assessment**
 
-Then apply the capability-aware assurance requirements from `AI-NATIVE-PRODUCT-ASSURANCE.md`:
+16. **Release + Supply-Chain Assurance**
+17. **Operational Readiness + Recovery**
 
-16. **AI / LLM Evaluation + Model Assurance** — required when the product contains AI/ML/LLM/RAG/agentic behavior.
-17. **User / Problem / UX Validation** — required when user-facing assumptions or material UX decisions need evidence.
-18. **Engineering Quality + Maintainability Review** — required before major module completion/release.
-19. **Progressive Delivery + Production Verification** — required when release risk justifies staged rollout/feature controls.
-20. **Product Analytics / KPI Evidence + Experiment Feedback Loop** — required when product outcomes are measurable/material; experimentation remains optional and bounded.
+Stage numbers 8–17 match `DEVELOPMENT-LIFECYCLE.md`, which is canonical for stage content.
+
+Then apply the capability-aware assurance gates from `AI-NATIVE-PRODUCT-ASSURANCE.md`. They are labeled by requirement, not stage number:
+
+- **REQ-83 AI / LLM Evaluation + Model Assurance** — required when the product contains AI/ML/LLM/RAG/agentic behavior.
+- **REQ-84 User / Problem / UX Validation** — hypotheses are defined in Stage 7; evidence is gathered during design and after implementation.
+- **REQ-88 Engineering Quality + Maintainability Review** — required before major module completion/release.
+- **REQ-87 Progressive Delivery + Production Verification** — required when release risk justifies staged rollout/feature controls.
+- **REQ-85/86 Product Analytics / KPI Evidence + Experiment Feedback Loop** — required when product outcomes are measurable/material; experimentation remains optional and bounded.
 
 These are project-type-aware gates, not mandatory bureaucracy. Mark a gate `not_applicable` only with a project-specific reason and evidence.
 

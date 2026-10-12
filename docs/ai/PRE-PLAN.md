@@ -1,6 +1,8 @@
 # AI-Native Pre-Plan
 
-This file is the living pre-implementation decomposition document. The AI must replace template placeholders with project-specific evidence before large-scale implementation.
+> **Template.** Every `TBD` is a placeholder. In the canonical source this file stays a template; in a child project the planner fills it during START-HERE Stage 7.
+
+This file is the living pre-implementation decomposition document. The AI must replace template placeholders with project-specific evidence before large-scale implementation. Cite research as `EVID-*` IDs from `config/research/evidence-registry.json`.
 
 ## 1. Product Objective
 
@@ -32,11 +34,28 @@ This file is the living pre-implementation decomposition document. The AI must r
 
 ## 5. Validated Requirements
 
-- TBD
+Use stable `REQ-*` IDs; each one also gets a link in `config/traceability/requirements-traceability.json`.
+
+| ID | Requirement | Source / evidence |
+|---|---|---|
+| REQ-001 | TBD | TBD |
 
 ## 6. Assumptions Still Requiring Validation
 
 - TBD
+
+### Product hypotheses (REQ-84–86)
+
+| Hypothesis | How it will be validated | KPI (if measurable) |
+|---|---|---|
+| TBD | TBD | TBD |
+
+## 6a. Evidence-Driven Changes to the Original Idea
+
+- Recommended additions: TBD
+- Recommended removals / simplifications: TBD
+- Competitive / market-driven requirements: TBD
+- Differentiators: TBD
 
 ## 7. Constraints and Risks
 
@@ -75,6 +94,14 @@ Convert the project into outcome-oriented phases, then map modules and small wor
 
 Avoid giant phases that cannot be completed or verified incrementally.
 
+### Work units
+
+Mirror of `config/ai/execution-plan.json` `work_units`; that file is canonical.
+
+| ID | Phase | Module | Requirements | Depends on | Priority | Allowed paths | Acceptance criteria |
+|---|---|---|---|---|---|---|---|
+| WU-TBD | PHASE-TBD | MOD-TBD | REQ-TBD | — | 100 | TBD | TBD |
+
 ## 12. Dependency and Critical-Path Notes
 
 - TBD
@@ -95,9 +122,15 @@ Avoid giant phases that cannot be completed or verified incrementally.
 
 - TBD
 
-## 17. Execution Readiness
+## 17. Plan Approval
 
-Before implementation begins at scale, confirm:
+- Plan status (`config/ai/execution-plan.json` `plan_status`): draft
+- Approval consent ID (`plan_approval_ref`): TBD
+- Approved by / at: TBD
+
+## 18. Execution Readiness
+
+Planning (Stage 7) ends at plan approval. These items are confirmed later, before implementation at scale (after Stage 9 technology consent):
 
 - [ ] validated project objective exists
 - [ ] repository reality has been reconciled
@@ -111,3 +144,4 @@ Before implementation begins at scale, confirm:
 - [ ] dependencies and blockers are visible
 - [ ] acceptance criteria and required checks exist
 - [ ] project state identifies a valid resume point
+- [ ] the plan is approved (`plan_status: approved`) and slots were generated from it

@@ -3,6 +3,7 @@
   "coordination_mode": "multi_agent",
   "updated_at": null,
   "slots": [],
+  "slot_dependency_semantics": "Slot dependencies are work-unit IDs from config/ai/execution-plan.json; a slot is claimable only when every dependency work unit has a merged or completed slot.",
   "slot_schema": {
     "id": "SLOT-001",
     "phase_id": "PHASE-001",

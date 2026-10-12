@@ -190,7 +190,7 @@ This lets the AI understand both the module and the exact capabilities configure
 
 Do not execute a project as a few giant phases.
 
-Translate the approved roadmap into a dependency-aware hierarchy:
+Translate the approved plan (`config/ai/execution-plan.json` with `plan_status: approved`, see START-HERE Stage 7 exit gate) into a dependency-aware hierarchy:
 
 `Project -> Phase/Milestone -> Module -> Work Unit -> Acceptance/Verification`
 
@@ -211,6 +211,45 @@ Prefer work units that are:
 - valuable enough to advance the module
 
 Do not split work into meaningless micro-tasks that create coordination overhead without reducing risk.
+
+## Planner role
+
+The planner runs START-HERE State C (intake → research → Stage 7 plan).
+
+- **Inputs:** `PROJECT-IDEA.md`, repository reality, research findings, user decisions.
+- **Outputs:** the Stage 7 artifacts listed in START-HERE (PRE-PLAN, options/modules banks, execution plan, traceability, risk register, product hypotheses) and `EVID-*` research entries.
+- **Exit criteria:** every `ready` work unit has requirement IDs, dependencies, priority, acceptance criteria, required checks and allowed paths; the user approved the plan via a `plan_approval` consent; `plan_status` is `approved`.
+- **Does not:** create work-queue slots (Supervisor, via `scripts/plan_to_slots.py`), approve its own plan, or start implementation.
+
+### ID conventions
+
+| Kind | Pattern | Example |
+|---|---|---|
+| Requirement | `REQ-*` | `REQ-014` |
+| Option | `OPT-*` | `OPT-GOOGLE-OAUTH` |
+| Module | `MOD-*` | `MOD-AUTH` |
+| Phase | `PHASE-*` | `PHASE-FOUNDATION` |
+| Work unit | `WU-*` | `WU-AUTH-012` |
+| Slot | `SLOT-<work unit id>` | `SLOT-WU-AUTH-012` |
+| Research evidence | `EVID-*` | `EVID-007` |
+
+Schemas in `schemas/execution-plan.schema.json`, `modules-bank.schema.json` and `options-bank.schema.json` enforce these patterns.
+
+### Lifecycle stage values
+
+`config/ai/project-state.json` `lifecycle_stage` moves through: `not_started` → `initialization` (State B) → `intake` → `research` → `planning` → `plan_proposed` → `plan_approved` → `system_design` (8) → `technology_consent` (9) → `architecture` (10) → `data_flow` (11) → `ui_ux` (12) → `development` (13) → `sqa` (14) → `security` (15) → `release` (16) → `operations` (17) → `maintenance`. Stages may overlap in practice; record the furthest stage whose entry gate is satisfied.
+
+### Status mapping
+
+| Work unit (`execution-plan.json`) | Slot (`agent-work-queue.json`) | Requirement (`requirements-traceability.json`) |
+|---|---|---|
+| `not_started`, `blocked`, `deferred` | no slot yet | `planned` |
+| `ready` | `free` | `planned` |
+| `in_progress` | `claimed`, `in_progress`, `blocked`, `changes_requested` | `in_progress` |
+| `verification_required` | `submitted_for_review`, `approved` | `implemented` (when merged) |
+| `complete` | `merged` → `completed` | `implemented`/`verified` per evidence |
+
+Git and verification evidence decide which row is true; the JSON mirrors follow.
 
 ## Execution Plan
 
@@ -266,7 +305,7 @@ Do not fake precision. If progress percentages cannot be credibly calculated, us
 
 ## Autonomous next-work selection
 
-When the user has authorized AI-native development and no human decision blocks progress, the AI should determine the next valid work item rather than asking the user which module to work on.
+When the user has authorized AI-native development (an approved plan: `plan_status: approved` with a `plan_approval` consent) and no human decision blocks progress, the AI should determine the next valid work item rather than asking the user which module to work on.
 
 Choose work using evidence such as:
 

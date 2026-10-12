@@ -1,5 +1,14 @@
 {
   "schema_version": 1,
+  "plan_status": "draft",
+  "plan_status_values": [
+    "draft",
+    "proposed",
+    "approved",
+    "superseded"
+  ],
+  "plan_approval_ref": null,
+  "plan_approval_rule": "Work-queue slots may only be generated while plan_status is approved and plan_approval_ref names an approved consent request of type plan_approval for the current plan. A material plan revision returns plan_status to proposed and needs a new approval.",
   "phases": [],
   "work_units": [],
   "status_values": [
@@ -27,14 +36,28 @@
     "id": "WU-EXAMPLE",
     "phase_id": "PHASE-EXAMPLE",
     "module_id": "MOD-EXAMPLE",
+    "requirement_ids": [],
     "title": "Small independently executable and verifiable slice",
     "objective": "Clear outcome",
     "dependencies": [],
-    "priority": null,
+    "priority": 100,
     "status": "not_started",
     "blockers": [],
     "acceptance_criteria": [],
     "required_checks": [],
-    "completion_evidence": []
-  }
+    "completion_evidence": [],
+    "risk_classification": "normal",
+    "eligibility": [
+      "ANY"
+    ],
+    "required_roles": [
+      "worker"
+    ],
+    "required_capabilities": [
+      "repository_write"
+    ],
+    "allowed_paths": [],
+    "denied_paths": []
+  },
+  "slot_mapping_rule": "scripts/plan_to_slots.py maps each ready work unit of an approved plan to one queue slot: id SLOT-<work unit id>, work_unit_id/phase_id/module_id/requirement_ids/title/priority/risk_classification/eligibility/required_roles/required_capabilities/allowed_paths/denied_paths/acceptance_criteria/required_checks copied, objective -> description, dependencies stay work-unit IDs."
 }

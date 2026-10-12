@@ -66,7 +66,7 @@ Repair stale mirrors from repository/Git/check/release evidence. PM/project dash
 
 ## Typed Worker routing
 
-Create Worker slots as typed handoff envelopes. At minimum include:
+Create Worker slots as typed handoff envelopes, generated from ready work units of the approved execution plan with `scripts/plan_to_slots.py` (it refuses unapproved plans and work units missing acceptance criteria, checks or allowed paths). At minimum include:
 
 - work-unit and requirement IDs;
 - risk classification;
