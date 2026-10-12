@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 QUEUE = ROOT / "config/coordination/agent-work-queue.json"
 SUPERVISOR = ROOT / "config/coordination/supervisor-state.json"
 sys.path.insert(0, str(ROOT / "scripts"))
-from anpos_guard import live_supervisor, require_verified_agent, verify_fencing  # noqa: E402
+from anpos_guard import atomic_write_text, live_supervisor, parse_time, require_verified_agent, verify_fencing  # noqa: E402
 
 
 def now() -> datetime:
@@ -57,7 +57,7 @@ def load(path: Path):
 
 
 def write(path: Path, data):
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    atomic_write_text(path, json.dumps(data, indent=2) + "\n")
 
 
 def find_slot(queue, slot_id):
@@ -80,6 +80,9 @@ def worker_heartbeat(args) -> None:
         raise SystemExit("Worker claim belongs to a stale coordination epoch.")
     if slot.get("lease_status") != "active":
         raise SystemExit(f"Worker lease is not active: {slot.get('lease_status')}.")
+    expires_at = parse_time(slot.get("lease_expires_at"))
+    if expires_at is None or expires_at <= now():
+        raise SystemExit("Worker lease has expired; the Supervisor must recover the slot before work resumes.")
     identity_ref = (agent.get("runtime_identity") or {}).get("evidence_ref")
     if slot.get("claimant_identity_ref") != identity_ref:
         raise SystemExit("Worker runtime identity evidence no longer matches the claim.")
@@ -154,6 +157,13 @@ def recover_ref(args) -> None:
     current = load(SUPERVISOR).get("supervisor", {}).get("election_ref")
     if args.ref == current:
         raise SystemExit("Refusing to delete the active Supervisor election ref through orphan recovery.")
+    live_lease_states = {"active", "expired", "orphaned"}
+    for slot in load(QUEUE).get("slots", []):
+        if isinstance(slot, dict) and slot.get("claim_ref") == args.ref and slot.get("lease_status") in live_lease_states:
+            raise SystemExit(
+                f"Refusing to delete {args.ref}: slot {slot.get('id')} still holds it (lease {slot.get('lease_status')}); "
+                "use worker-release to recover the slot first."
+            )
     delete_ref(args.repository or repo_name(), args.ref)
     print("Orphan/stale coordination ref removed after Supervisor authorization.")
 

@@ -169,7 +169,7 @@ Refresh after repository-visible state transitions and supported heartbeat inter
 - If the selected PM provider is unavailable/quota-limited, use repository state and provider documents/status surfaces where possible; do not block development unnecessarily.
 - If no PM provider is selected, repository-backed planning is sufficient.
 - If direct cross-agent messaging is unavailable, queue state + agent alerts + merge generation + optional PM mirror are the communication layer.
-- If only one development AI is available, it may act in separated Supervisor/Worker passes while preserving role and review safeguards.
+- If only one development AI is available, it may act in separated Supervisor/Worker passes while preserving role and review safeguards. Separated passes by the same agent are not independent review: in single-agent mode every merge to the default branch requires an explicit human approval (`review_policy.single_agent_mode_requires_human_merge_approval`), whatever the risk level.
 - If Figma cannot be accessed, design from requirements unless an export is genuinely needed.
 
 ## 13. Provider switching

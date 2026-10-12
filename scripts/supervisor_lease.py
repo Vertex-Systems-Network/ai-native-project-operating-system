@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "config/coordination/supervisor-state.json"
 sys.path.insert(0, str(ROOT / "scripts"))
-from anpos_guard import require_verified_agent  # noqa: E402
+from anpos_guard import atomic_write_text, require_verified_agent  # noqa: E402
 
 
 def now():
@@ -141,7 +141,7 @@ def main() -> int:
             "election_ref": election_ref,
         }
         state["last_reconciled_main_sha"] = sha
-        STATE.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        atomic_write_text(STATE, json.dumps(state, indent=2) + "\n")
     except Exception as exc:
         rolled_back = delete_remote(repo, election_ref)
         status = "rolled back election ref" if rolled_back else "ORPHAN ELECTION REF REQUIRES RECOVERY"

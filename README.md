@@ -13,7 +13,7 @@ The source must remain inert:
 - no live Project Management provider/project is selected or mapped;
 - no project-specific Supervisor/Worker AI pool is attached;
 - no child-project GitHub Rules are treated as applied to this source;
-- no child-project runtime/quality workflows or Dependabot config are active under source `.github/`; the only active source workflow is the repository-guarded, read-only continuous certification guard, and it is stripped from customer/vendor-template outputs;
+- no child-project runtime/quality workflows or Dependabot config are active under source `.github/`; the only active source workflows are the repository-guarded continuous certification guard and the vendor-only commercial operations workflows (handoff, production readiness/deploy/migrate, sandbox E2E); every one of them is listed in `config/licensing/vendor-source-boundary.json`, enforced by `scripts/validate_ai_native_repo.py`, and stripped from customer/vendor-template outputs;
 - no production credentials, environments, releases, claims, leases, runtime consent decisions, project progress, or PM sync timestamps are stored as live project state;
 - no Marketplace customer records, live paid plan IDs, payment data, webhook secrets, GitHub App private keys, entitlement-signing private keys, or active customer entitlements are stored here.
 
@@ -27,11 +27,11 @@ The commercial runtime uses the `ANPOS_*` environment namespace for Marketplace,
 
 Current paid-launch sequence remains fail-closed: configure real Marketplace plan IDs, signing/seat/operator controls, then prove purchase/change/cancel reconciliation and Repository Supervisor entitlement E2E before paid launch is called ready. Developer delivery now uses a deterministic certified template release embedded into the private commercial-service artifact; production also exposes a no-store public-safe Marketplace plan discovery readiness route that reads real listing plan identities with the Marketplace App JWT and reports only bounded App-owner/active-installation eligibility observations; a separate Vendor Distribution App/private template repository is no longer a Developer launch dependency and remains conditional for collaborator provisioning or higher-tier private distribution. Marketplace reconciliation preserves billing cycle, next billing date, and free-trial end time for customer-facing subscription status. Migration `008_marketplace_billing_lifecycle.sql` is the current commercial database readiness gate.
 
-Live paid-launch checkpoint (2026-09-26): the real Marketplace listing currently exposes only the published free Community plan (plan ID `14648`), zero paid plans and one observed active installation. Full production `/api/ready` now fails closed only on `ANPOS_MARKETPLACE_PLAN_MAP`; this variable cannot be configured until GitHub assigns a genuine paid plan ID. Current external paid eligibility evidence remains below the recorded 100-install reference threshold and still requires publisher-verification and financial-onboarding evidence. Canonical tracker: Issue #94.
+Live paid-launch status (Marketplace plan IDs, installation counts, eligibility observations) is operational state and is intentionally not recorded in this inert source. Canonical tracker: Issue #94.
 
 ## Persistent source continuous certification in 1.3.13
 
-The canonical source now retains exactly one active GitHub Actions workflow: `.github/workflows/source-continuous-certification.yml`.
+The canonical source retains one active certification workflow, `.github/workflows/source-continuous-certification.yml`, alongside the vendor-only commercial operations workflows described above. All active workflows are repository-guarded and listed in the vendor source boundary.
 
 - It runs on pull requests targeting `main` and on pushes to `main`.
 - It is hard-bound to `Vertex-Systems-Network/ai-native-project-operating-system`, uses read-only repository permissions, does not consume repository secrets, disables checkout credential persistence, and pins GitHub Actions to immutable commit SHAs.

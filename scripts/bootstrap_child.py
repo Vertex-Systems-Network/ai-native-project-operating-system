@@ -49,6 +49,24 @@ def load_vendor_only_paths() -> tuple[str, ...]:
     return tuple(paths)
 
 
+def is_vendor_only(relative: str, vendor_only_paths: tuple[str, ...]) -> bool:
+    return any(relative == p.rstrip("/") or relative.startswith(p.rstrip("/") + "/") for p in vendor_only_paths)
+
+
+def prune_manifest(vendor_only_paths: tuple[str, ...]) -> None:
+    """Drop manifest context entries for removed vendor-only paths so child agents never load missing files."""
+    manifest_path = ROOT / ".ai" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["common"] = [p for p in manifest.get("common", []) if not is_vendor_only(p, vendor_only_paths)]
+    roles = {}
+    for role, files in (manifest.get("roles") or {}).items():
+        kept = [p for p in files if not is_vendor_only(p, vendor_only_paths)]
+        if kept:
+            roles[role] = kept
+    manifest["roles"] = roles
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--apply", action="store_true")
@@ -89,6 +107,8 @@ def main() -> int:
         elif target.exists():
             target.unlink()
             removed.append(relative)
+
+    prune_manifest(vendor_only_paths)
 
     print("Vendor-only source removed from child repository:" if removed else "No vendor-only source present in child repository.")
     for relative in removed:

@@ -2,6 +2,8 @@
 
 > This file is the repository's persistent intake record. On first run, the user does not need to edit this file manually. The AI should collect the user's raw input conversationally and update this file when repository write access is available.
 
+Status values for the three status fields below: `NOT_STARTED`, `IN_PROGRESS`, `COMPLETE`, `NEEDS_REVISION`. Planning Status becomes `COMPLETE` only when the plan is approved (`config/ai/execution-plan.json` `plan_status: approved`).
+
 ## Intake Status
 
 `NOT_STARTED`

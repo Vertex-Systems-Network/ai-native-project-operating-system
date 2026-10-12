@@ -47,7 +47,7 @@ def main() -> int:
         "ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}",
         "EXPECTED_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}",
         'test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"',
-        "persist-credentials: false", "fetch-depth: 0", "python-version: '3.12'", "jsonschema==4.25.1",
+        "persist-credentials: false", "fetch-depth: 0", "python-version: '3.12'", "-r requirements-anpos.txt",
         "python -m compileall -q scripts tests", "python -m unittest discover -s tests -p 'test_*.py' -v",
         "python scripts/validate_ai_native_repo.py", "python scripts/validate_commercial_licensing.py",
         "python scripts/validate_commercial_service.py", "python scripts/validate_vendor_repository_export.py",

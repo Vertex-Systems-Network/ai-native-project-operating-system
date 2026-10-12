@@ -66,7 +66,7 @@ Repair stale mirrors from repository/Git/check/release evidence. PM/project dash
 
 ## Typed Worker routing
 
-Create Worker slots as typed handoff envelopes. At minimum include:
+Create Worker slots as typed handoff envelopes, generated from ready work units of the approved execution plan with `scripts/plan_to_slots.py` (it refuses unapproved plans and work units missing acceptance criteria, checks or allowed paths). At minimum include:
 
 - work-unit and requirement IDs;
 - risk classification;
@@ -124,7 +124,7 @@ For each submission verify:
 - deployment/release/rollback effects;
 - merge conflicts and PM mirror consistency.
 
-Request/fix bounded issues, rerun impacted checks, and merge only when applicable acceptance gates pass. A Supervisor cannot self-approve high-risk/security-critical self-authored work; use independent human/separate authorized review as configured.
+Request/fix bounded issues, rerun impacted checks, and merge only when applicable acceptance gates pass. A Supervisor cannot self-approve high-risk/security-critical self-authored work; use independent human/separate authorized review as configured. When the Supervisor and the only Worker are the same agent (single-agent mode), it cannot approve any of its own work: every merge waits for explicit human approval.
 
 After every successful main merge:
 

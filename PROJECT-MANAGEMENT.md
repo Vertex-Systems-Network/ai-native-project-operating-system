@@ -72,9 +72,9 @@ Normal mapping:
 
 Example:
 
-- Work Unit: `AUTH-012 Google Login`
+- Work Unit: `WU-AUTH-012 Google Login`
 - Agent: `Worker-02`
-- Branch: `agent/AUTH-012/google-login`
+- Branch: `agent/WU-AUTH-012/google-login`
 - Review: `PR #42`
 - Git state: merged + required checks/evidence accepted
 - PM state: Done

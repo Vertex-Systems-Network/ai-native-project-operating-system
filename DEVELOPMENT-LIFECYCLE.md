@@ -202,7 +202,7 @@ Only then may the applicable scope be marked verified/released.
 
 ## Conditional post-implementation assurance gates — Requirements 83–88
 
-After the core lifecycle reaches implementation/SQA/security readiness, load `AI-NATIVE-PRODUCT-ASSURANCE.md` and activate only the gates that match the project type and risk.
+After the core lifecycle reaches implementation/SQA/security readiness, load `AI-NATIVE-PRODUCT-ASSURANCE.md` and activate only the gates that match the project type and risk. User/problem hypotheses, KPIs and experiment candidates (Requirements 84–86) are *defined* during Stage 7 planning; this section covers gathering and judging their evidence.
 
 - **AI / LLM evaluation:** use `config/ai/ai-evaluation-policy.json` when AI/ML/LLM/RAG/agentic behavior exists.
 - **User / UX validation:** use `config/product/product-validation.json` when user-facing assumptions or material experience decisions require evidence.

@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from anpos_guard import require_verified_agent, verify_fencing  # noqa: E402
+from anpos_guard import atomic_write_text, require_verified_agent, verify_fencing  # noqa: E402
 
 ALLOWED_TARGETS = {
     "config/coordination/agent-work-queue.json",
@@ -97,7 +97,7 @@ def main() -> int:
         print("DRY RUN - authorized mutation validated but not written.")
         return 0
 
-    target.write_text(rendered, encoding="utf-8")
+    atomic_write_text(target, rendered)
     print("Authorized fenced local mutation written. Remote orchestrators must still commit with GitHub blob-SHA CAS.")
     return 0
 
